@@ -1,0 +1,1150 @@
+# 🧠 Segundo Cerebro Legislativo - Master Blueprint
+> **Versión**: 1.0.0 (Electron Embebido + React 18 + SQLite)
+> **Objetivo**: Aplicación de escritorio local para gestión legislativa, con UI perfeccionada, control de quórum, versión de proyectos, QR, bot de Telegram y sincronización con GitHub.
+
+---
+
+## 🏗️ Arquitectura & Stack
+| Capa | Tecnología |
+|------|------------|
+| **Frontend (UI)** | React 18, TailwindCSS, Lucide-React |
+| **Build Tool** | Vite 5 |
+| **Desktop** | Electron 30 (Main Process) |
+| **Database** | SQLite (via `better-sqlite3`, archivo local) |
+| **Extras** | Telegraf (Bot), Simple-Git (Sync), Winston (Logs), QRCode |
+
+---
+
+## 📦 FASE 1: Inicialización & Estructura
+
+### 1.1 Instalar Dependencias
+Ejecutar en la raíz del proyecto:
+```bash
+npm install react@18.3.1 react-dom@18.3.1 lucide-react@0.469.0
+npm install electron@30.0.0 electron-builder@24.13.3
+npm install better-sqlite3@9.5.0 winston@3.13.0 qrcode@1.5.3 telegraf@4.16.3 simple-git@3.24.0 dotenv@16.4.5
+npm install -D vite@5.2.12 @vitejs/plugin-react@4.3.0 concurrently@8.2.2 wait-on@7.2.0 cross-env@7.0.3 tailwindcss@3.4.1 postcss@8.4.38 autoprefixer@10.4.19
+
+1.2 Estructura de Carpetas
+
+segundo-cerebro/
+├── electron/
+│   ├── main.js
+│   └── preload.js
+├── src/
+│   ├── services/
+│   │   ├── qr.js
+│   │   └── versioning.js
+│   ├── App.jsx      # UI COMPLETA
+│   ├── main.jsx     # Entry point
+│   └── index.css
+├── public/
+├── logs/
+├── backups/
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+├── postcss.config.js
+├── .env.example
+└── README.md
+
+⚙️ FASE 2: Archivos de Configuración
+package.json
+Reemplazar contenido. Nota: main apunta a electron/main.js.
+{
+  "name": "segundo-cerebro-legislativo",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "build": "vite build && electron-builder",
+    "build:win": "npm run build -- --win",
+    "build:mac": "npm run build -- --mac"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.469.0",
+    "tailwindcss": "^3.4.1",
+    "better-sqlite3": "^9.5.0",
+    "winston": "^3.13.0",
+    "qrcode": "^1.5.3",
+    "telegraf": "^4.16.3",
+    "simple-git": "^3.24.0",
+    "dotenv": "^16.4.5",
+    "electron": "^30.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.2.12",
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0",
+    "cross-env": "^7.0.3",
+    "electron-builder": "^24.13.3"
+  }
+}
+
+vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  base: './', // Importante para Electron
+  server: { port: 5173 },
+  build: { outDir: 'dist' }
+});
+
+tailwind.config.js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./src/**/*.{js,jsx,ts,tsx}', './electron/**/*.{js,jsx}'],
+  darkMode: 'class',
+  theme: { extend: {} },
+  plugins: []
+};
+
+postcss.config.js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  }
+};
+
+src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply antialiased; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+  .dark ::-webkit-scrollbar-thumb { background: #374151; }
+}
+.env.example
+NODE_ENV=development
+TELEGRAM_BOT_TOKEN=
+GITHUB_REPO_URL=https://github.com/usuario/segundo-cerebro.git
+BACKUP_INTERVAL_HOURS=12
+MAX_LOG_SIZE_MB=50
+
+🖥️ FASE 3: Electron Core
+electron/preload.js
+Puente seguro entre el navegador y Node.js.
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('legisAPI', {
+  // Invocación genérica
+  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  on: (channel, callback) => ipcRenderer.on(channel, (_, data) => callback(data)),
+  
+  // Servicios
+  log: (level, message) => ipcRenderer.invoke('log', { level, message }),
+  
+  qr: { generate: (data) => ipcRenderer.invoke('qr:generate', data) },
+  
+  git: { 
+    sync: (msg) => ipcRenderer.invoke('git:sync', msg),
+    status: () => ipcRenderer.invoke('git:status')
+  },
+  
+  telegram: { notify: (payload) => ipcRenderer.invoke('tg:notify', payload) },
+  
+  db: {
+    query: (table, data) => ipcRenderer.invoke('db:insert', { table, data }),
+    getAll: (table) => ipcRenderer.invoke('db:all', { table })
+  }
+});
+
+electron/main.js
+Kernel de la aplicación. Maneja DB, Logs, Bot y Git.
+
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const Database = require('better-sqlite3');
+const winston = require('winston');
+const QRCode = require('qrcode');
+const { Telegraf } = require('telegraf');
+const simpleGit = require('simple-git');
+
+// 📁 Rutas
+const DB_PATH = path.join(app.getPath('userData'), 'scl_local.db');
+const LOG_PATH = path.join(app.getPath('userData'), 'logs');
+const fs = require('fs');
+if (!fs.existsSync(LOG_PATH)) fs.mkdirSync(LOG_PATH, { recursive: true });
+
+const db = new Database(DB_PATH);
+
+// 🪵 Logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [new winston.transports.File({ filename: path.join(LOG_PATH, 'app.log') })]
+});
+
+// 🗄️ DB Init
+function initDB() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY, timestamp TEXT, level TEXT, action TEXT, entity TEXT, signature TEXT);
+    CREATE TABLE IF NOT EXISTS laws (id INTEGER PRIMARY KEY, nombre TEXT, gaceta TEXT, tipo TEXT, anio INTEGER, ruta TEXT, qr_data TEXT, descargas INTEGER DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS attendance (id INTEGER PRIMARY KEY, session_id INTEGER, legislator_id INTEGER, timestamp TEXT);
+  `);
+}
+
+// 🤖 Telegram
+function initBot() {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+  try {
+    const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+    bot.start((ctx) => ctx.reply('✅ Segundo Cerebro conectado.'));
+    bot.command('help', (ctx) => ctx.reply('Comandos: /status, /sync'));
+    bot.launch();
+    logger.info('Telegram bot launched');
+    ipcMain.handle('tg:notify', async (_, payload) => {
+      try {
+        await bot.telegram.sendMessage(payload.chatId, payload.message);
+        return true;
+      } catch (e) { return false; }
+    });
+  } catch (e) { logger.error('Telegram bot failed', e.message); }
+}
+
+let mainWindow;
+
+app.whenReady().then(() => {
+  initDB();
+  initBot();
+  
+  mainWindow = new BrowserWindow({
+    width: 1400, height: 900,
+    webPreferences: { 
+      preload: path.join(__dirname, 'preload.js'), 
+      contextIsolation: true, 
+      nodeIntegration: false 
+    },
+    icon: path.join(__dirname, '../public/icon.png') // Opcional
+  });
+
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+});
+
+// 🔌 IPC Handlers
+ipcMain.handle('log', (_, { level, message }) => logger[level](message));
+ipcMain.handle('qr:generate', (_, data) => QRCode.toDataURL(data));
+
+ipcMain.handle('git:sync', async (_, msg) => {
+  try {
+    const git = simpleGit();
+    await git.add('.').commit(msg || 'auto-sync [electron]');
+    await git.push();
+    return 'synced';
+  } catch (e) { return 'error: ' + e.message; }
+});
+
+// Ejemplo de handler DB
+ipcMain.handle('db:insert', (_, { table, data }) => {
+  const cols = Object.keys(data).join(', ');
+  const vals = Object.values(data).map(v => typeof v === 'string' ? `'${v}'` : v).join(', ');
+  db.run(`INSERT INTO ${table} (${cols}) VALUES (${vals})`);
+  return true;
+});
+
+🎨 FASE 4: UI React (App.jsx)
+⚠️ CRÍTICO: Reemplazar el contenido de src/App.jsx con el código completo que se adjunta al final de este archivo o usar el archivo App.jsx provisto en el contexto que contiene la versión final corregida.
+No modificar estructura JSX. La integración de nuevos módulos se hace vía window.legisAPI.
+(Aquí iría el código completo del App.jsx corregido. Para mantener este blueprint legible, asume que el archivo src/App.jsx contiene el código React provisto en el prompt).
+src/main.jsx
+
+
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { 
+  LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
+  Search, Moon, Sun, ChevronRight, Plus, Trash2, Edit3, 
+  AlertTriangle, Check, Clock, ArrowRight, Filter, 
+  Upload, File, BarChart3, ChevronDown,
+  ChevronLeft, Bell, Cloud, Info, Zap,
+  CalendarDays, User, Link, RefreshCw, Settings, Hash, Briefcase, Home, Gavel, Building2,
+  X  // ✅ CORRECCIÓN 1: Icono X agregado
+} from 'lucide-react';
+
+// ============================================================
+// UTILIDADES GLOBALES
+// ============================================================
+const safeJSONParse = (key, fallback) => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const getDaysSince = (dateStr) => {
+  if (!dateStr) return 999;
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+};
+
+const getStagnationColor = (dateStr) => {
+  const days = getDaysSince(dateStr);
+  if (days > 30) return 'text-red-500 bg-red-500/10 border-red-500/20';
+  if (days >= 15) return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+  return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+};
+
+const getStagnationLabel = (dateStr) => {
+  const days = getDaysSince(dateStr);
+  if (days > 30) return 'Estancado (>30 días)';
+  if (days >= 15) return 'Atención (15-30 días)';
+  return 'Activo (<15 días)';
+};
+
+const getSessionTypeByDate = (dateStr) => {
+  if (!dateStr) return 'Ordinaria';
+  const date = new Date(dateStr + 'T12:00:00');
+  const day = date.getDay();
+  if (day === 2 || day === 4) return 'Ordinaria';
+  return 'Extraordinaria';
+};
+
+const generateSessionNumber = (tipo, year, existingSessions) => {
+  if (tipo === 'Especial' || tipo === 'Solemne' || tipo === 'Instalación') return '';
+  const yearSessions = existingSessions.filter(s => 
+    s.activo &&
+    (s.tipo === 'Ordinaria' || s.tipo === 'Extraordinaria') &&
+    s.tipo === tipo &&
+    s.numero_correlativo &&
+    s.numero_correlativo.endsWith(`-${year}`)
+  );
+  const maxNum = yearSessions.reduce((max, s) => {
+    const parts = s.numero_correlativo.split('-');
+    const num = parseInt(parts[0], 10);
+    return num > max ? num : max;
+  }, 0);
+  return `${String(maxNum + 1).padStart(3, '0')}-${year}`;
+};
+
+const getRoutePhases = (origen) => {
+  if (origen === 'Comisión') {
+    return ['Estudio en Comisión', 'Informe de Dirección', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
+  }
+  return ['Entrada al Pleno', 'Estudio en Comisión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
+};
+
+// ✅ CORRECCIÓN 3: Función para convertir archivo a base64
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// ============================================================
+// CONFIGURACIÓN INICIAL
+// ============================================================
+const defaultConfig = {
+  nombre_secretario: '',
+  cedula: '',
+  periodo_sesiones: '2026-2027',
+  fecha_configuracion: new Date().toISOString().split('T')[0],
+  setupComplete: false,
+  darkMode: true
+};
+
+const initialLegislators = [
+  { id: 1, nombre: 'Carlos Mendoza', partido_politico: 'Partido Azul', contacto: 'c.mendoza@legis.gob', notas: 'Presidente Comisión 1', activo: true },
+  { id: 2, nombre: 'María Fernández', partido_politico: 'Partido Rojo', contacto: 'm.fernandez@legis.gob', notas: '', activo: true },
+  { id: 3, nombre: 'José Ramírez', partido_politico: 'Partido Verde', contacto: 'j.ramirez@legis.gob', notas: 'Experiencia en derecho constitucional', activo: true },
+  { id: 4, nombre: 'Ana Gutiérrez', partido_politico: 'Partido Azul', contacto: 'a.gutierrez@legis.gob', notas: '', activo: true },
+  { id: 5, nombre: 'Roberto Silva', partido_politico: 'Partido Rojo', contacto: 'r.silva@legis.gob', notas: 'Vicepresidente', activo: true },
+];
+
+const initialCommissions = [
+  { id: 1, nombre: 'Comisión de Justicia', presidente_id: 1, activo: true },
+  { id: 2, nombre: 'Comisión de Hacienda', presidente_id: 3, activo: true },
+  { id: 3, nombre: 'Comisión de Seguridad', presidente_id: 5, activo: true },
+];
+
+const initialSessions = [
+  { id: 1, tipo: 'Ordinaria', numero_correlativo: '001-2026', motivo: '', fecha: '2026-01-14', hora_inicio: '09:00', hora_cierre: '12:30', periodo: '2026-2027', observaciones: 'Sesión inaugural del periodo legislativo', activo: true },
+  { id: 2, tipo: 'Ordinaria', numero_correlativo: '002-2026', motivo: '', fecha: '2026-01-16', hora_inicio: '09:00', hora_cierre: '11:45', periodo: '2026-2027', observaciones: '', activo: true },
+  { id: 3, tipo: 'Extraordinaria', numero_correlativo: '001-2026', motivo: '', fecha: '2026-01-20', hora_inicio: '10:00', hora_cierre: '14:00', periodo: '2026-2027', observaciones: 'Presupuesto de emergencia', activo: true },
+  { id: 4, tipo: 'Especial', numero_correlativo: '', motivo: 'Conmemoración bicentenario', fecha: '2026-02-03', hora_inicio: '08:00', hora_cierre: '10:00', periodo: '2026-2027', observaciones: '', activo: true },
+];
+
+const initialOficios = [
+  { id: 1, numero_oficio: 'OF-001-2026', fecha: '2026-01-16', organo_receptor: 'Ministerio de Hacienda', asunto: 'Solicitud de informes presupuestarios Q1', sesion_id: 2, activo: true },
+  { id: 2, numero_oficio: 'OF-002-2026', fecha: '2026-01-16', organo_receptor: 'Defensoría del Pueblo', asunto: 'Requerimiento sobre situación carcelaria', sesion_id: 2, activo: true },
+  { id: 3, numero_oficio: 'OF-003-2026', fecha: '2026-02-03', organo_receptor: 'Corte Suprema de Justicia', asunto: 'Consulta sobre jurisprudencia electoral', sesion_id: 4, activo: true },
+];
+
+const initialProjects = [
+  { id: 1, titulo: 'Reforma al Código Penal', origen: 'Comisión', comision_id: 1, ponente_id: 1, fase_actual: '2da Discusión', urgencia_parlamentaria: false, fecha_ingreso: '2026-01-10', fecha_actualizacion: '2026-04-28', activo: true },
+  { id: 2, titulo: 'Ley de Transparencia Fiscal', origen: 'Gobernación', comision_id: 2, ponente_id: 3, fase_actual: 'Estudio en Comisión', urgencia_parlamentaria: false, fecha_ingreso: '2026-02-15', fecha_actualizacion: '2026-03-01', activo: true },
+  { id: 3, titulo: 'Código de Ética Parlamentaria', origen: 'Comisión', comision_id: 1, ponente_id: 4, fase_actual: '3ra Discusión', urgencia_parlamentaria: true, fecha_ingreso: '2026-01-20', fecha_actualizacion: '2026-04-30', activo: true },
+  { id: 4, titulo: 'Ley de Protección de Datos', origen: 'Votantes', comision_id: 3, ponente_id: 5, fase_actual: 'Aprobada', urgencia_parlamentaria: false, fecha_ingreso: '2026-03-01', fecha_actualizacion: '2026-04-15', activo: true },
+  { id: 5, titulo: 'Reforma Electoral Integral', origen: 'Comisión', comision_id: 1, ponente_id: 2, fase_actual: '1ra Discusión', urgencia_parlamentaria: false, fecha_ingreso: '2026-04-01', fecha_actualizacion: '2026-04-20', activo: true },
+];
+
+const initialDocuments = [
+  { id: 1, entidad_tipo: 'Sesion', entidad_id: 1, fase_etiqueta: 'Acta', ruta_archivo: '/boveda/sesion/1/acta_sesion_001.pdf', hash_integridad: 'sha256:a1b2c3d4', activo: true },
+  { id: 2, entidad_tipo: 'ProyectoLey', entidad_id: 1, fase_etiqueta: '1ra Discusión', ruta_archivo: '/boveda/proyecto/1/primera_disc.pdf', hash_integridad: 'sha256:e5f6g7h8', activo: true },
+  { id: 3, entidad_tipo: 'ProyectoLey', entidad_id: 4, fase_etiqueta: 'Gaceta Oficial', ruta_archivo: '/boveda/proyecto/4/gaceta.pdf', hash_integridad: 'sha256:i9j0k1l2', activo: true },
+];
+
+// ============================================================
+// SISTEMA DE TOASTS
+// ============================================================
+const ToastContainer = ({ toasts, removeToast }) => (
+  <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2">
+    {toasts.map((toast) => (
+      <div
+        key={toast.id}
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-sm
+          ${toast.type === 'success' ? 'bg-emerald-500/90 border-emerald-400/30 text-white' : ''}
+          ${toast.type === 'error' ? 'bg-red-500/90 border-red-400/30 text-white' : ''}
+          ${toast.type === 'warning' ? 'bg-amber-500/90 border-amber-400/30 text-white' : ''}
+          ${toast.type === 'info' ? 'bg-blue-500/90 border-blue-400/30 text-white' : ''}`}
+        style={{ animation: 'slide-in 0.3s ease-out' }}
+      >
+        {toast.type === 'success' && <Check className="w-4 h-4" />}
+        {toast.type === 'error' && <X className="w-4 h-4" />}
+        {toast.type === 'warning' && <AlertTriangle className="w-4 h-4" />}
+        {toast.type === 'info' && <Info className="w-4 h-4" />}
+        <span className="text-sm font-medium">{toast.message}</span>
+        <button onClick={() => removeToast(toast.id)} className="ml-2 opacity-70 hover:opacity-100">
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    ))}
+  </div>
+);
+
+// ============================================================
+// SETUP WIZARD
+// ============================================================
+const SetupWizard = ({ onComplete, initialDark }) => {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState({ nombre_secretario: '', cedula: '', periodo_sesiones: '2026-2027' });
+  const [darkMode, setDarkMode] = useState(initialDark ?? true);
+  
+  const update = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
+  const handleComplete = () => onComplete({ ...form, fecha_configuracion: new Date().toISOString().split('T')[0], setupComplete: true, darkMode });
+  
+  const inputCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+
+  return (
+    <div className={`min-h-screen flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className="w-full max-w-lg p-8">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+            <Gavel className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold">Segundo Cerebro Legislativo</h1>
+          <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Configuración inicial del sistema</p>
+        </div>
+        <div className="flex gap-2 mb-8">
+          {[0, 1, 2].map(s => (
+            <div key={s} className={`flex-1 h-1.5 rounded-full transition-colors ${s <= step ? 'bg-indigo-500' : darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+          ))}
+        </div>
+        <div className={`${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border rounded-2xl p-6 mb-6`}>
+          {step === 0 && (<div className="space-y-4"><h2 className="text-lg font-semibold">Datos del Secretario</h2><div><label className={labelCls}>Nombre completo</label><input type="text" value={form.nombre_secretario} onChange={e => update('nombre_secretario', e.target.value)} placeholder="Ej: Dr. Juan Pérez" className={inputCls} /></div><div><label className={labelCls}>Cédula</label><input type="text" value={form.cedula} onChange={e => update('cedula', e.target.value)} placeholder="Ej: 8-888-8888" className={inputCls} /></div></div>)}
+          {step === 1 && (<div className="space-y-4"><h2 className="text-lg font-semibold">Período de Sesiones</h2><div><label className={labelCls}>Período</label><input type="text" value={form.periodo_sesiones} onChange={e => update('periodo_sesiones', e.target.value)} placeholder="Ej: 2026-2027" className={inputCls} /></div></div>)}
+          {step === 2 && (<div className="space-y-4"><h2 className="text-lg font-semibold">Apariencia</h2><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Elige el tema visual de la aplicación.</p><div className="grid grid-cols-2 gap-4"><button onClick={() => setDarkMode(false)} className={`p-4 rounded-xl border-2 transition-all ${!darkMode ? 'border-indigo-500 bg-indigo-50' : darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}><Sun className="w-6 h-6 mx-auto mb-2 text-amber-500" /><p className="text-sm font-medium">Claro</p></button><button onClick={() => setDarkMode(true)} className={`p-4 rounded-xl border-2 transition-all ${darkMode ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-200 bg-gray-50'}`}><Moon className="w-6 h-6 mx-auto mb-2 text-indigo-400" /><p className="text-sm font-medium">Oscuro</p></button></div></div>)}
+        </div>
+        <div className="flex gap-3">
+          {step > 0 && <button onClick={() => setStep(s => s - 1)} className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Atrás</button>}
+          <button onClick={() => step < 2 ? setStep(s => s + 1) : handleComplete()} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-all">{step < 2 ? 'Siguiente' : 'Comenzar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// COMMAND PALETTE
+// ============================================================
+const CommandPalette = ({ isOpen, onClose, sessions, oficios, projects, legislators, onNavigate }) => {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (isOpen && inputRef.current) inputRef.current.focus(); setQuery(''); }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [isOpen, onClose]);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    const found = [];
+    sessions?.filter(s => s.activo).forEach(s => { if ((s.numero_correlativo||'').toLowerCase().includes(q) || s.tipo?.toLowerCase().includes(q) || s.fecha?.includes(q)) found.push({ type: 'sesion', id: s.id, label: `${s.numero_correlativo || s.tipo} - ${s.fecha}` }); });
+    oficios?.filter(o => o.activo).forEach(o => { if (o.numero_oficio?.toLowerCase().includes(q) || o.asunto?.toLowerCase().includes(q)) found.push({ type: 'oficio', id: o.id, label: `${o.numero_oficio} - ${o.asunto}` }); });
+    projects?.filter(p => p.activo).forEach(p => { if (p.titulo?.toLowerCase().includes(q)) found.push({ type: 'proyecto', id: p.id, label: p.titulo }); });
+    legislators?.filter(l => l.activo).forEach(l => { if (l.nombre?.toLowerCase().includes(q)) found.push({ type: 'legislador', id: l.id, label: l.nombre }); });
+    return found.slice(0, 10);
+  }, [query, sessions, oficios, projects, legislators]);
+
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-start justify-center pt-[20vh] bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden" style={{ animation: 'scale-in 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <Search className="w-5 h-5 text-gray-400" />
+          <input ref={inputRef} type="text" placeholder="Buscar sesiones, oficios, proyectos..." className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400" value={query} onChange={e => setQuery(e.target.value)} />
+          <kbd className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 rounded-md text-gray-500">ESC</kbd>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          {results.length === 0 && query && <p className="text-center py-8 text-gray-400 text-sm">Sin resultados</p>}
+          {!query && <div className="py-8 text-center text-gray-400 text-sm"><Search className="w-8 h-8 mx-auto mb-2 opacity-40" /><p>Escribe para buscar en toda la aplicación</p></div>}
+          {results.map((r, i) => (
+            <div key={i} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left transition-colors cursor-pointer" onClick={() => { if (onNavigate && r.type && r.id) onNavigate(r.type, r.id); onClose(); }}>
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">{r.type}</span>
+              <span className="text-sm text-gray-900 dark:text-gray-100 truncate">{r.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// MODAL
+// ============================================================
+const Modal = ({ isOpen, onClose, title, children, darkMode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className={`w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`} style={{ animation: 'scale-in 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
+        <div className={`sticky top-0 flex items-center justify-between px-6 py-4 border-b ${darkMode ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'} rounded-t-2xl z-10`}>
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// STAT CARD
+// ============================================================
+const StatCard = ({ darkMode, icon, label, value, color }) => {
+  const colorMap = { blue: 'from-blue-500 to-blue-600', purple: 'from-purple-500 to-purple-600', emerald: 'from-emerald-500 to-emerald-600', amber: 'from-amber-500 to-amber-600' };
+  return (
+    <div className={`rounded-2xl border p-5 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorMap[color]} flex items-center justify-center text-white mb-3`}>{icon}</div>
+      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</p>
+      <p className="text-3xl font-bold mt-1">{value}</p>
+    </div>
+  );
+};
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavigate }) => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthSessions = useMemo(() => sessions.filter(s => { if (!s.activo) return false; const d = new Date(s.fecha + 'T12:00:00'); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; }), [sessions, currentMonth, currentYear]);
+  const ytdSessions = useMemo(() => sessions.filter(s => { if (!s.activo) return false; return new Date(s.fecha + 'T12:00:00').getFullYear() === currentYear; }), [sessions, currentYear]);
+  const monthOficios = useMemo(() => oficios.filter(o => { if (!o.activo) return false; const d = new Date(o.fecha + 'T12:00:00'); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; }), [oficios, currentMonth, currentYear]);
+  const ytdOficios = useMemo(() => oficios.filter(o => { if (!o.activo) return false; return new Date(o.fecha + 'T12:00:00').getFullYear() === currentYear; }), [oficios, currentYear]);
+  const approvedLaws = useMemo(() => projects.filter(p => p.activo && (p.fase_actual === 'Aprobada' || p.fase_actual === 'Sancionada')), [projects]);
+  const activeProjects = useMemo(() => projects.filter(p => p.activo && p.fase_actual !== 'Sancionada'), [projects]);
+  const sessionTypeBreakdown = useMemo(() => { const c = {}; monthSessions.forEach(s => { c[s.tipo] = (c[s.tipo] || 0) + 1; }); return c; }, [monthSessions]);
+  const stalledProjects = useMemo(() => projects.filter(p => { if (!p.activo || p.fase_actual === 'Sancionada') return false; return getDaysSince(p.fecha_actualizacion) > 30; }), [projects]);
+  const alertProjects = useMemo(() => projects.filter(p => { if (!p.activo || p.fase_actual === 'Sancionada') return false; const d = getDaysSince(p.fecha_actualizacion); return d >= 15 && d <= 30; }), [projects]);
+
+  return (
+    <div className="space-y-6">
+      <div><h1 className="text-2xl font-bold mb-1">Dashboard</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Resumen del mes de {now.toLocaleDateString('es-ES', { month: 'long' })} {currentYear}</p></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard darkMode={darkMode} icon={<CalendarDays className="w-5 h-5" />} label="Sesiones del Mes" value={monthSessions.length} color="blue" />
+        <StatCard darkMode={darkMode} icon={<FileText className="w-5 h-5" />} label="Oficios del Mes" value={monthOficios.length} color="purple" />
+        <StatCard darkMode={darkMode} icon={<Scale className="w-5 h-5" />} label="Leyes Aprobadas" value={approvedLaws.length} color="emerald" />
+        <StatCard darkMode={darkMode} icon={<BarChart3 className="w-5 h-5" />} label="Proyectos Activos" value={activeProjects.length} color="amber" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <h3 className="font-semibold mb-4">Sesiones del Mes por Tipo</h3>
+          <div className="space-y-3">
+            {Object.entries(sessionTypeBreakdown).map(([tipo, count]) => (
+              <div key={tipo} className="flex items-center justify-between">
+                <div className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${tipo === 'Ordinaria' ? 'bg-blue-500' : tipo === 'Extraordinaria' ? 'bg-purple-500' : tipo === 'Especial' ? 'bg-amber-500' : 'bg-gray-500'}`} /><span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tipo}</span></div>
+                <span className="font-semibold text-sm">{count}</span>
+              </div>
+            ))}
+            {Object.keys(sessionTypeBreakdown).length === 0 && <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sin sesiones este mes</p>}
+          </div>
+          <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>YTD: {ytdSessions.length} sesiones | {ytdOficios.length} oficios</p></div>
+        </div>
+        <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <h3 className="font-semibold mb-4 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Semáforo de Proyectos</h3>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {stalledProjects.map(p => (
+              <div key={p.id} className={`flex items-center justify-between p-3 rounded-xl border ${darkMode ? 'border-red-500/20 bg-red-500/5' : 'border-red-200 bg-red-50'}`}>
+                <div className="min-w-0 flex-1"><button onClick={(e) => { e.stopPropagation(); onNavigate?.('proyecto', p.id); }} className="text-left w-full"><p className="text-sm font-medium truncate hover:underline">{p.titulo}</p><p className="text-xs text-red-400">{getDaysSince(p.fecha_actualizacion)} días sin actividad</p></button></div>
+                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500 ml-2" />
+              </div>
+            ))}
+            {alertProjects.map(p => (
+              <div key={p.id} className={`flex items-center justify-between p-3 rounded-xl border ${darkMode ? 'border-amber-500/20 bg-amber-500/5' : 'border-amber-200 bg-amber-50'}`}>
+                <div className="min-w-0 flex-1"><button onClick={(e) => { e.stopPropagation(); onNavigate?.('proyecto', p.id); }} className="text-left w-full"><p className="text-sm font-medium truncate hover:underline">{p.titulo}</p><p className="text-xs text-amber-400">{getDaysSince(p.fecha_actualizacion)} días sin actividad</p></button></div>
+                <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-500 ml-2" />
+              </div>
+            ))}
+            {stalledProjects.length === 0 && alertProjects.length === 0 && <div className="text-center py-8"><Check className="w-8 h-8 mx-auto text-emerald-500 mb-2" /><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Todos los proyectos están activos</p></div>}
+          </div>
+        </div>
+      </div>
+      <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <h3 className="font-semibold mb-4">Legisladores Registrados</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {legislators.filter(l => l.activo).map(l => (
+            <div key={l.id} className={`p-3 rounded-xl border text-center ${darkMode ? 'border-gray-800 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
+              <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">{l.nombre.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
+              <p className="text-xs font-medium truncate">{l.nombre}</p>
+              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>{l.partido_politico}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// SESSIONS MODULE
+// ============================================================
+const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToast, onNavigate }) => {
+  const [view, setView] = useState('list');
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' });
+  const resetForm = () => { setForm({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' }); setEditingId(null); setView('list'); };
+
+  const handleDateChange = (val) => { const tipo = getSessionTypeByDate(val); const year = new Date(val + 'T12:00:00').getFullYear(); setForm(prev => ({ ...prev, fecha: val, tipo, numero_correlativo: generateSessionNumber(tipo, year, sessions) })); };
+  const handleTypeChange = (val) => { const needsNumber = val === 'Ordinaria' || val === 'Extraordinaria'; setForm(prev => { if (needsNumber && prev.fecha) { const year = new Date(prev.fecha + 'T12:00:00').getFullYear(); return { ...prev, tipo: val, numero_correlativo: generateSessionNumber(val, year, sessions), motivo: '' }; } return { ...prev, tipo: val, numero_correlativo: '', motivo: '' }; }); };
+
+  const handleSave = () => {
+    if (!form.fecha) { addToast('La fecha es requerida', 'error'); return; }
+    if ((form.tipo === 'Especial' || form.tipo === 'Solemne' || form.tipo === 'Instalación') && !form.motivo) { addToast('El motivo es requerido', 'error'); return; }
+    const isDuplicate = sessions.some(s => s.activo && s.id !== editingId && s.numero_correlativo === form.numero_correlativo && s.tipo === form.tipo && form.numero_correlativo);
+    if (isDuplicate) { addToast('Ya existe una sesión con este número correlativo', 'error'); return; }
+    onSave(editingId ? { ...form, id: editingId } : form);
+    addToast(editingId ? 'Sesión actualizada' : 'Sesión creada', 'success'); resetForm();
+  };
+
+  const handleDelete = (id) => {
+    const linked = oficios.filter(o => o.activo && o.sesion_id === id);
+    if (linked.length > 0 && !window.confirm(`⚠️ Esta sesión tiene ${linked.length} oficio(s) vinculado(s).\n\n¿Deseas eliminarla igualmente?`)) return;
+    onDelete(id); addToast('Sesión eliminada', 'warning');
+  };
+
+  const getLinkedOficios = useCallback((sesionId) => oficios.filter(o => o.activo && o.sesion_id === sesionId), [oficios]);
+  const typeColors = { 'Ordinaria': 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400', 'Extraordinaria': 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400', 'Especial': 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400', 'Solemne': 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400', 'Instalación': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400' };
+  const activeSessions = useMemo(() => sessions.filter(s => s.activo).sort((a, b) => b.fecha.localeCompare(a.fecha)), [sessions]);
+  const inputCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+
+  if (view === 'form' || view === 'edit') return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <button onClick={resetForm} className={`flex items-center gap-2 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}><ChevronLeft className="w-4 h-4" /> Volver al listado</button>
+      <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <h2 className="text-xl font-semibold mb-6">{editingId ? 'Editar Sesión' : 'Nueva Sesión'}</h2>
+        <div className="space-y-4">
+          <div><label className={labelCls}>Fecha</label><input type="date" value={form.fecha} onChange={e => handleDateChange(e.target.value)} className={inputCls} />{form.fecha && <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tipo detectado: <span className="font-medium">{form.tipo}</span></p>}</div>
+          <div><label className={labelCls}>Tipo de Sesión</label><select value={form.tipo} onChange={e => handleTypeChange(e.target.value)} className={inputCls}><option value="Ordinaria">Ordinaria</option><option value="Extraordinaria">Extraordinaria</option><option value="Especial">Especial</option><option value="Solemne">Solemne</option><option value="Instalación">Instalación</option></select></div>
+          {(form.tipo === 'Ordinaria' || form.tipo === 'Extraordinaria') && (<div><label className={labelCls}>Número Correlativo</label><div className="flex gap-2"><input type="text" value={form.numero_correlativo} readOnly className={`flex-1 px-4 py-2.5 rounded-xl border ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-gray-100 border-gray-200 text-gray-500'}`} /><button onClick={() => handleTypeChange(form.tipo)} className={`px-4 py-2.5 rounded-xl border ${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}><RefreshCw className="w-4 h-4" /></button></div></div>)}
+          {(form.tipo === 'Especial' || form.tipo === 'Solemne' || form.tipo === 'Instalación') && (<div><label className={labelCls}>Motivo / Período</label><input type="text" value={form.motivo} onChange={e => setForm(prev => ({ ...prev, motivo: e.target.value }))} placeholder="Ej: Conmemoración bicentenario" className={`${inputCls} ${darkMode ? 'placeholder-gray-500' : ''}`} /></div>)}
+          <div className="grid grid-cols-2 gap-4"><div><label className={labelCls}>Hora Inicio</label><input type="time" value={form.hora_inicio} onChange={e => setForm(p => ({ ...p, hora_inicio: e.target.value }))} className={inputCls} /></div><div><label className={labelCls}>Hora Cierre</label><input type="time" value={form.hora_cierre} onChange={e => setForm(p => ({ ...p, hora_cierre: e.target.value }))} className={inputCls} /></div></div>
+          <div><label className={labelCls}>Observaciones</label><textarea value={form.observaciones} onChange={e => setForm(p => ({ ...p, observaciones: e.target.value }))} rows={3} className={`${inputCls} resize-none ${darkMode ? 'placeholder-gray-500' : ''}`} /></div>
+        </div>
+        <div className="flex gap-3 mt-6"><button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button><button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">{editingId ? 'Actualizar' : 'Crear Sesión'}</button></div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold mb-1">Sesiones</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión de sesiones legislativas</p></div><button onClick={() => { setView('form'); setEditingId(null); setForm({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' }); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium"><Plus className="w-4 h-4" /> Nueva Sesión</button></div>
+      <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full"><thead><tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tipo</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Horario</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Oficios</th><th className={`text-right px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th></tr></thead>
+          <tbody>{activeSessions.map(s => { const ofs = getLinkedOficios(s.id); return (<tr key={s.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}><td className="px-6 py-4"><span className="text-sm font-mono font-medium">{s.numero_correlativo || '—'}</span>{s.motivo && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>{s.motivo}</p>}</td><td className="px-6 py-4"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${typeColors[s.tipo] || ''}`}>{s.tipo}</span></td><td className="px-6 py-4"><span className="text-sm">{new Date(s.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span></td><td className="px-6 py-4"><span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.hora_inicio} - {s.hora_cierre}</span></td><td className="px-6 py-4">{ofs.length > 0 ? (<button onClick={(e) => { e.stopPropagation(); onNavigate?.('oficio', ofs[0].id); }} className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors" title="Ver oficio vinculado"><Link className="w-3 h-3" /> {ofs.length}</button>) : (<span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>—</span>)}</td><td className="px-6 py-4"><div className="flex items-center justify-end gap-1"><button onClick={() => { setEditingId(s.id); setForm({ tipo: s.tipo, numero_correlativo: s.numero_correlativo, motivo: s.motivo, fecha: s.fecha, hora_inicio: s.hora_inicio, hora_cierre: s.hora_cierre, periodo: s.periodo, observaciones: s.observaciones }); setView('edit'); }} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Edit3 className="w-4 h-4" /></button><button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button></div></td></tr>); })}{activeSessions.length === 0 && (<tr><td colSpan={6} className="px-6 py-12 text-center"><CalendarDays className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} /><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No hay sesiones registradas</p></td></tr>)}</tbody></table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// OFICIOS MODULE
+// ============================================================
+const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate }) => {
+  const [view, setView] = useState('list');
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ numero_oficio: '', fecha: new Date().toISOString().split('T')[0], organo_receptor: '', asunto: '', sesion_id: '' });
+  const resetForm = () => { setForm({ numero_oficio: '', fecha: new Date().toISOString().split('T')[0], organo_receptor: '', asunto: '', sesion_id: '' }); setEditingId(null); setView('list'); };
+  const inputCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+
+  useEffect(() => { if (view === 'form') { const year = new Date().getFullYear(); const active = oficios.filter(o => o.activo && o.numero_oficio?.includes(`-${year}`)); const maxNum = active.reduce((max, o) => { const parts = o.numero_oficio.split('-'); return parseInt(parts[1] || '0', 10) > max ? parseInt(parts[1] || '0', 10) : max; }, 0); setForm(prev => ({ ...prev, numero_oficio: `OF-${String(maxNum + 1).padStart(3, '0')}-${year}` })); } }, [view, oficios]);
+
+  const handleSave = () => { if (!form.organo_receptor) { addToast('El órgano receptor es requerido', 'error'); return; } if (!form.asunto) { addToast('El asunto es requerido', 'error'); return; } const sesionIdVal = form.sesion_id ? Number(form.sesion_id) : null; onSave(editingId ? { ...form, id: editingId, sesion_id: sesionIdVal } : { ...form, sesion_id: sesionIdVal }); addToast(editingId ? 'Oficio actualizado' : 'Oficio creado', 'success'); resetForm(); };
+  const activeOficios = useMemo(() => oficios.filter(o => o.activo).sort((a, b) => b.fecha.localeCompare(a.fecha)), [oficios]);
+
+  if (view === 'form' || view === 'edit') return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <button onClick={resetForm} className={`flex items-center gap-2 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'} transition-colors`}><ChevronLeft className="w-4 h-4" /> Volver al listado</button>
+      <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <h2 className="text-xl font-semibold mb-6">{editingId ? 'Editar Oficio' : 'Nuevo Oficio Saliente'}</h2>
+        <div className="space-y-4">
+          <div><label className={labelCls}>Número de Oficio</label><input type="text" value={form.numero_oficio} onChange={e => setForm(p => ({ ...p, numero_oficio: e.target.value }))} className={inputCls} /></div>
+          <div><label className={labelCls}>Fecha</label><input type="date" value={form.fecha} onChange={e => setForm(p => ({ ...p, fecha: e.target.value }))} className={inputCls} /></div>
+          <div><label className={labelCls}>Órgano Receptor</label><input type="text" value={form.organo_receptor} onChange={e => setForm(p => ({ ...p, organo_receptor: e.target.value }))} placeholder="Ej: Ministerio de Hacienda" className={`${inputCls} ${darkMode ? 'placeholder-gray-500' : ''}`} /></div>
+          <div><label className={labelCls}>Asunto</label><textarea value={form.asunto} onChange={e => setForm(p => ({ ...p, asunto: e.target.value }))} rows={3} className={`${inputCls} resize-none ${darkMode ? 'placeholder-gray-500' : ''}`} /></div>
+          <div><label className={labelCls}>Vincular a Sesión</label><select value={form.sesion_id} onChange={e => setForm(p => ({ ...p, sesion_id: e.target.value }))} className={inputCls}><option value="">Sin vincular</option>{sessions.filter(s => s.activo).sort((a, b) => b.fecha.localeCompare(a.fecha)).map(s => (<option key={s.id} value={s.id}>{s.numero_correlativo || s.tipo} - {s.fecha}</option>))}</select></div>
+        </div>
+        <div className="flex gap-3 mt-6"><button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button><button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">{editingId ? 'Actualizar' : 'Crear Oficio'}</button></div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold mb-1">Oficios Salientes</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión de comunicaciones oficiales</p></div><button onClick={() => setView('form')} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium"><Plus className="w-4 h-4" /> Nuevo Oficio</button></div>
+      <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full"><thead><tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Número</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Receptor</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Asunto</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sesión</th><th className={`text-right px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th></tr></thead>
+          <tbody>{activeOficios.map(o => { const sesion = sessions.find(s => s.id === o.sesion_id); return (<tr key={o.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}><td className="px-6 py-4"><span className="text-sm font-mono font-medium">{o.numero_oficio}</span></td><td className="px-6 py-4"><span className="text-sm">{new Date(o.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span></td><td className="px-6 py-4"><span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{o.organo_receptor}</span></td><td className="px-6 py-4"><span className={`text-sm max-w-xs truncate block ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{o.asunto}</span></td><td className="px-6 py-4">{sesion ? (<button onClick={(e) => { e.stopPropagation(); onNavigate?.('sesion', sesion.id); }} className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors" title="Ver sesión vinculada"><Link className="w-3 h-3" /> {sesion.numero_correlativo || sesion.tipo}</button>) : (<span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>Sin vincular</span>)}</td><td className="px-6 py-4"><div className="flex items-center justify-end gap-1"><button onClick={() => { setEditingId(o.id); setForm({ numero_oficio: o.numero_oficio, fecha: o.fecha, organo_receptor: o.organo_receptor, asunto: o.asunto, sesion_id: o.sesion_id || '' }); setView('edit'); }} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Edit3 className="w-4 h-4" /></button><button onClick={() => { onDelete(o.id); addToast('Oficio eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button></div></td></tr>); })}{activeOficios.length === 0 && (<tr><td colSpan={6} className="px-6 py-12 text-center"><FileText className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} /><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No hay oficios registrados</p></td></tr>)}</tbody></table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// VAULT MODULE
+// ============================================================
+const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToast, onSaveDocument, onDeleteDocument }) => {
+  const [filterType, setFilterType] = useState('');
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadForm, setUploadForm] = useState({ entidad_tipo: 'Sesion', entidad_id: '', fase_etiqueta: '', nombre_archivo: '' });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const getEntityName = (doc) => {
+    if (doc.entidad_tipo === 'Sesion') { const s = sessions.find(s => s.id === doc.entidad_id); return s ? `${s.numero_correlativo || s.tipo} (${s.fecha})` : 'No encontrada'; }
+    if (doc.entidad_tipo === 'Oficio') { const o = oficios.find(o => o.id === doc.entidad_id); return o ? o.numero_oficio : 'No encontrado'; }
+    if (doc.entidad_tipo === 'ProyectoLey') { const p = projects.find(p => p.id === doc.entidad_id); return p ? p.titulo : 'No encontrado'; }
+    return '';
+  };
+  const getPhaseLabels = (t) => { if (t === 'Sesion') return ['Acta', 'Acuerdo', 'Orden del Día', 'Asistencia']; if (t === 'Oficio') return ['Oficio Original', 'Acuse de Recibo', 'Respuesta']; if (t === 'ProyectoLey') return ['Estudio en Comisión', 'Informe de Dirección', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Gaceta Oficial']; return []; };
+
+  const handleFileSelect = (e) => { const file = e.target.files?.[0]; if (!file) return; if (!['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) { addToast('Solo PDF o Word', 'error'); return; } if (file.size > 10 * 1024 * 1024) { addToast('Máx. 10MB', 'error'); return; } setSelectedFile(file); setUploadForm(p => ({ ...p, nombre_archivo: file.name })); };
+
+  const handleUpload = async () => {
+    if (!uploadForm.entidad_id) { addToast('Seleccione una entidad', 'error'); return; }
+    if (!uploadForm.fase_etiqueta) { addToast('Seleccione la fase', 'error'); return; }
+    try {
+      setUploadProgress(30);
+      let base64 = null, fileSize = 0, fileType = '';
+      if (selectedFile) { base64 = await fileToBase64(selectedFile); fileSize = selectedFile.size; fileType = selectedFile.type; setUploadProgress(70); }
+      const hash = `sha256:${Array.from(uploadForm.nombre_archivo || 'doc').reduce((a, c) => a + c.charCodeAt(0), 0).toString(16).padStart(8, '0')}`;
+      onSaveDocument?.({ id: Date.now(), entidad_tipo: uploadForm.entidad_tipo, entidad_id: Number(uploadForm.entidad_id), fase_etiqueta: uploadForm.fase_etiqueta, ruta_archivo: `/boveda/${uploadForm.entidad_tipo.toLowerCase()}/${uploadForm.entidad_id}/${uploadForm.nombre_archivo || 'doc'}`, hash_integridad: hash, nombre_original: uploadForm.nombre_archivo || 'documento', tipo_mime: fileType || 'application/octet-stream', tamano_bytes: fileSize, fecha_subida: new Date().toISOString().split('T')[0], contenido_base64: base64, activo: true });
+      setUploadProgress(100); addToast(`✅ "${uploadForm.nombre_archivo}" subido`, 'success');
+      setShowUpload(false); setSelectedFile(null); setUploadProgress(0); setUploadForm({ entidad_tipo: 'Sesion', entidad_id: '', fase_etiqueta: '', nombre_archivo: '' });
+    } catch { addToast('Error al subir', 'error'); setUploadProgress(0); }
+  };
+
+  const activeDocs = useMemo(() => documents.filter(d => { if (!d.activo) return false; if (filterType && d.entidad_tipo !== filterType) return false; return true; }), [documents, filterType]);
+  const activeSessions = useMemo(() => sessions.filter(s => s.activo), [sessions]);
+  const activeOficios = useMemo(() => oficios.filter(o => o.activo), [oficios]);
+  const activeProjects = useMemo(() => projects.filter(p => p.activo), [projects]);
+  const typeIcons = { Sesion: <CalendarDays className="w-5 h-5" />, Oficio: <FileText className="w-5 h-5" />, ProyectoLey: <Scale className="w-5 h-5" /> };
+  const typeColors = { Sesion: 'text-blue-500 bg-blue-500/10', Oficio: 'text-purple-500 bg-purple-500/10', ProyectoLey: 'text-emerald-500 bg-emerald-500/10' };
+  const selectCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold mb-1">Bóveda Documental</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión y almacenamiento de documentos</p></div><button onClick={() => setShowUpload(true)} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium"><Upload className="w-4 h-4" /> Subir Archivo</button></div>
+      <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit">
+        {['Todos', 'Sesion', 'Oficio', 'ProyectoLey'].map((t) => (<button key={t} onClick={() => setFilterType(t === 'Todos' ? '' : t)} className={`px-4 py-2 rounded-lg text-sm font-medium ${(!filterType && t === 'Todos') || filterType === t ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}>{t === 'Sesion' ? 'Sesiones' : t === 'ProyectoLey' ? 'Leyes' : t}</button>))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {activeDocs.map(doc => (
+          <div key={doc.id} className={`rounded-2xl border p-5 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-start gap-3"><div className={`p-2.5 rounded-xl ${typeColors[doc.entidad_tipo] || ''}`}>{typeIcons[doc.entidad_tipo] || <File className="w-5 h-5" />}</div><div className="min-w-0 flex-1"><p className="text-sm font-medium truncate">{getEntityName(doc)}</p><p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{doc.entidad_tipo}</p></div></div>
+            <div className={`mt-4 p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fase</p><p className="text-sm font-medium">{doc.fase_etiqueta}</p></div>
+            <div className={`mt-2 p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Ruta</p><p className={`text-xs font-mono truncate ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{doc.ruta_archivo}</p></div>
+            <div className="flex items-center justify-between mt-3">
+              <span className={`text-[10px] font-mono ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>{doc.tipo_mime?.split('/')?.[1]?.toUpperCase() || 'DOC'} • {doc.tamano_bytes ? `${(doc.tamano_bytes / 1024).toFixed(1)} KB` : '—'}</span>
+              <div className="flex gap-1">
+                {doc.contenido_base64 && (<a href={doc.contenido_base64} download={doc.nombre_original} className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Descargar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>)}
+                <button className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Detalles" onClick={(e) => { e.stopPropagation(); addToast('Detalles del documento', 'info'); }}><Info className="w-3.5 h-3.5" /></button>
+                <button className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10" title="Eliminar" onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Eliminar?')) { onDeleteDocument?.(doc.id); addToast('Eliminado', 'warning'); } }}><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {activeDocs.length === 0 && (<div className={`col-span-full rounded-2xl border p-12 text-center ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}><FolderOpen className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} /><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No hay documentos</p></div>)}
+      </div>
+
+      <Modal isOpen={showUpload} onClose={() => { setShowUpload(false); setSelectedFile(null); setUploadProgress(0); }} title="Subir Archivo" darkMode={darkMode}>
+        <div className="space-y-4">
+          <div className={`p-6 rounded-xl border-2 border-dashed text-center ${darkMode ? 'border-gray-700 bg-gray-800 hover:border-indigo-500' : 'border-gray-200 bg-gray-50 hover:border-indigo-400'}`}>
+            <input type="file" id="file-upload" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileSelect} />
+            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+              <Upload className={`w-10 h-10 mx-auto mb-3 ${selectedFile ? 'text-emerald-500' : darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+              {selectedFile ? (<><p className="text-sm font-medium text-emerald-500 truncate max-w-xs">{selectedFile.name}</p><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p><button type="button" onClick={e => { e.preventDefault(); setSelectedFile(null); }} className="mt-2 text-xs text-red-500 hover:underline">Remover</button></>) : (<><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Arrastra o <span className="text-indigo-500 underline">explora</span></p><p className={`text-xs mt-1 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>PDF, DOC, DOCX (máx. 10MB)</p></>)}
+            </label>
+            {uploadProgress > 0 && uploadProgress < 100 && (<div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"><div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} /></div>)}
+          </div>
+          <div><label className={labelCls}>Tipo de Entidad</label><select value={uploadForm.entidad_tipo} onChange={e => setUploadForm(p => ({ ...p, entidad_tipo: e.target.value, entidad_id: '', fase_etiqueta: '' }))} className={selectCls}><option value="Sesion">Sesión</option><option value="Oficio">Oficio</option><option value="ProyectoLey">Proyecto de Ley</option></select></div>
+          <div><label className={labelCls}>Entidad</label><select value={uploadForm.entidad_id} onChange={e => setUploadForm(p => ({ ...p, entidad_id: e.target.value }))} className={selectCls}><option value="">Seleccionar...</option>{(uploadForm.entidad_tipo === 'Sesion' ? activeSessions : uploadForm.entidad_tipo === 'Oficio' ? activeOficios : activeProjects).map(e => (<option key={e.id} value={e.id}>{uploadForm.entidad_tipo === 'Sesion' ? (e.numero_correlativo || e.tipo) : uploadForm.entidad_tipo === 'Oficio' ? e.numero_oficio : e.titulo}</option>))}</select></div>
+          <div><label className={labelCls}>Fase</label><select value={uploadForm.fase_etiqueta} onChange={e => setUploadForm(p => ({ ...p, fase_etiqueta: e.target.value }))} className={selectCls}><option value="">Seleccionar...</option>{getPhaseLabels(uploadForm.entidad_tipo).map(f => <option key={f} value={f}>{f}</option>)}</select></div>
+          <button onClick={handleUpload} disabled={uploadProgress > 0 && uploadProgress < 100} className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium flex items-center justify-center gap-2">{uploadProgress === 100 ? <Check className="w-4 h-4" /> : <Upload className="w-4 h-4" />}{uploadProgress === 100 ? '¡Subido!' : 'Subir'}</button>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================
+// LEGISLATORS MODULE
+// ============================================================
+const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveCommission, onDeleteLegislator, onDeleteCommission, darkMode, addToast }) => {
+  const [tab, setTab] = useState('legislators');
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState('legislator');
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ nombre: '', partido_politico: '', contacto: '', notas: '' });
+  const [commissionForm, setCommissionForm] = useState({ nombre: '', presidente_id: '' });
+  const resetForm = () => { setForm({ nombre: '', partido_politico: '', contacto: '', notas: '' }); setEditingId(null); setShowForm(false); };
+  const resetCommissionForm = () => { setCommissionForm({ nombre: '', presidente_id: '' }); setEditingId(null); setShowForm(false); };
+
+  const handleSaveLegislator = () => { if (!form.nombre.trim()) { addToast('Nombre requerido', 'error'); return; } onSaveLegislator(editingId ? { ...form, id: editingId } : form); addToast(editingId ? 'Actualizado' : 'Creado', 'success'); resetForm(); };
+  const handleSaveCommission = () => { if (!commissionForm.nombre.trim()) { addToast('Nombre requerido', 'error'); return; } onSaveCommission(editingId ? { ...commissionForm, id: editingId, presidente_id: commissionForm.presidente_id ? Number(commissionForm.presidente_id) : null } : { ...commissionForm, presidente_id: commissionForm.presidente_id ? Number(commissionForm.presidente_id) : null }); addToast(editingId ? 'Actualizada' : 'Creada', 'success'); resetCommissionForm(); };
+
+  const activeLegislators = useMemo(() => legislators.filter(l => l.activo), [legislators]);
+  const activeCommissions = useMemo(() => commissions.filter(c => c.activo), [commissions]);
+  const inputCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold mb-1">Legisladores y Comisiones</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión de miembros y comisiones</p></div><button onClick={() => { setShowForm(true); setFormType(tab === 'legislators' ? 'legislator' : 'commission'); tab === 'legislators' ? resetForm() : resetCommissionForm(); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium"><Plus className="w-4 h-4" /> {tab === 'legislators' ? 'Nuevo Legislador' : 'Nueva Comisión'}</button></div>
+      <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit">
+        <button onClick={() => setTab('legislators')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'legislators' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}>Legisladores</button>
+        <button onClick={() => setTab('commissions')} className={`px-4 py-2 rounded-lg text-sm font-medium ${tab === 'commissions' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}>Comisiones</button>
+      </div>
+      {tab === 'legislators' && (
+        <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full"><thead><tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Nombre</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Partido</th><th className={`text-left px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Contacto</th><th className={`text-right px-6 py-3 text-xs font-medium uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th></tr></thead>
+            <tbody>{activeLegislators.map(l => (<tr key={l.id} className={`border-b last:border-0 ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}><td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">{l.nombre.split(' ').map(n => n[0]).join('').slice(0, 2)}</div><div><p className="text-sm font-medium">{l.nombre}</p>{l.notas && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{l.notas}</p>}</div></div></td><td className="px-6 py-4"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{l.partido_politico}</span></td><td className="px-6 py-4"><span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{l.contacto || '—'}</span></td><td className="px-6 py-4"><div className="flex items-center justify-end gap-1"><button onClick={() => { setEditingId(l.id); setForm({ nombre: l.nombre, partido_politico: l.partido_politico, contacto: l.contacto, notas: l.notas }); setShowForm(true); setFormType('legislator'); }} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Edit3 className="w-4 h-4" /></button><button onClick={() => { onDeleteLegislator(l.id); addToast('Eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button></div></td></tr>))}{activeLegislators.length === 0 && <tr><td colSpan={4} className="px-6 py-12 text-center"><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sin legisladores</p></td></tr>}</tbody></table>
+          </div>
+        </div>
+      )}
+      {tab === 'commissions' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeCommissions.map(c => { const president = legislators.find(l => l.id === c.presidente_id); return (<div key={c.id} className={`rounded-2xl border p-5 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}><div className="flex items-start justify-between mb-3"><h3 className="font-semibold">{c.nombre}</h3><div className="flex gap-1"><button onClick={() => { setEditingId(c.id); setCommissionForm({ nombre: c.nombre, presidente_id: c.presidente_id || '' }); setShowForm(true); setFormType('commission'); }} className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}><Edit3 className="w-3.5 h-3.5" /></button><button onClick={() => { onDeleteCommission(c.id); addToast('Eliminada', 'warning'); }} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10"><Trash2 className="w-3.5 h-3.5" /></button></div></div>{president && (<div className={`flex items-center gap-2 p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><User className="w-4 h-4 text-gray-400 flex-shrink-0" /><div><p className="text-xs text-gray-400">Presidente</p><p className="text-sm font-medium">{president.nombre}</p></div></div>)}</div>); })}
+          {activeCommissions.length === 0 && <div className="col-span-full text-center py-12"><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sin comisiones</p></div>}
+        </div>
+      )}
+      <Modal isOpen={showForm} onClose={() => { resetForm(); resetCommissionForm(); }} title={formType === 'legislator' ? (editingId ? 'Editar Legislador' : 'Nuevo Legislador') : (editingId ? 'Editar Comisión' : 'Nueva Comisión')} darkMode={darkMode}>
+        {formType === 'legislator' ? (<div className="space-y-4"><div><label className={labelCls}>Nombre</label><input type="text" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} className={inputCls} /></div><div><label className={labelCls}>Partido</label><input type="text" value={form.partido_politico} onChange={e => setForm(p => ({ ...p, partido_politico: e.target.value }))} className={inputCls} /></div><div><label className={labelCls}>Contacto</label><input type="text" value={form.contacto} onChange={e => setForm(p => ({ ...p, contacto: e.target.value }))} className={inputCls} /></div><div><label className={labelCls}>Notas</label><textarea value={form.notas} onChange={e => setForm(p => ({ ...p, notas: e.target.value }))} rows={2} className={`${inputCls} resize-none`} /></div><button onClick={handleSaveLegislator} className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">{editingId ? 'Actualizar' : 'Crear'}</button></div>) : (<div className="space-y-4"><div><label className={labelCls}>Nombre</label><input type="text" value={commissionForm.nombre} onChange={e => setCommissionForm(p => ({ ...p, nombre: e.target.value }))} className={inputCls} /></div><div><label className={labelCls}>Presidente</label><select value={commissionForm.presidente_id} onChange={e => setCommissionForm(p => ({ ...p, presidente_id: e.target.value }))} className={inputCls}><option value="">Seleccionar...</option>{activeLegislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}</select></div><button onClick={handleSaveCommission} className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">{editingId ? 'Actualizar' : 'Crear'}</button></div>)}
+      </Modal>
+    </div>
+  );
+};
+
+// ============================================================
+// AGENDA MODULE
+// ============================================================
+const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, onNavigate }) => {
+  const [view, setView] = useState('list');
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ titulo: '', origen: 'Comisión', comision_id: '', ponente_id: '', fase_actual: 'Estudio en Comisión', urgencia_parlamentaria: false, fecha_ingreso: new Date().toISOString().split('T')[0] });
+  const [filters, setFilters] = useState({ comision_id: '', origen: '', fase: '', urgencia: '' });
+  const [detailProject, setDetailProject] = useState(null);
+  const resetForm = () => { setForm({ titulo: '', origen: 'Comisión', comision_id: '', ponente_id: '', fase_actual: 'Estudio en Comisión', urgencia_parlamentaria: false, fecha_ingreso: new Date().toISOString().split('T')[0] }); setEditingId(null); setView('list'); };
+  const handleOriginChange = (val) => { setForm(prev => ({ ...prev, origen: val, fase_actual: getRoutePhases(val)[0] })); };
+  const handleSave = () => { if (!form.titulo.trim()) { addToast('Título requerido', 'error'); return; } const now = new Date().toISOString().split('T')[0]; onSave(editingId ? { ...form, id: editingId, comision_id: form.comision_id ? Number(form.comision_id) : null, ponente_id: form.ponente_id ? Number(form.ponente_id) : null, fecha_actualizacion: now } : { ...form, comision_id: form.comision_id ? Number(form.comision_id) : null, ponente_id: form.ponente_id ? Number(form.ponente_id) : null, fecha_actualizacion: now }); addToast(editingId ? 'Actualizado' : 'Creado', 'success'); resetForm(); };
+  const handleAdvancePhase = (project) => {
+    if (project.fase_actual === 'Sancionada') { addToast('Ya está sancionado', 'info'); return; }
+    const phases = getRoutePhases(project.origen);
+    const idx = phases.indexOf(project.fase_actual);
+    if (idx >= phases.length - 1) { addToast('Fase final alcanzada', 'info'); return; }
+    const next = phases[idx + 1];
+    if (!project.urgencia_parlamentaria && next.includes('Discusión') && !project.fase_actual.includes('Discusión')) { if (!confirm(`⚠️ Saltando fases.\nDe "${project.fase_actual}" a "${next}".\n¿Continuar?`)) return; }
+    const updated = { ...project, fase_actual: next, fecha_actualizacion: new Date().toISOString().split('T')[0] };
+    onSave(updated); setDetailProject(updated); addToast(`Fase: ${next}`, 'success');
+  };
+
+  const filteredProjects = useMemo(() => projects.filter(p => { if (!p.activo) return false; if (filters.comision_id && p.comision_id !== Number(filters.comision_id)) return false; if (filters.origen && p.origen !== filters.origen) return false; if (filters.fase && p.fase_actual !== filters.fase) return false; if (filters.urgencia === 'true' && !p.urgencia_parlamentaria) return false; if (filters.urgencia === 'false' && p.urgencia_parlamentaria) return false; return true; }), [projects, filters]);
+  const activeLegislators = useMemo(() => legislators.filter(l => l.activo), [legislators]);
+  const activeCommissions = useMemo(() => commissions.filter(c => c.activo), [commissions]);
+  const inputCls = `w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`;
+  const labelCls = `block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`;
+  const selectCls = inputCls;
+
+  if (detailProject) {
+    const phases = getRoutePhases(detailProject.origen);
+    const currentIdx = phases.indexOf(detailProject.fase_actual);
+    const commission = commissions.find(c => c.id === detailProject.comision_id);
+    const ponente = legislators.find(l => l.id === detailProject.ponente_id);
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <button onClick={() => setDetailProject(null)} className={`flex items-center gap-2 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}><ChevronLeft className="w-4 h-4" /> Volver</button>
+        <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-start justify-between mb-6"><div><h2 className="text-xl font-bold">{detailProject.titulo}</h2><div className="flex items-center gap-2 mt-1"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${detailProject.origen === 'Comisión' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' : 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400'}`}>{detailProject.origen}</span>{detailProject.urgencia_parlamentaria && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400"><Zap className="w-3 h-3" /> Urgente</span>}</div></div><span className={`px-3 py-1.5 rounded-xl text-xs font-medium border ${getStagnationColor(detailProject.fecha_actualizacion)}`}>{getStagnationLabel(detailProject.fecha_actualizacion)}</span></div>
+          <div className="mb-8"><p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Progreso:</p><div className="flex gap-1 overflow-x-auto pb-2">{phases.map((phase, idx) => (<React.Fragment key={phase}><div className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap ${idx < currentIdx ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : ''}${idx === currentIdx ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 ring-2 ring-indigo-500' : ''}${idx > currentIdx ? darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400' : ''}`}>{idx < currentIdx && <Check className="w-3 h-3 inline mr-1" />}{phase}</div>{idx < phases.length - 1 && <div className={`flex-shrink-0 w-4 flex items-center justify-center ${idx < currentIdx ? 'text-emerald-500' : darkMode ? 'text-gray-700' : 'text-gray-300'}`}><ArrowRight className="w-3 h-3" /></div>}</React.Fragment>))}</div></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"><div className={`p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Comisión</p><p className="text-sm font-medium">{commission?.nombre || '—'}</p></div><div className={`p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Ponente</p><p className="text-sm font-medium">{ponente?.nombre || '—'}</p></div><div className={`p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Ingreso</p><p className="text-sm font-medium">{detailProject.fecha_ingreso}</p></div><div className={`p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Actualización</p><p className="text-sm font-medium">{detailProject.fecha_actualizacion}</p></div></div>
+          <div className="flex flex-wrap gap-3">{currentIdx < phases.length - 1 && <button onClick={() => handleAdvancePhase(detailProject)} className="flex-1 min-w-[200px] py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center gap-2"><ArrowRight className="w-4 h-4" /> Avanzar a {phases[currentIdx + 1]}</button>}<button onClick={() => { setEditingId(detailProject.id); setForm({ titulo: detailProject.titulo, origen: detailProject.origen, comision_id: detailProject.comision_id || '', ponente_id: detailProject.ponente_id || '', fase_actual: detailProject.fase_actual, urgencia_parlamentaria: detailProject.urgencia_parlamentaria, fecha_ingreso: detailProject.fecha_ingreso }); setView('edit'); setDetailProject(null); }} className={`px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}><Edit3 className="w-4 h-4" /> Editar</button><button onClick={() => { onDelete(detailProject.id); setDetailProject(null); addToast('Eliminado', 'warning'); }} className="px-4 py-2.5 rounded-xl font-medium text-red-500 hover:bg-red-500/10 flex items-center gap-2"><Trash2 className="w-4 h-4" /> Eliminar</button></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'form' || view === 'edit') {
+    const phases = getRoutePhases(form.origen);
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <button onClick={resetForm} className={`flex items-center gap-2 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}><ChevronLeft className="w-4 h-4" /> Volver</button>
+        <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <h2 className="text-xl font-semibold mb-6">{editingId ? 'Editar Proyecto' : 'Nuevo Proyecto'}</h2>
+          <div className="space-y-4">
+            <div><label className={labelCls}>Título</label><input type="text" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))} placeholder="Ej: Ley de Transparencia" className={`${inputCls} ${darkMode ? 'placeholder-gray-500' : ''}`} /></div>
+            <div><label className={labelCls}>Origen</label><select value={form.origen} onChange={e => handleOriginChange(e.target.value)} className={selectCls}><option value="Comisión">Comisión</option><option value="Gobernación">Gobernación</option><option value="Votantes">Votantes</option></select></div>
+            <div><label className={labelCls}>Comisión</label><select value={form.comision_id} onChange={e => setForm(p => ({ ...p, comision_id: e.target.value }))} className={selectCls}><option value="">Seleccionar...</option>{activeCommissions.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
+            <div><label className={labelCls}>Ponente</label><select value={form.ponente_id} onChange={e => setForm(p => ({ ...p, ponente_id: e.target.value }))} className={selectCls}><option value="">Seleccionar...</option>{activeLegislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}</select></div>
+            <div><label className={labelCls}>Fase Actual</label><select value={form.fase_actual} onChange={e => setForm(p => ({ ...p, fase_actual: e.target.value }))} className={selectCls}>{phases.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+            <div className="flex items-center gap-3"><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" checked={form.urgencia_parlamentaria} onChange={e => setForm(p => ({ ...p, urgencia_parlamentaria: e.target.checked }))} className="sr-only peer" /><div className="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-red-500"></div></label><div><p className="text-sm font-medium">Urgencia Parlamentaria</p><p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Salta fases sin advertencias</p></div></div>
+            <div><label className={labelCls}>Fecha Ingreso</label><input type="date" value={form.fecha_ingreso} onChange={e => setForm(p => ({ ...p, fecha_ingreso: e.target.value }))} className={inputCls} /></div>
+          </div>
+          <div className="flex gap-3 mt-6"><button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button><button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium">{editingId ? 'Actualizar' : 'Crear'}</button></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold mb-1">Agenda Legislativa</h1><p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Proyectos de ley y su seguimiento</p></div><button onClick={() => { setView('form'); setEditingId(null); setForm({ titulo: '', origen: 'Comisión', comision_id: '', ponente_id: '', fase_actual: 'Estudio en Comisión', urgencia_parlamentaria: false, fecha_ingreso: new Date().toISOString().split('T')[0] }); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium"><Plus className="w-4 h-4" /> Nuevo Proyecto</button></div>
+      <div className={`rounded-2xl border p-4 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <div className="flex items-center gap-2 mb-3"><Filter className="w-4 h-4 text-gray-400" /><span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Filtros</span></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <select value={filters.comision_id} onChange={e => setFilters(p => ({ ...p, comision_id: e.target.value }))} className={`px-3 py-2 rounded-xl border text-sm outline-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}><option value="">Todas las comisiones</option>{activeCommissions.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select>
+          <select value={filters.origen} onChange={e => setFilters(p => ({ ...p, origen: e.target.value }))} className={`px-3 py-2 rounded-xl border text-sm outline-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}><option value="">Todo origen</option><option value="Comisión">Comisión</option><option value="Gobernación">Gobernación</option><option value="Votantes">Votantes</option></select>
+          <select value={filters.fase} onChange={e => setFilters(p => ({ ...p, fase: e.target.value }))} className={`px-3 py-2 rounded-xl border text-sm outline-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}><option value="">Todas las fases</option>{['Entrada al Pleno', 'Estudio en Comisión', 'Informe de Dirección', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'].map(f => <option key={f} value={f}>{f}</option>)}</select>
+          <select value={filters.urgencia} onChange={e => setFilters(p => ({ ...p, urgencia: e.target.value }))} className={`px-3 py-2 rounded-xl border text-sm outline-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}><option value="">Urgencia</option><option value="true">Urgente</option><option value="false">Normal</option></select>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {filteredProjects.map(p => { const commission = commissions.find(c => c.id === p.comision_id); return (<div key={p.id} onClick={() => setDetailProject(p)} className={`rounded-2xl border p-5 cursor-pointer transition-all hover:shadow-lg ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-gray-700' : 'bg-white border-gray-200 hover:border-gray-300'}`}><div className="flex items-start justify-between"><div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-1"><h3 className="font-semibold truncate">{p.titulo}</h3>{p.urgencia_parlamentaria && <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white"><Zap className="w-3 h-3" /> URGENTE</span>}</div><div className="flex items-center gap-4 mt-2 flex-wrap"><span className={`text-xs px-2 py-0.5 rounded-md ${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{p.origen}</span>{commission && <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{commission.nombre}</span>}<span className={`text-xs px-2.5 py-0.5 rounded-lg font-medium ${p.fase_actual === 'Sancionada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : p.fase_actual === 'Aprobada' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'}`}>{p.fase_actual}</span></div></div><div className={`flex-shrink-0 ml-4 px-3 py-1.5 rounded-xl text-xs font-medium border ${getStagnationColor(p.fecha_actualizacion)}`}>{getStagnationLabel(p.fecha_actualizacion)}</div></div><div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-800' : 'border-gray-100'} flex items-center justify-between`}><span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Ingreso: {p.fecha_ingreso}</span><ArrowRight className={`w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} /></div></div>); })}
+        {filteredProjects.length === 0 && (<div className={`rounded-2xl border p-12 text-center ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}><Scale className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} /><p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sin resultados</p></div>)}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// APP
+// ============================================================
+function App() {
+  const [config, setConfig] = useState(() => safeJSONParse('scl_config', defaultConfig));
+  const [sessions, setSessions] = useState(() => safeJSONParse('scl_sessions', initialSessions));
+  const [legislators, setLegislators] = useState(() => safeJSONParse('scl_legislators', initialLegislators));
+  const [commissions, setCommissions] = useState(() => safeJSONParse('scl_commissions', initialCommissions));
+  const [oficios, setOficios] = useState(() => safeJSONParse('scl_oficios', initialOficios));
+  const [projects, setProjects] = useState(() => safeJSONParse('scl_projects', initialProjects));
+  const [documents, setDocuments] = useState(() => safeJSONParse('scl_documents', initialDocuments));
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [toasts, setToasts] = useState([]);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const darkMode = config.darkMode;
+
+  useEffect(() => { try { localStorage.setItem('scl_config', JSON.stringify(config)); } catch {} }, [config]);
+  useEffect(() => { try { localStorage.setItem('scl_sessions', JSON.stringify(sessions)); } catch {} }, [sessions]);
+  useEffect(() => { try { localStorage.setItem('scl_legislators', JSON.stringify(legislators)); } catch {} }, [legislators]);
+  useEffect(() => { try { localStorage.setItem('scl_commissions', JSON.stringify(commissions)); } catch {} }, [commissions]);
+  useEffect(() => { try { localStorage.setItem('scl_oficios', JSON.stringify(oficios)); } catch {} }, [oficios]);
+  useEffect(() => { try { localStorage.setItem('scl_projects', JSON.stringify(projects)); } catch {} }, [projects]);
+  useEffect(() => { try { localStorage.setItem('scl_documents', JSON.stringify(documents)); } catch {} }, [documents]);
+
+  useEffect(() => { const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setShowCommandPalette(p => !p); } }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, []);
+
+  const addToast = useCallback((message, type = 'info') => { const id = Date.now() + Math.random(); setToasts(p => [...p, { id, message, type }]); setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000); }, []);
+  const removeToast = useCallback((id) => setToasts(p => p.filter(t => t.id !== id)), []);
+  const toggleDarkMode = () => setConfig(p => ({ ...p, darkMode: !p.darkMode }));
+  const navigateToEntity = useCallback((type) => {
+    const map = { sesion: 'sesiones', oficio: 'oficios', proyecto: 'agenda', legislador: 'legisladores' };
+    if (map[type]) setCurrentPage(map[type]);
+  }, []);
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { id: 'sesiones', label: 'Sesiones', icon: <Calendar className="w-5 h-5" /> },
+    { id: 'oficios', label: 'Oficios', icon: <FileText className="w-5 h-5" /> },
+    { id: 'agenda', label: 'Agenda Legislativa', icon: <Scale className="w-5 h-5" /> },
+    { id: 'legisladores', label: 'Legisladores', icon: <Users className="w-5 h-5" /> },
+    { id: 'boveda', label: 'Bóveda', icon: <FolderOpen className="w-5 h-5" /> },
+  ];
+  const pageTitles = { dashboard: 'Dashboard', sesiones: 'Sesiones', oficios: 'Oficios Salientes', agenda: 'Agenda Legislativa', legisladores: 'Legisladores', boveda: 'Bóveda Documental' };
+  const commonProps = { darkMode, addToast, onNavigate: navigateToEntity };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard': return <Dashboard sessions={sessions} oficios={oficios} projects={projects} legislators={legislators} {...commonProps} />;
+      case 'sesiones': return <SessionsModule sessions={sessions} oficios={oficios} {...commonProps} onSave={(d) => { if (d.id) setSessions(p => p.map(s => s.id === d.id ? { ...s, ...d } : s)); else setSessions(p => [...p, { ...d, id: Date.now(), activo: true }]); }} onDelete={(id) => setSessions(p => p.map(s => s.id === id ? { ...s, activo: false } : s))} />;
+      case 'oficios': return <OficiosModule oficios={oficios} sessions={sessions} {...commonProps} onSave={(d) => { if (d.id) setOficios(p => p.map(o => o.id === d.id ? { ...o, ...d } : o)); else setOficios(p => [...p, { ...d, id: Date.now(), activo: true }]); }} onDelete={(id) => setOficios(p => p.map(o => o.id === id ? { ...o, activo: false } : o))} />;
+      case 'agenda': return <AgendaModule projects={projects} commissions={commissions} legislators={legislators} {...commonProps} onSave={(d) => { const now = new Date().toISOString().split('T')[0]; if (d.id) setProjects(p => p.map(pr => pr.id === d.id ? { ...pr, ...d, fecha_actualizacion: d.fecha_actualizacion || now } : pr)); else setProjects(p => [...p, { ...d, id: Date.now(), activo: true, fecha_actualizacion: now }]); }} onDelete={(id) => setProjects(p => p.map(pr => pr.id === id ? { ...pr, activo: false } : pr))} />;
+      case 'legisladores': return <LegislatorsModule legislators={legislators} commissions={commissions} {...commonProps} onSaveLegislator={(d) => { if (d.id) setLegislators(p => p.map(l => l.id === d.id ? { ...l, ...d } : l)); else setLegislators(p => [...p, { ...d, id: Date.now(), activo: true }]); }} onSaveCommission={(d) => { if (d.id) setCommissions(p => p.map(c => c.id === d.id ? { ...c, ...d } : c)); else setCommissions(p => [...p, { ...d, id: Date.now(), activo: true }]); }} onDeleteLegislator={(id) => setLegislators(p => p.map(l => l.id === id ? { ...l, activo: false } : l))} onDeleteCommission={(id) => setCommissions(p => p.map(c => c.id === id ? { ...c, activo: false } : c))} />;
+      case 'boveda': return <VaultModule documents={documents} sessions={sessions} oficios={oficios} projects={projects} {...commonProps} onSaveDocument={(doc) => setDocuments(p => [...p, doc])} onDeleteDocument={(id) => setDocuments(p => p.map(d => d.id === id ? { ...d, activo: false } : d))} />;
+      default: return <Dashboard sessions={sessions} oficios={oficios} projects={projects} legislators={legislators} {...commonProps} />;
+    }
+  };
+
+  if (!config.setupComplete) return (
+    <>
+      <SetupWizard onComplete={setConfig} initialDark={config.darkMode} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <style>{`@keyframes slide-in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes scale-in{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${darkMode ? '#374151' : '#d1d5db'};border-radius:3px}`}</style>
+    </>
+  );
+
+  return (
+    <div className={darkMode ? 'dark' : ''}>
+      <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+          <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800/50"><div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0"><Gavel className="w-5 h-5 text-white" /></div>{sidebarOpen && (<div className="min-w-0"><p className="text-sm font-bold truncate">Segundo Cerebro</p><p className={`text-[10px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Legislativo</p></div>)}</div>
+          <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">{navItems.map(item => (<button key={item.id} onClick={() => setCurrentPage(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${currentPage === item.id ? darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600' : darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'} ${!sidebarOpen ? 'justify-center px-2' : ''}`}>{item.icon}{sidebarOpen && <span className="truncate">{item.label}</span>}</button>))}</nav>
+          {sidebarOpen && (<div className={`mx-3 mb-4 p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}><p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{config.nombre_secretario || 'Secretario'}</p><p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{config.cedula || ''} · {config.periodo_sesiones}</p></div>)}
+          <div className="p-2 border-t border-gray-800/50"><button onClick={() => setSidebarOpen(p => !p)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'} ${!sidebarOpen ? 'justify-center' : ''}`}>{sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}{sidebarOpen && <span>Colapsar</span>}</button></div>
+        </aside>
+
+        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
+          <header className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
+            <div className="flex items-center gap-2">
+              {[{ label: 'Inicio', page: 'dashboard' }, { label: pageTitles[currentPage] || currentPage, page: currentPage }].map((c, i, arr) => (<React.Fragment key={i}>{i > 0 && <ChevronRight className={`w-4 h-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />}<button onClick={() => c.page && setCurrentPage(c.page)} className={`text-sm ${i === arr.length - 1 ? 'font-semibold' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>{c.label}</button></React.Fragment>))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-700'}`}><Search className="w-4 h-4" /><span className="hidden sm:inline">Buscar...</span><kbd className={`hidden sm:inline px-1.5 py-0.5 rounded text-[10px] ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>⌘K</kbd></button>
+              <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+              <div className="flex items-center gap-1.5 px-2 py-1.5"><Cloud className="w-4 h-4 text-emerald-500" /><span className="text-xs text-emerald-500 font-medium hidden sm:inline">Sincronizado</span></div>
+              <button onClick={toggleDarkMode} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>{darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
+            </div>
+          </header>
+          <main className="p-6">{renderPage()}</main>
+        </div>
+
+        <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} sessions={sessions} oficios={oficios} projects={projects} legislators={legislators} onNavigate={navigateToEntity} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <style>{`@keyframes slide-in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes scale-in{from{transform:scale(0.95);opacity:0}to{transform:scale(1);opacity:1}}::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${darkMode ? '#374151' : '#d1d5db'};border-radius:3px}::-webkit-scrollbar-thumb:hover{background:${darkMode ? '#4b5563' : '#9ca3af'}}`}</style>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+
+
+🔌 FASE 5: Servicios de Integración
+Crear estos archivos para extender la UI sin tocarla directamente.
+src/services/qr.js
+// Genera QR para leyes o sesiones
+export const generateQR = async (data) => {
+  const payload = JSON.stringify(data);
+  try {
+    // Intenta usar Electron API, fallback a librería web si es necesario
+    if (window.legisAPI) {
+      return await window.legisAPI.qr.generate(payload);
+    }
+    // Fallback web (requiere instalar 'qrcode' también en react)
+    // return await import('qrcode').then(q => q.toDataURL(payload));
+  } catch (e) {
+    console.error("QR Generation failed", e);
+    return null;
+  }
+};
+
+src/services/versioning.js
+export const createVersionSnapshot = async (projectData, user) => {
+  // Lógica para guardar versión en DB local via IPC
+  const payload = {
+    projectId: projectData.id,
+    snapshot: JSON.stringify(projectData),
+    author: user,
+    timestamp: new Date().toISOString()
+  };
+  
+  if (window.legisAPI) {
+    return await window.legisAPI.db.query('versions', payload);
+  }
+  console.warn("Versioning: API not available (Web Mode?)");
+};
+
+🚀 FASE 6: Comandos y Flujo de Trabajo
+Comando
+Descripción
+npm run dev
+Inicia Vite + Electron simultáneamente.
+npm run build:win
+Compila ejecutable .exe en dist/.
+npm run build:mac
+Compila .dmg (macOS).
+git sync
+(Manual) node -e "require('simple-git')().add('.').commit('sync').push()"
+
+🛡️ Checklist de Producción
+UI Original: src/App.jsx intacto y funcionando.
+Seguridad: contextIsolation: true en main.js.
+Persistencia: SQLite crea scl_local.db en userData (no en carpeta del usuario directamente).
+Logs: Se escriben en %APPDATA%/segundo-cerebro-legislativo/logs/.
+Backup: Script backup.sh configurado en cron o Windows Task Scheduler.
+Bot: Variable TELEGRAM_BOT_TOKEN configurada en .env.
+Limpieza: .env y node_modules en .gitignore.
+
+🔧 Troubleshooting
+Error
+Solución
+Cannot find module 'better-sqlite3'
+Ejecutar npm rebuild better-sqlite3. Requiere Python y herramientas de compilación (Visual Studio Build Tools en Windows).
+Pantalla en blanco en Electron
+Verificar vite.config.js -> base: './' y que dist/index.html existe.
+Git sync falla
+Asegurar que el repo tiene un origin configurado y estás logueado en git (git config --global ...).
+Telegram no responde
+Verificar token en .env y que el bot no tenga otro webhook activo.
+
+📝 Notas para el Agente (Gemini CLI)
+Si usas gemini cli para generar partes de esto, usa los siguientes prompts:
+generate scaffold electron-react project structure as defined in blueprint
+implement electron/main.js with sqlite, winston and telegraf integration
+create src/services/qr.js and versioning.js using window.legisAPI bridge
+

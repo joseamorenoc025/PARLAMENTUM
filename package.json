@@ -1,0 +1,38 @@
+{
+  "name": "segundo-cerebro-legislativo",
+  "version": "1.0.0",
+  "description": "Sistema de gestión legislativa profesional",
+  "main": "electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "build": "vite build && electron-builder",
+    "build:win": "npm run build -- --win",
+    "build:mac": "npm run build -- --mac",
+    "db:migrate": "node electron/src/db/migrate.js",
+    "db:seed": "node electron/src/db/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^16.4.5",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "lucide-react": "^0.469.0",
+    "qrcode": "^1.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.1",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.5.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "vite": "^5.2.12",
+    "wait-on": "^7.2.0"
+  }
+}

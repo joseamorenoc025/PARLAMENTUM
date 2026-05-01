@@ -1,0 +1,23 @@
+ Capítulo 1: Cimentación (Entorno y Estructura)
+   1. Inicialización del Repositorio: Configurar el monorepo y el sistema de archivos propuesto en la Fase 1.
+   2. Instalación de Dependencias: Instalar el stack crítico (electron, vite, better-sqlite3, tailwindcss, lucide-react).
+   3. Configuración de Herramientas: Configurar vite.config.js y tailwind.config.js para que funcionen dentro del entorno de Electron.
+
+  Capítulo 2: El "Corazón" de la App (Backend Local)
+   1. Setup de Base de Datos: Crear los esquemas en SQLite para sesiones, leyes, proyectos y logs de auditoría.
+   2. IPC Bridge (Puente de Comunicación): Configurar preload.js para que el frontend (React) pueda hablar con el backend (Node.js/Electron) de forma segura.
+   3. Logger y Auditoría: Implementar winston para registrar cada clic y cambio importante en un archivo de log protegido.
+
+  Capítulo 3: Integración de la UI (El Gran Trasplante)
+   1. Portabilidad de App.jsx: Mover el código actual de la interfaz al nuevo entorno.
+   2. Refactorización de Persistencia: Cambiar las llamadas de localStorage por llamadas asíncronas a la base de datos a través del puente de Electron (window.legisAPI).   3. Ajustes de Estilo: Asegurar que el modo oscuro y la responsividad funcionen perfectamente en la ventana de escritorio.
+
+  Capítulo 4: Activación de Módulos Avanzados
+   1. Módulo QR: Implementar el servicio de generación de códigos para las leyes subidas a la "Bóveda".
+   2. Módulo de Versiones: Crear la lógica que guarda un "snapshot" cada vez que se edita un proyecto de ley.
+   3. Auditoría: Implementar el sistema de auditoría inmutable.
+   4. Backup: Implementar el sistema de respaldo automático.
+  Capítulo 5: Validación y Empaque
+   1. Pruebas de Seguridad: Verificar que los logs de auditoría sean correctos y que la base de datos esté protegida.
+   2. Creación de Instaladores: Ejecutar electron-builder para generar el archivo .exe (Windows) o .dmg (Mac).
+   3. Checklist Final: Validar contra la lista de pre-producción de gemini.md (backups, variables de entorno, etc.).
