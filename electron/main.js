@@ -6,6 +6,7 @@ import winston from 'winston';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
+import { schema } from './src/db/schema.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -45,6 +46,9 @@ if (process.env.NODE_ENV !== 'production') {
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
+// 🚀 Inicializar esquema si no existe
+db.exec(schema);
+
 let mainWindow;
 
 function createWindow() {
@@ -54,7 +58,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 768,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },

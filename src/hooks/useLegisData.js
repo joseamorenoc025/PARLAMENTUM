@@ -9,6 +9,7 @@ export const useLegisData = (defaultConfig) => {
   const [oficios, setOficios] = useState([]);
   const [projects, setProjects] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadAllData = useCallback(async () => {
@@ -21,7 +22,8 @@ export const useLegisData = (defaultConfig) => {
         dbCommissions,
         dbOficios,
         dbProjects,
-        dbDocuments
+        dbDocuments,
+        dbAuditLogs
       ] = await Promise.all([
         dbService.getConfig(),
         dbService.getSessions(),
@@ -29,7 +31,8 @@ export const useLegisData = (defaultConfig) => {
         dbService.getCommissions(),
         dbService.getOficios(),
         dbService.getProjects(),
-        dbService.getDocuments()
+        dbService.getDocuments(),
+        dbService.getAuditLogs()
       ]);
 
       setConfig(prev => ({ ...prev, ...dbConfig }));
@@ -39,6 +42,7 @@ export const useLegisData = (defaultConfig) => {
       setOficios(dbOficios);
       setProjects(dbProjects);
       setDocuments(dbDocuments);
+      setAuditLogs(dbAuditLogs);
     } catch (err) {
       console.error('Error loading data from SQLite:', err);
     } finally {
@@ -50,71 +54,100 @@ export const useLegisData = (defaultConfig) => {
     loadAllData();
   }, [loadAllData]);
 
+  // Helper for audit logging
+  const logAction = async (action, entity_type, entity_id, changes = null) => {
+    await dbService.addAuditLog({
+      action,
+      entity_type,
+      entity_id,
+      changes,
+      userId: config.nombre_secretario || 'admin'
+    });
+    setAuditLogs(await dbService.getAuditLogs());
+  };
+
   // Actions
   const updateConfig = async (newConfig) => {
     const updated = { ...config, ...newConfig };
     setConfig(updated);
     await dbService.saveConfig(updated);
+    await logAction('UPDATE_CONFIG', 'system', 0, newConfig);
   };
 
   const saveSession = async (session) => {
-    await dbService.saveSession(session);
-    setSessions(await dbService.getSessions());
+    const id = await dbService.saveSession(session);
+    await loadAllData();
+    await logAction(session.id ? 'UPDATE_SESSION' : 'CREATE_SESSION', 'sessions', id || session.id, session);
   };
 
   const deleteSession = async (id) => {
     await dbService.deleteSession(id);
-    setSessions(await dbService.getSessions());
+    await loadAllData();
+    await logAction('DELETE_SESSION', 'sessions', id);
   };
 
   const saveLegislator = async (legislator) => {
-    await dbService.saveLegislator(legislator);
-    setLegislators(await dbService.getLegislators());
+    const id = await dbService.saveLegislator(legislator);
+    await loadAllData();
+    await logAction(legislator.id ? 'UPDATE_LEGISLATOR' : 'CREATE_LEGISLATOR', 'legislators', id || legislator.id, legislator);
   };
 
   const deleteLegislator = async (id) => {
     await dbService.deleteLegislator(id);
-    setLegislators(await dbService.getLegislators());
+    await loadAllData();
+    await logAction('DELETE_LEGISLATOR', 'legislators', id);
   };
 
   const saveCommission = async (commission) => {
-    await dbService.saveCommission(commission);
-    setCommissions(await dbService.getCommissions());
+    const id = await dbService.saveCommission(commission);
+    await loadAllData();
+    await logAction(commission.id ? 'UPDATE_COMMISSION' : 'CREATE_COMMISSION', 'commissions', id || commission.id, commission);
   };
 
   const deleteCommission = async (id) => {
     await dbService.deleteCommission(id);
-    setCommissions(await dbService.getCommissions());
+    await loadAllData();
+    await logAction('DELETE_COMMISSION', 'commissions', id);
   };
 
   const saveOficio = async (oficio) => {
-    await dbService.saveOficio(oficio);
-    setOficios(await dbService.getOficios());
+    const id = await dbService.saveOficio(oficio);
+    await loadAllData();
+    await logAction(oficio.id ? 'UPDATE_OFICIO' : 'CREATE_OFICIO', 'oficios', id || oficio.id, oficio);
   };
 
   const deleteOficio = async (id) => {
     await dbService.deleteOficio(id);
-    setOficios(await dbService.getOficios());
+    await loadAllData();
+    await logAction('DELETE_OFICIO', 'oficios', id);
   };
 
   const saveProject = async (project) => {
-    await dbService.saveProject(project);
-    setProjects(await dbService.getProjects());
+    const id = await dbService.saveProject(project);
+    await loadAllData();
+    await logAction(project.id ? 'UPDATE_PROJECT' : 'CREATE_PROJECT', 'projects', id || project.id, project);
   };
 
   const deleteProject = async (id) => {
     await dbService.deleteProject(id);
-    setProjects(await dbService.getProjects());
+    await loadAllData();
+    await logAction('DELETE_PROJECT', 'projects', id);
   };
 
   const saveDocument = async (document) => {
-    await dbService.saveDocument(document);
-    setDocuments(await dbService.getDocuments());
+    const id = await dbService.saveDocument(document);
+    await loadAllData();
+    await logAction('CREATE_DOCUMENT', 'documents', id, { nombre: document.nombre_original });
   };
 
   const deleteDocument = async (id) => {
     await dbService.deleteDocument(id);
-    setDocuments(await dbService.getDocuments());
+    await loadAllData();
+    await logAction('DELETE_DOCUMENT', 'documents', id);
+  };
+
+  const getProjectVersions = async (projectId) => {
+    return await dbService.getProjectVersions(projectId);
   };
 
   return {
@@ -125,6 +158,8 @@ export const useLegisData = (defaultConfig) => {
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
     documents, saveDocument, deleteDocument,
+    auditLogs,
+    getProjectVersions,
     isLoading, reload: loadAllData
   };
 };

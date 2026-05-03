@@ -29,13 +29,21 @@ export const schema = `
     activo INTEGER DEFAULT 1
   );
 
-  -- Comisiones
+  -- Comisiones (Estructura Ampliada)
   CREATE TABLE IF NOT EXISTS commissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
     presidente_id INTEGER,
+    vicepresidente_id INTEGER,
+    miembro_1_id INTEGER,
+    miembro_2_id INTEGER,
+    miembro_3_id INTEGER,
     activo INTEGER DEFAULT 1,
-    FOREIGN KEY(presidente_id) REFERENCES legislators(id)
+    FOREIGN KEY(presidente_id) REFERENCES legislators(id),
+    FOREIGN KEY(vicepresidente_id) REFERENCES legislators(id),
+    FOREIGN KEY(miembro_1_id) REFERENCES legislators(id),
+    FOREIGN KEY(miembro_2_id) REFERENCES legislators(id),
+    FOREIGN KEY(miembro_3_id) REFERENCES legislators(id)
   );
 
   -- Sesiones Legislativas

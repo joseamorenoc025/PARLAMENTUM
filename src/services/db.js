@@ -48,11 +48,25 @@ export const dbService = {
   // Comisiones
   getCommissions: async () => query('SELECT * FROM commissions WHERE activo = 1'),
   saveCommission: async (c) => {
+    const params = [
+      c.nombre, 
+      c.presidente_id || null, 
+      c.vicepresidente_id || null, 
+      c.miembro_1_id || null, 
+      c.miembro_2_id || null, 
+      c.miembro_3_id || null
+    ];
     if (c.id) {
-      await query('UPDATE commissions SET nombre = ?, presidente_id = ? WHERE id = ?', [c.nombre, c.presidente_id, c.id]);
+      await query(
+        'UPDATE commissions SET nombre = ?, presidente_id = ?, vicepresidente_id = ?, miembro_1_id = ?, miembro_2_id = ?, miembro_3_id = ? WHERE id = ?', 
+        [...params, c.id]
+      );
       return c.id;
     } else {
-      const result = await query('INSERT INTO commissions (nombre, presidente_id) VALUES (?, ?)', [c.nombre, c.presidente_id]);
+      const result = await query(
+        'INSERT INTO commissions (nombre, presidente_id, vicepresidente_id, miembro_1_id, miembro_2_id, miembro_3_id) VALUES (?, ?, ?, ?, ?, ?)', 
+        params
+      );
       return result.lastInsertRowid;
     }
   },
@@ -139,5 +153,33 @@ export const dbService = {
     );
     return result.lastInsertRowid;
   },
-  deleteDocument: async (id) => query('UPDATE documents SET activo = 0 WHERE id = ?', [id])
+  deleteDocument: async (id) => query('UPDATE documents SET activo = 0 WHERE id = ?', [id]),
+
+  // Auditoría
+  getAuditLogs: async () => query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500'),
+  addAuditLog: async (log) => {
+    // Obtener el último hash para encadenar
+    const lastLogs = await query('SELECT signature FROM audit_logs ORDER BY id DESC LIMIT 1');
+    const prevSignature = lastLogs.length > 0 ? lastLogs[0].signature : 'GENESIS';
+    
+    // Crear una "firma" simple (en un entorno real usaríamos crypto.createHash)
+    const dataToHash = `${prevSignature}|${log.action}|${log.entity_type}|${log.entity_id}|${log.timestamp || new Date().toISOString()}`;
+    const signature = `sha256:${Array.from(dataToHash).reduce((a, c) => a + c.charCodeAt(0), 0).toString(16).padStart(64, '0')}`;
+
+    const params = [
+      new Date().toISOString(),
+      log.level || 'INFO',
+      log.userId || 'admin',
+      log.action,
+      log.entity_type,
+      log.entity_id,
+      log.changes ? JSON.stringify(log.changes) : null,
+      signature
+    ];
+
+    await query(
+      'INSERT INTO audit_logs (timestamp, level, userId, action, entity_type, entity_id, changes, signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      params
+    );
+  }
 };

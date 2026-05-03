@@ -4,37 +4,7 @@ import {
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
-
-// Nota: Estas utilidades deben estar disponibles. 
-// Como son pequeñas, las redeclaramos o importamos si estuvieran en un archivo utils.
-const getRoutePhases = (origen) => {
-  if (origen === 'Comisión') {
-    return ['Estudio en Comisión', 'Informe de Dirección', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
-  }
-  return ['Entrada al Pleno', 'Estudio en Comisión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
-};
-
-const getDaysSince = (dateStr) => {
-  if (!dateStr) return 999;
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-};
-
-const getStagnationColor = (dateStr) => {
-  const days = getDaysSince(dateStr);
-  if (days > 30) return 'text-red-500 bg-red-500/10 border-red-500/20';
-  if (days >= 15) return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
-  return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-};
-
-const getStagnationLabel = (dateStr) => {
-  const days = getDaysSince(dateStr);
-  if (days > 30) return 'Estancado (>30 días)';
-  if (days >= 15) return 'Atención (15-30 días)';
-  return 'Activo (<15 días)';
-};
+import { getRoutePhases, getStagnationColor, getStagnationLabel } from '../utils/helpers';
 
 const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, onNavigate, config }) => {
   const [view, setView] = useState('list');
@@ -152,13 +122,39 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
       <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-2xl border">
         <h2 className="text-xl font-bold mb-6">Nuevo Proyecto</h2>
         <div className="space-y-4">
-          <input placeholder="Título" value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} className="w-full p-2.5 rounded-xl border dark:bg-gray-800" />
-          <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})} className="w-full p-2.5 rounded-xl border dark:bg-gray-800">
-            <option value="Comisión">Comisión</option><option value="Gobernación">Gobernación</option>
-          </select>
-          <div className="flex gap-3">
-            <button onClick={resetForm} className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-xl">Cancelar</button>
-            <button onClick={handleSave} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl">Guardar</button>
+          <input placeholder="Título" value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">Origen</label>
+              <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})} className={`w-full p-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                <option value="Comisión">Comisión</option>
+                <option value="Gobernación">Gobernación</option>
+                <option value="Votantes">Votantes</option>
+              </select>
+            </div>
+            {form.origen === 'Comisión' && (
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">Seleccionar Comisión</label>
+                <select value={form.comision_id} onChange={e => setForm({...form, comision_id: e.target.value})} className={`w-full p-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                  <option value="">Seleccionar...</option>
+                  {commissions.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">Legislador Ponente</label>
+            <select value={form.ponente_id} onChange={e => setForm({...form, ponente_id: e.target.value})} className={`w-full p-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+              <option value="">Seleccionar...</option>
+              {legislators.filter(l => l.activo).map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
+            <button onClick={handleSave} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all">Guardar Proyecto</button>
           </div>
         </div>
       </div>
