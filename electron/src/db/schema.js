@@ -29,6 +29,17 @@ export const schema = `
     activo INTEGER DEFAULT 1
   );
 
+  -- Gestión de Usuarios (RBAC)
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT DEFAULT 'legislador', -- admin, secretario, legislador, viewer
+    nombre_completo TEXT,
+    ultimo_login TEXT,
+    activo INTEGER DEFAULT 1
+  );
+
   -- Comisiones (Estructura Ampliada)
   CREATE TABLE IF NOT EXISTS commissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

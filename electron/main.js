@@ -6,6 +6,7 @@ import winston from 'winston';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 import { schema } from './src/db/schema.js';
 
 // Cargar variables de entorno
@@ -17,11 +18,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const userDataPath = app.getPath('userData');
 const DB_PATH = path.join(userDataPath, 'legis.db');
 const LOG_PATH = path.join(userDataPath, 'logs');
+const BACKUP_PATH = path.join(userDataPath, 'backups');
 
 // Asegurar que las carpetas existan
-if (!fs.existsSync(LOG_PATH)) {
-  fs.mkdirSync(LOG_PATH, { recursive: true });
-}
+[LOG_PATH, BACKUP_PATH].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 // 🪵 Configuración de Winston (Logger Profesional)
 const logger = winston.createLogger({
@@ -90,6 +92,26 @@ app.on('window-all-closed', () => {
 });
 
 // 🔌 IPC Handlers
+ipcMain.handle('auth:hash', async (_, password) => {
+  return await bcrypt.hash(password, 10);
+});
+
+ipcMain.handle('auth:verify', async (_, { password, hash }) => {
+  return await bcrypt.compare(password, hash);
+});
+
+ipcMain.handle('db:backup:local', async () => {
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFile = path.join(BACKUP_PATH, `legis-backup-${timestamp}.db`);
+    await db.backup(backupFile);
+    return { success: true, path: backupFile };
+  } catch (err) {
+    logger.error('Backup error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('log', (_, { level, message }) => {
   logger.log(level, message);
   return true;

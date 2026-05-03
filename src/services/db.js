@@ -155,6 +155,33 @@ export const dbService = {
   },
   deleteDocument: async (id) => query('UPDATE documents SET activo = 0 WHERE id = ?', [id]),
 
+  // Usuarios y Autenticación
+  getUsers: async () => query('SELECT id, username, role, nombre_completo, ultimo_login, activo FROM users WHERE activo = 1'),
+  getUserByUsername: async (username) => {
+    const rows = await query('SELECT * FROM users WHERE username = ? AND activo = 1', [username]);
+    return rows[0] || null;
+  },
+  saveUser: async (u) => {
+    if (u.id) {
+      await query(
+        'UPDATE users SET username = ?, role = ?, nombre_completo = ? WHERE id = ?',
+        [u.username, u.role, u.nombre_completo, u.id]
+      );
+      return u.id;
+    } else {
+      // Si es un usuario nuevo, ya debe venir con el password_hash generado
+      const result = await query(
+        'INSERT INTO users (username, password_hash, role, nombre_completo) VALUES (?, ?, ?, ?)',
+        [u.username, u.password_hash, u.role, u.nombre_completo]
+      );
+      return result.lastInsertRowid;
+    }
+  },
+  updateLastLogin: async (id) => query('UPDATE users SET ultimo_login = ? WHERE id = ?', [new Date().toISOString(), id]),
+
+  // Backups
+  createLocalBackup: async () => await window.legisAPI.db.backupLocal(),
+
   // Auditoría
   getAuditLogs: async () => query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 500'),
   addAuditLog: async (log) => {
