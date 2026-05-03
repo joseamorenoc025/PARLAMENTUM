@@ -54,17 +54,18 @@ export const dbService = {
       c.vicepresidente_id || null, 
       c.miembro_1_id || null, 
       c.miembro_2_id || null, 
-      c.miembro_3_id || null
+      c.miembro_3_id || null,
+      c.miembro_3_nombre || null
     ];
     if (c.id) {
       await query(
-        'UPDATE commissions SET nombre = ?, presidente_id = ?, vicepresidente_id = ?, miembro_1_id = ?, miembro_2_id = ?, miembro_3_id = ? WHERE id = ?', 
+        'UPDATE commissions SET nombre = ?, presidente_id = ?, vicepresidente_id = ?, miembro_1_id = ?, miembro_2_id = ?, miembro_3_id = ?, miembro_3_nombre = ? WHERE id = ?', 
         [...params, c.id]
       );
       return c.id;
     } else {
       const result = await query(
-        'INSERT INTO commissions (nombre, presidente_id, vicepresidente_id, miembro_1_id, miembro_2_id, miembro_3_id) VALUES (?, ?, ?, ?, ?, ?)', 
+        'INSERT INTO commissions (nombre, presidente_id, vicepresidente_id, miembro_1_id, miembro_2_id, miembro_3_id, miembro_3_nombre) VALUES (?, ?, ?, ?, ?, ?, ?)', 
         params
       );
       return result.lastInsertRowid;

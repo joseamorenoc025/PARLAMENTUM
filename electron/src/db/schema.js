@@ -49,6 +49,7 @@ export const schema = `
     miembro_1_id INTEGER,
     miembro_2_id INTEGER,
     miembro_3_id INTEGER,
+    miembro_3_nombre TEXT, -- Para ciudadanos no legisladores
     activo INTEGER DEFAULT 1,
     FOREIGN KEY(presidente_id) REFERENCES legislators(id),
     FOREIGN KEY(vicepresidente_id) REFERENCES legislators(id),

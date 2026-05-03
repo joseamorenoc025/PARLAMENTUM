@@ -51,6 +51,30 @@ db.pragma('journal_mode = WAL');
 // 🚀 Inicializar esquema si no existe
 db.exec(schema);
 
+// 🛠️ Migraciones de Esquema (Asegurar que existan nuevas columnas)
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(commissions)").all();
+  const columns = tableInfo.map(c => c.name);
+  
+  if (!columns.includes('vicepresidente_id')) {
+    db.exec("ALTER TABLE commissions ADD COLUMN vicepresidente_id INTEGER REFERENCES legislators(id)");
+  }
+  if (!columns.includes('miembro_1_id')) {
+    db.exec("ALTER TABLE commissions ADD COLUMN miembro_1_id INTEGER REFERENCES legislators(id)");
+  }
+  if (!columns.includes('miembro_2_id')) {
+    db.exec("ALTER TABLE commissions ADD COLUMN miembro_2_id INTEGER REFERENCES legislators(id)");
+  }
+  if (!columns.includes('miembro_3_id')) {
+    db.exec("ALTER TABLE commissions ADD COLUMN miembro_3_id INTEGER REFERENCES legislators(id)");
+  }
+  if (!columns.includes('miembro_3_nombre')) {
+    db.exec("ALTER TABLE commissions ADD COLUMN miembro_3_nombre TEXT");
+  }
+} catch (err) {
+  logger.error('Migration error:', err);
+}
+
 let mainWindow;
 
 function createWindow() {
