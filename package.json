@@ -12,12 +12,16 @@
     "build:win": "npm run build -- --win",
     "build:mac": "npm run build -- --mac",
     "db:migrate": "node electron/src/db/migrate.js",
-    "db:seed": "node electron/src/db/seed.js"
+    "db:seed": "node electron/src/db/seed.js",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src electron --ext .js,.jsx"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.2",
     "electron": "^30.0.0",
     "electron-builder": "^24.13.3",
     "googleapis": "^171.4.0",
@@ -30,11 +34,20 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "autoprefixer": "^10.5.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
     "vite": "^5.2.12",
+    "vitest": "^4.1.5",
     "wait-on": "^7.2.0"
   }
 }

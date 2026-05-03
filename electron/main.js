@@ -2,12 +2,14 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
-import winston from 'winston';
 import QRCode from 'qrcode';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
-import { schema } from './src/db/schema.js';
+import { db, sqlite } from './src/db/index.js';
+import { runMigrations } from './src/db/migrate.js';
+import * as schema from './src/db/schema.js';
+import { eq, like, desc, sql as drizzleSql } from 'drizzle-orm';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -17,62 +19,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 📁 Rutas de datos persistentes
 const userDataPath = app.getPath('userData');
 const DB_PATH = path.join(userDataPath, 'legis.db');
-const LOG_PATH = path.join(userDataPath, 'logs');
 const BACKUP_PATH = path.join(userDataPath, 'backups');
 
 // Asegurar que las carpetas existan
-[LOG_PATH, BACKUP_PATH].forEach(dir => {
+[BACKUP_PATH].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// 🪵 Configuración de Winston (Logger Profesional)
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: path.join(LOG_PATH, 'error.log'), level: 'error' }),
-    new winston.transports.File({ filename: path.join(LOG_PATH, 'combined.log') }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-  }));
-}
-
-// 🗄️ Inicializar Base de Datos
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-
-// 🚀 Inicializar esquema si no existe
-db.exec(schema);
-
-// 🛠️ Migraciones de Esquema (Asegurar que existan nuevas columnas)
+// 🚀 Ejecutar Migraciones Robustas
 try {
-  const tableInfo = db.prepare("PRAGMA table_info(commissions)").all();
-  const columns = tableInfo.map(c => c.name);
-  
-  if (!columns.includes('vicepresidente_id')) {
-    db.exec("ALTER TABLE commissions ADD COLUMN vicepresidente_id INTEGER REFERENCES legislators(id)");
-  }
-  if (!columns.includes('miembro_1_id')) {
-    db.exec("ALTER TABLE commissions ADD COLUMN miembro_1_id INTEGER REFERENCES legislators(id)");
-  }
-  if (!columns.includes('miembro_2_id')) {
-    db.exec("ALTER TABLE commissions ADD COLUMN miembro_2_id INTEGER REFERENCES legislators(id)");
-  }
-  if (!columns.includes('miembro_3_id')) {
-    db.exec("ALTER TABLE commissions ADD COLUMN miembro_3_id INTEGER REFERENCES legislators(id)");
-  }
-  if (!columns.includes('miembro_3_nombre')) {
-    db.exec("ALTER TABLE commissions ADD COLUMN miembro_3_nombre TEXT");
-  }
+  runMigrations(DB_PATH);
 } catch (err) {
-  logger.error('Migration error:', err);
+  logger.error('Critical: Migration failed', err);
 }
 
 let mainWindow;
@@ -128,7 +86,7 @@ ipcMain.handle('db:backup:local', async () => {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFile = path.join(BACKUP_PATH, `legis-backup-${timestamp}.db`);
-    await db.backup(backupFile);
+    await sqlite.backup(backupFile);
     return { success: true, path: backupFile };
   } catch (err) {
     logger.error('Backup error:', err);
@@ -150,10 +108,10 @@ ipcMain.handle('qr:generate', async (_, data) => {
   }
 });
 
-// Manejador genérico para consultas a la DB
+// Manejador genérico para consultas a la DB (Legacy support)
 ipcMain.handle('db:query', (_, { sql, params = [] }) => {
   try {
-    const stmt = db.prepare(sql);
+    const stmt = sqlite.prepare(sql);
     if (sql.trim().toLowerCase().startsWith('select')) {
       return stmt.all(...params);
     } else {
@@ -161,6 +119,91 @@ ipcMain.handle('db:query', (_, { sql, params = [] }) => {
     }
   } catch (err) {
     logger.error('Database query error:', err);
+    throw err;
+  }
+});
+
+// --- Nuevos Handlers usando Drizzle ---
+
+// Stats
+ipcMain.handle('db:get-stats', async () => {
+  try {
+    const leyesCount = db.select({ count: drizzleSql`count(*)` }).from(schema.laws).all();
+    const sesionesCount = db.select({ count: drizzleSql`count(*)` }).from(schema.sessions).where(eq(schema.sessions.activo, 1)).all();
+    const proyectosCount = db.select({ count: drizzleSql`count(*)` }).from(schema.projects).where(eq(schema.projects.activo, 1)).all();
+    
+    return {
+      leyes: leyesCount[0]?.count || 0,
+      sesiones: sesionesCount[0]?.count || 0,
+      proyectos: proyectosCount[0]?.count || 0,
+    };
+  } catch (err) {
+    logger.error('Drizzle stats error:', err);
+    throw err;
+  }
+});
+
+// Auth & Users
+ipcMain.handle('auth:get-user', async (_, username) => {
+  try {
+    const results = db.select().from(schema.users).where(eq(schema.users.username, username)).all();
+    return results[0] || null;
+  } catch (err) {
+    logger.error('Auth get user error:', err);
+    throw err;
+  }
+});
+
+ipcMain.handle('auth:update-login', async (_, id) => {
+  try {
+    return db.update(schema.users)
+      .set({ ultimoLogin: new Date().toISOString() })
+      .where(eq(schema.users.id, id))
+      .run();
+  } catch (err) {
+    logger.error('Auth update login error:', err);
+    throw err;
+  }
+});
+
+// CRUD Genérico (Aproximación inicial para migración rápida)
+ipcMain.handle('db:select', async (_, { table, where = {} }) => {
+  try {
+    const tableSchema = schema[table];
+    if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
+    
+    let queryBuilder = db.select().from(tableSchema);
+    
+    // Filtro simple por activo=1 por defecto si la columna existe
+    if (tableSchema.activo) {
+      queryBuilder = queryBuilder.where(eq(tableSchema.activo, 1));
+    }
+
+    return queryBuilder.all();
+  } catch (err) {
+    logger.error(`Select error [${table}]:`, err);
+    throw err;
+  }
+});
+
+ipcMain.handle('db:upsert', async (_, { table, data }) => {
+  try {
+    const tableSchema = schema[table];
+    if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
+
+    if (data.id) {
+      const { id, ...updateData } = data;
+      return db.update(tableSchema)
+        .set(updateData)
+        .where(eq(tableSchema.id, id))
+        .run();
+    } else {
+      return db.insert(tableSchema)
+        .values(data)
+        .run();
+    }
+  } catch (err) {
+    logger.error(`Upsert error [${table}]:`, err);
     throw err;
   }
 });

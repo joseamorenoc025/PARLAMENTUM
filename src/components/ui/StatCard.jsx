@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StatCard = ({ darkMode, icon, label, value, color }) => {
+const StatCard = ({ darkMode, icon, label, value, color, onClick }) => {
   const colorMap = {
     blue: 'from-blue-500 to-blue-600',
     purple: 'from-purple-500 to-purple-600',
@@ -8,7 +8,10 @@ const StatCard = ({ darkMode, icon, label, value, color }) => {
     amber: 'from-amber-500 to-amber-600',
   };
   return (
-    <div className={`rounded-2xl border p-5 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+    <div 
+      onClick={onClick}
+      className={`rounded-2xl border p-5 transition-all ${onClick ? 'cursor-pointer hover:shadow-lg active:scale-95' : ''} ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}
+    >
       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${colorMap[color]} flex items-center justify-center text-white mb-3`}>
         {icon}
       </div>

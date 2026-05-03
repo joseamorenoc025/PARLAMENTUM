@@ -1,0 +1,294 @@
+🔹 1. "Test && (Commit || Revert)"
+❌ Mentalidad común: "Lo pruebo manual, si funciona, lo subo"
+✅ Mentalidad ingenieril: "Si no hay test automatizado que lo valide, no existe"
+
+Flujo:
+1. Escribes un test que falla (rojo)
+2. Implementas el mínimo código para que pase (verde)
+3. Refactorizas con confianza (refactor)
+4. Si algo rompe, el test te avisa ANTES de que llegue a producción
+
+🔹 2. "Deployment Pipeline" 
+Tu código no "se sube". Viaja por un pipeline con gates de calidad:
+
+[Commit] → [Lint] → [Test Unitarios] → [Build] → [Test E2E] → [Artifact] → [Release]
+
+Cada etapa es automática. Si falla una, se detiene todo.
+
+Para cambios de esquema de base de datos sin downtime:
+-- Fase 1: EXPAND (agregar sin romper)
+ALTER TABLE leyes ADD COLUMN nueva_columna TEXT;
+
+-- Fase 2: MIGRATE (migrar datos en background)
+UPDATE leyes SET nueva_columna = valor_calculado WHERE nueva_columna IS NULL;
+
+-- Fase 3: CONTRACT (remover lo viejo, cuando nadie lo usa)
+-- (En un release futuro, cuando estés seguro)
+
+🔹 4. "Conway's Law" + "Team Topologies"
+Aplicación práctica: Si tu código tiene módulos acoplados, pregúntate: ¿estoy intentando hacer demasiadas cosas en un solo proceso mental? Separa responsabilidades como separarías equipos.
+
+🔹 5. "Right-Sized Stories"
+❌ "Hacer el sistema de búsquedas"
+✅ "Como usuario, puedo buscar leyes por número de expediente usando Ctrl+K"
+
+Una historia debe:
+- Ser entregable en 1-3 días
+- Tener criterio de aceptación claro
+- Poder ser probada automáticamente
+🛠️ PARTE 2: Recomendaciones Técnicas Concretas (Priorizadas)
+🥇 PRIORIDAD 1: Testing Estratégico (Semana 1-2)
+No intentes testear todo. Empieza por lo crítico:
+
+// 📁 test/unit/ipcHandlers.test.js
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { handleSearchLeyes } from '../../src/main/ipc/leyes.js'
+import { db } from '../../src/main/db/index.js'
+
+describe('IPC: searchLeyes', () => {
+  beforeEach(() => {
+    vi.mocked(db.all).mockReset()
+  })
+
+  it('devuelve leyes que coinciden con el término de búsqueda', async () => {
+    const mockResults = [{ id: 1, titulo: 'Ley de Transparencia' }]
+    vi.mocked(db.all).mockResolvedValue(mockResults)
+
+    const result = await handleSearchLeyes('transparencia')
+    
+    expect(result).toEqual(mockResults)
+    expect(db.all).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE titulo LIKE ?'),
+      ['%transparencia%']
+    )
+  })
+
+  it('maneja errores de base de datos gracefulmente', async () => {
+    vi.mocked(db.all).mockRejectedValue(new Error('DB_TIMEOUT'))
+    
+    await expect(handleSearchLeyes('test'))
+      .resolves.toEqual({ error: 'Búsqueda no disponible temporalmente' })
+  })
+})
+
+Stack de tests:
+
+Unitarios
+Vitest o Jest
+Rápido, buen soporte para ESM, mocking nativo
+
+Componentes React
+React Testing Library
+Testea comportamiento, no implementación
+
+IPC / Main Process
+Vitest + vi.mock()
+Aísla lógica de negocio de Electron APIs
+
+E2E
+Playwright 
+Soporte nativo para Electron, multi-plataforma
+Visual Regression
+Playwright + Percy
+Detecta cambios visuales no intencionales
+
+🥈 PRIORIDAD 2: CI/CD Básico pero Sólido (Semana 3)
+GitHub Actions para Electron 
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Lint
+        run: npm run lint
+        
+      - name: Type check (si usas TS)
+        run: npm run typecheck
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test -- --coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+
+  build:
+    needs: [quality, test]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build:${{ matrix.os == 'windows-latest' && 'win' || matrix.os == 'macos-latest' && 'mac' || 'linux' }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cerebro-legislativo-${{ matrix.os }}
+          path: dist/
+
+🥉 PRIORIDAD 3: Migraciones de Base de Datos Robustas
+
+// 📁 src/main/db/migrations/001_create_leyes_table.js
+import { sql } from 'drizzle-orm'
+
+export const up = sql`
+  CREATE TABLE IF NOT EXISTS leyes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    expediente TEXT UNIQUE NOT NULL,
+    titulo TEXT NOT NULL,
+    contenido TEXT,
+    fecha_publicacion DATETIME,
+    estado TEXT CHECK(estado IN ('vigente', 'derogada', 'en_tramite')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  
+  CREATE INDEX idx_leyes_expediente ON leyes(expediente);
+  CREATE INDEX idx_leyes_estado ON leyes(estado);
+`;
+
+export const down = sql`
+  DROP INDEX IF EXISTS idx_leyes_estado;
+  DROP INDEX IF EXISTS idx_leyes_expediente;
+  DROP TABLE IF EXISTS leyes;
+`;
+cript de migración automática al inicio (src/main/db/migrate.js):
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { db } from './index.js'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+export const runMigrations = () => {
+  try {
+    migrate(db, {
+      migrationsFolder: path.join(__dirname, 'migrations'),
+    })
+    console.log('✅ Migraciones aplicadas exitosamente')
+  } catch (error) {
+    console.error('❌ Error aplicando migraciones:', error)
+    // En producción: podrías hacer rollback o notificar al usuario
+    process.exit(1)
+  }
+}
+🏅 PRIORIDAD 4: Observabilidad y Debugging en Producción
+// 📁 src/main/lib/logger.js (extensión de Winston)
+import winston from 'winston'
+import { app } from 'electron'
+
+export const logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { 
+    app: 'cerebro-legislativo',
+    version: app.getVersion(),
+    platform: process.platform
+  },
+  transports: [
+    new winston.transports.File({ 
+      filename: path.join(app.getPath('logs'), 'error.log'), 
+      level: 'error',
+      maxsize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 3 
+    }),
+    new winston.transports.File({ 
+      filename: path.join(app.getPath('logs'), 'combined.log'),
+      maxsize: 10 * 1024 * 1024, // 10MB
+      maxFiles: 5
+    })
+  ]
+})
+
+// En desarrollo, agrega consola
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }))
+}
+Bonus: Reporte de errores anónimo opcional:
+// Solo si el usuario acepta en settings
+if (userSettings.allowErrorReporting) {
+  logger.on('error', (error) => {
+    // Enviar a servicio como Sentry, Highlight.io, o tu propio endpoint
+    reportErrorAnonymously({
+      message: error.message,
+      stack: error.stack,
+      context: error.meta
+    })
+  })
+}
+
+🔄 PARTE 3: Tu Nuevo Flujo de Trabajo (Checklist Semanal)
+🗓️ Lunes: Planning
+□ Revisar issues/pull requests
+□ Definir 1-2 "right-sized stories" para la semana
+□ Actualizar ARCHITECTURE.md si hay cambios de diseño
+
+🗓️ Martes-Jueves: Desarrollo
+□ Para cada feature:
+  1. Escribir test primero (rojo)
+  2. Implementar mínimo viable (verde)
+  3. Refactorizar con confianza
+  4. Actualizar documentación si cambia API interna
+□ Commits semánticos: `feat(search): add fuzzy matching for leyes`
+
+🗓️ Viernes: Calidad y Release
+□ Ejecutar `npm run test:coverage` (meta: >80% en main process)
+□ Revisar logs de errores de la semana
+□ Si hay release:
+  - Generar changelog automático con `conventional-changelog`
+  - Taggear versión semántica: `v1.2.3`
+  - Publicar artifacts desde CI
+
+🗓️ Domingo (opcional): Aprendizaje
+□ Leer 1 artículo técnico o ver 1 charla
+□ Experimentar con 1 nueva herramienta en rama `spike/`
+🎯 Tu Próximo Paso Concreto (Hoy)
+Instala Vitest: npm install -D vitest @vitest/coverage-v8
+Crea 1 test unitario para una función crítica (ej: formatLeyResultado())
+Agrega un script en package.json: "test": "vitest run"
+Ejecútalo: npm test → celebra cuando pase 🎉
