@@ -7,10 +7,10 @@ import { getSessionTypeByDate, generateSessionNumber } from '../utils/helpers';
 const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' });
+  const [form, setForm] = useState({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' });
 
   const resetForm = () => {
-    setForm({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' });
+    setForm({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' });
     setEditingId(null);
     setView('list');
   };
@@ -19,7 +19,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
     const tipo = getSessionTypeByDate(val);
     const year = new Date(val + 'T12:00:00').getFullYear();
     const num = generateSessionNumber(tipo, year, sessions);
-    setForm(prev => ({ ...prev, fecha: val, tipo, numero_correlativo: num }));
+    setForm(prev => ({ ...prev, fecha: val, tipo, numeroCorrelativo: num }));
   };
 
   const handleTypeChange = (val) => {
@@ -28,9 +28,9 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
       if (needsNumber && prev.fecha) {
         const year = new Date(prev.fecha + 'T12:00:00').getFullYear();
         const num = generateSessionNumber(val, year, sessions);
-        return { ...prev, tipo: val, numero_correlativo: num, motivo: '' };
+        return { ...prev, tipo: val, numeroCorrelativo: num, motivo: '' };
       }
-      return { ...prev, tipo: val, numero_correlativo: '', motivo: '' };
+      return { ...prev, tipo: val, numeroCorrelativo: '', motivo: '' };
     });
   };
 
@@ -43,9 +43,9 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
     const isDuplicate = sessions.some(s => 
       s.activo && 
       s.id !== editingId && 
-      s.numero_correlativo === form.numero_correlativo &&
+      s.numeroCorrelativo === form.numeroCorrelativo &&
       s.tipo === form.tipo &&
-      form.numero_correlativo 
+      form.numeroCorrelativo 
     );
     if (isDuplicate) {
       addToast('Ya existe una sesión con este número correlativo', 'error');
@@ -58,7 +58,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
   };
 
   const handleDelete = (id) => {
-    const linkedOficios = oficios.filter(o => o.activo && o.sesion_id === id);
+    const linkedOficios = oficios.filter(o => o.activo && o.sesionId === id);
     if (linkedOficios.length > 0) {
       const msg = `⚠️ Esta sesión tiene ${linkedOficios.length} oficio(s) vinculado(s).\n\n¿Deseas eliminarla igualmente? Los vínculos se romperán.`;
       if (!window.confirm(msg)) return;
@@ -67,7 +67,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
     addToast('Sesión eliminada', 'warning');
   };
 
-  const getLinkedOficios = useCallback((sesionId) => oficios.filter(o => o.activo && o.sesion_id === sesionId), [oficios]);
+  const getLinkedOficios = useCallback((sesionId) => oficios.filter(o => o.activo && o.sesionId === sesionId), [oficios]);
 
   const typeColors = {
     'Ordinaria': 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
@@ -109,8 +109,8 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    value={form.numero_correlativo} 
-                    onChange={e => setForm(prev => ({ ...prev, numero_correlativo: e.target.value }))}
+                    value={form.numeroCorrelativo} 
+                    onChange={e => setForm(prev => ({ ...prev, numeroCorrelativo: e.target.value }))}
                     placeholder="000-2026"
                     className={`flex-1 px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} 
                   />
@@ -134,11 +134,11 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Hora Inicio</label>
-                <input type="time" value={form.hora_inicio} onChange={e => setForm(prev => ({ ...prev, hora_inicio: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
+                <input type="time" value={form.horaInicio} onChange={e => setForm(prev => ({ ...prev, horaInicio: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
               </div>
               <div>
                 <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Hora Cierre</label>
-                <input type="time" value={form.hora_cierre} onChange={e => setForm(prev => ({ ...prev, hora_cierre: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
+                <input type="time" value={form.horaCierre} onChange={e => setForm(prev => ({ ...prev, horaCierre: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
               </div>
             </div>
             <div>
@@ -164,7 +164,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
           <h1 className="text-2xl font-bold mb-1">Sesiones</h1>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión de sesiones legislativas</p>
         </div>
-        <button onClick={() => { setView('form'); setEditingId(null); setForm({ tipo: 'Ordinaria', numero_correlativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], hora_inicio: '09:00', hora_cierre: '12:00', periodo: '2026-2027', observaciones: '' }); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all">
+        <button onClick={() => { setView('form'); setEditingId(null); setForm({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' }); }} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all">
           <Plus className="w-4 h-4" /> Nueva Sesión
         </button>
       </div>
@@ -188,7 +188,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
                 return (
                   <tr key={s.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-mono font-medium">{s.numero_correlativo || '—'}</span>
+                      <span className="text-sm font-mono font-medium">{s.numeroCorrelativo || '—'}</span>
                       {s.motivo && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>{s.motivo}</p>}
                     </td>
                     <td className="px-6 py-4">
@@ -198,7 +198,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
                       <span className="text-sm">{new Date(s.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.hora_inicio} - {s.hora_cierre}</span>
+                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.horaInicio} - {s.horaCierre}</span>
                     </td>
                     <td className="px-6 py-4">
                       {ofs.length > 0 ? (
@@ -215,7 +215,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingId(s.id); setForm({ tipo: s.tipo, numero_correlativo: s.numero_correlativo, motivo: s.motivo, fecha: s.fecha, hora_inicio: s.hora_inicio, hora_cierre: s.hora_cierre, periodo: s.periodo, observaciones: s.observaciones }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                        <button onClick={() => { setEditingId(s.id); setForm({ tipo: s.tipo, numeroCorrelativo: s.numeroCorrelativo, motivo: s.motivo, fecha: s.fecha, horaInicio: s.horaInicio, horaCierre: s.horaCierre, periodo: s.periodo, observaciones: s.observaciones }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">

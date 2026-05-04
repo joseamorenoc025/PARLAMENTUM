@@ -94,6 +94,14 @@ export const dbService = {
   },
   deleteDocument: async (id) => upsert('documents', { id, activo: 0 }),
 
+  // Biblioteca de Leyes
+  getLaws: async () => select('laws'),
+  saveLaw: async (l) => {
+    const result = await upsert('laws', l);
+    return l.id || result.lastInsertRowid;
+  },
+  deleteLaw: async (id) => upsert('laws', { id, activo: 0 }),
+
   // Usuarios y Autenticación
   getUsers: async () => select('users'),
   getUserByUsername: async (username) => {

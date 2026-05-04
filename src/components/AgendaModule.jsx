@@ -12,11 +12,11 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
   const [form, setForm] = useState({ 
     titulo: '', 
     origen: 'Comisión', 
-    comision_id: '', 
-    ponente_id: '', 
-    fase_actual: 'Estudio en Comisión', 
-    urgencia_parlamentaria: 0, 
-    fecha_ingreso: new Date().toISOString().split('T')[0] 
+    comisionId: '', 
+    ponenteId: '', 
+    faseActual: 'Estudio en Comisión', 
+    urgenciaParlamentaria: 0, 
+    fechaIngreso: new Date().toISOString().split('T')[0] 
   });
   const [detailProject, setDetailProject] = useState(null);
 
@@ -24,11 +24,11 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     setForm({ 
       titulo: '', 
       origen: 'Comisión', 
-      comision_id: '', 
-      ponente_id: '', 
-      fase_actual: 'Estudio en Comisión', 
-      urgencia_parlamentaria: 0, 
-      fecha_ingreso: new Date().toISOString().split('T')[0] 
+      comisionId: '', 
+      ponenteId: '', 
+      faseActual: 'Estudio en Comisión', 
+      urgenciaParlamentaria: 0, 
+      fechaIngreso: new Date().toISOString().split('T')[0] 
     }); 
     setEditingId(null); 
     setView('kanban'); 
@@ -36,14 +36,14 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
   const handleSave = async () => {
     if (!form.titulo.trim()) return addToast('El título del proyecto es obligatorio', 'error');
-    if (form.origen === 'Comisión' && !form.comision_id) return addToast('Debes seleccionar una comisión responsable', 'warning');
+    if (form.origen === 'Comisión' && !form.comisionId) return addToast('Debes seleccionar una comisión responsable', 'warning');
     
     const data = {
       ...form,
-      comision_id: form.comision_id ? Number(form.comision_id) : null,
-      ponente_id: form.ponente_id ? Number(form.ponente_id) : null,
-      urgencia_parlamentaria: Number(form.urgencia_parlamentaria),
-      fecha_actualizacion: new Date().toISOString().split('T')[0],
+      comisionId: form.comisionId ? Number(form.comisionId) : null,
+      ponenteId: form.ponenteId ? Number(form.ponenteId) : null,
+      urgenciaParlamentaria: Number(form.urgenciaParlamentaria),
+      fechaActualizacion: new Date().toISOString().split('T')[0],
       activo: 1
     };
     
@@ -59,7 +59,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
   const phases = ['Estudio en Comisión', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
 
   const handleAdvancePhase = async (project) => {
-    const currentIdx = phases.indexOf(project.fase_actual);
+    const currentIdx = phases.indexOf(project.faseActual);
     if (currentIdx === -1 || currentIdx >= phases.length - 1) {
       addToast('El proyecto ya alcanzó su fase final', 'info');
       return;
@@ -68,17 +68,17 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     const nextPhase = phases[currentIdx + 1];
     const updated = { 
       ...project, 
-      fase_actual: nextPhase, 
-      fecha_actualizacion: new Date().toISOString().split('T')[0] 
+      faseActual: nextPhase, 
+      fechaActualizacion: new Date().toISOString().split('T')[0] 
     };
     
     try {
       await dbService.saveProjectVersion({
-        project_id: project.id,
-        version_label: project.fase_actual,
+        projectId: project.id,
+        versionLabel: project.faseActual,
         mensaje: `Cambio de fase a ${nextPhase}`,
         snapshot: project,
-        autor: config?.nombre_secretario || 'Sistema'
+        autor: config?.nombreSecretario || 'Sistema'
       });
       
       await onSave(updated);
@@ -96,9 +96,9 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
   }
 
   if (detailProject && view !== 'form') {
-    const currentIdx = phases.indexOf(detailProject.fase_actual);
-    const commission = commissions.find(c => c.id === detailProject.comision_id);
-    const ponente = legislators.find(l => l.id === detailProject.ponente_id);
+    const currentIdx = phases.indexOf(detailProject.faseActual);
+    const commission = commissions.find(c => c.id === detailProject.comisionId);
+    const ponente = legislators.find(l => l.id === detailProject.ponenteId);
 
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -122,9 +122,9 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               <button onClick={() => setView('history')} className={`p-3 rounded-2xl border ${darkMode ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-100 hover:bg-gray-50'} transition-colors`} title="Ver historial">
                 <History className="w-6 h-6 opacity-40" />
               </button>
-              <div className={`px-4 py-3 rounded-2xl border flex flex-col items-end ${getStagnationColor(detailProject.fecha_actualizacion || detailProject.fecha_ingreso)}`}>
+              <div className={`px-4 py-3 rounded-2xl border flex flex-col items-end ${getStagnationColor(detailProject.fechaActualizacion || detailProject.fechaIngreso)}`}>
                  <span className="text-[9px] uppercase font-black opacity-50">Estado</span>
-                 <span className="text-xs font-bold">{getStagnationLabel(detailProject.fecha_actualizacion || detailProject.fecha_ingreso)}</span>
+                 <span className="text-xs font-bold">{getStagnationLabel(detailProject.fechaActualizacion || detailProject.fechaIngreso)}</span>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
               <p className="text-[10px] uppercase font-black opacity-30 mb-1 tracking-widest">Fase Actual</p>
-              <p className="text-sm font-black text-indigo-500">{detailProject.fase_actual}</p>
+              <p className="text-sm font-black text-indigo-500">{detailProject.faseActual}</p>
             </div>
             <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
               <p className="text-[10px] uppercase font-black opacity-30 mb-1 tracking-widest">Ponente</p>
@@ -140,7 +140,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             </div>
             <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
               <p className="text-[10px] uppercase font-black opacity-30 mb-1 tracking-widest">Ingreso</p>
-              <p className="text-sm font-bold opacity-60">{detailProject.fecha_ingreso}</p>
+              <p className="text-sm font-bold opacity-60">{detailProject.fechaIngreso}</p>
             </div>
           </div>
 
@@ -196,7 +196,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             {form.origen === 'Comisión' && (
               <div className="space-y-3">
                 <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Comisión Responsable</label>
-                <select value={form.comision_id} onChange={e => setForm({...form, comision_id: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                <select value={form.comisionId} onChange={e => setForm({...form, comisionId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
                   <option value="">Seleccionar...</option>
                   {commissions.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
@@ -206,7 +206,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
           <div className="space-y-3">
             <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Legislador Ponente</label>
-            <select value={form.ponente_id} onChange={e => setForm({...form, ponente_id: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+            <select value={form.ponenteId} onChange={e => setForm({...form, ponenteId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
               <option value="">Seleccionar...</option>
               {legislators.filter(l => l.activo).map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
             </select>
@@ -216,8 +216,8 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
              <input 
                type="checkbox" 
                id="urgencia" 
-               checked={!!form.urgencia_parlamentaria} 
-               onChange={e => setForm({...form, urgencia_parlamentaria: e.target.checked ? 1 : 0})}
+               checked={!!form.urgenciaParlamentaria} 
+               onChange={e => setForm({...form, urgenciaParlamentaria: e.target.checked ? 1 : 0})}
                className="w-5 h-5 rounded-lg text-indigo-600"
              />
              <label htmlFor="urgencia" className="text-xs font-black uppercase tracking-widest cursor-pointer opacity-70">Declarar Urgencia Parlamentaria</label>
@@ -254,7 +254,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
         <div className="flex-1 overflow-x-auto pb-8 scrollbar-hide">
           <div className="flex gap-6 h-full min-w-max px-1">
             {phases.map(column => {
-              const columnProjects = filteredProjects.filter(p => p.fase_actual === column);
+              const columnProjects = filteredProjects.filter(p => p.faseActual === column);
               return (
                 <div key={column} className={`w-[22rem] flex flex-col rounded-[2rem] border transition-all ${darkMode ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/50 border-gray-100'}`}>
                   <div className="p-6 border-b dark:border-gray-800 flex items-center justify-between">
@@ -272,9 +272,9 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50 dark:border-gray-800">
                           <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest opacity-30">
                              <Clock className="w-3.5 h-3.5" />
-                             <span>{p.fecha_actualizacion || p.fecha_ingreso}</span>
+                             <span>{p.fechaActualizacion || p.fechaIngreso}</span>
                           </div>
-                          {p.urgencia_parlamentaria ? (
+                          {p.urgenciaParlamentaria ? (
                             <div className="flex items-center gap-1 text-red-500">
                                <AlertCircle className="w-3 h-3" />
                                <span className="text-[8px] font-black uppercase tracking-tighter">Urgencia</span>
@@ -304,15 +304,15 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               className={`p-6 rounded-3xl border flex justify-between items-center cursor-pointer transition-all hover:shadow-xl ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'}`}
             >
               <div className="flex items-center gap-6">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${p.urgencia_parlamentaria ? 'bg-red-500/10 text-red-500' : 'bg-indigo-50/10 text-indigo-500'}`}>
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${p.urgenciaParlamentaria ? 'bg-red-500/10 text-red-500' : 'bg-indigo-50/10 text-indigo-500'}`}>
                   {p.titulo.charAt(0)}
                 </div>
                 <div>
                   <h3 className="font-black text-sm leading-tight">{p.titulo}</h3>
                   <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[9px] uppercase font-black tracking-widest opacity-30">{p.fase_actual}</span>
+                    <span className="text-[9px] uppercase font-black tracking-widest opacity-30">{p.faseActual}</span>
                     <span className="w-1 h-1 rounded-full bg-indigo-500/30" />
-                    <span className="text-[9px] font-bold opacity-30">{p.fecha_ingreso}</span>
+                    <span className="text-[9px] font-bold opacity-30">{p.fechaIngreso}</span>
                   </div>
                 </div>
               </div>

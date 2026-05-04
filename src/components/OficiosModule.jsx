@@ -6,10 +6,10 @@ import {
 const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ numero_oficio: '', fecha: new Date().toISOString().split('T')[0], organo_receptor: '', asunto: '', sesion_id: '' });
+  const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '' });
 
   const resetForm = () => {
-    setForm({ numero_oficio: '', fecha: new Date().toISOString().split('T')[0], organo_receptor: '', asunto: '', sesion_id: '' });
+    setForm({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '' });
     setEditingId(null);
     setView('list');
   };
@@ -17,21 +17,21 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
   useEffect(() => {
     if (view === 'form') {
       const year = new Date().getFullYear();
-      const active = oficios.filter(o => o.activo && o.numero_oficio?.includes(`-${year}`));
+      const active = oficios.filter(o => o.activo && o.numeroOficio?.includes(`-${year}`));
       const maxNum = active.reduce((max, o) => {
-        const parts = o.numero_oficio.split('-');
+        const parts = o.numeroOficio.split('-');
         const num = parseInt(parts[1] || '0', 10);
         return num > max ? num : max;
       }, 0);
-      setForm(prev => ({ ...prev, numero_oficio: `OF-${String(maxNum + 1).padStart(3, '0')}-${year}` }));
+      setForm(prev => ({ ...prev, numeroOficio: `OF-${String(maxNum + 1).padStart(3, '0')}-${year}` }));
     }
   }, [view, oficios]);
 
   const handleSave = () => {
-    if (!form.organo_receptor) { addToast('El órgano receptor es requerido', 'error'); return; }
+    if (!form.organoReceptor) { addToast('El órgano receptor es requerido', 'error'); return; }
     if (!form.asunto) { addToast('El asunto es requerido', 'error'); return; }
-    const sesionIdVal = form.sesion_id ? Number(form.sesion_id) : null;
-    onSave(editingId ? { ...form, id: editingId, sesion_id: sesionIdVal } : { ...form, sesion_id: sesionIdVal });
+    const sesionIdVal = form.sesionId ? Number(form.sesionId) : null;
+    onSave(editingId ? { ...form, id: editingId, sesionId: sesionIdVal } : { ...form, sesionId: sesionIdVal });
     addToast(editingId ? 'Oficio actualizado' : 'Oficio creado', 'success');
     resetForm();
   };
@@ -49,7 +49,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
           <div className="space-y-4">
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Número de Oficio</label>
-              <input type="text" value={form.numero_oficio} onChange={e => setForm(prev => ({ ...prev, numero_oficio: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
+              <input type="text" value={form.numeroOficio} onChange={e => setForm(prev => ({ ...prev, numeroOficio: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Fecha</label>
@@ -57,7 +57,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Órgano Receptor</label>
-              <input type="text" value={form.organo_receptor} onChange={e => setForm(prev => ({ ...prev, organo_receptor: e.target.value }))} placeholder="Ej: Ministerio de Hacienda" className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200'}`} />
+              <input type="text" value={form.organoReceptor} onChange={e => setForm(prev => ({ ...prev, organoReceptor: e.target.value }))} placeholder="Ej: Ministerio de Hacienda" className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200'}`} />
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Asunto</label>
@@ -65,10 +65,10 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vincular a Sesión (opcional)</label>
-              <select value={form.sesion_id} onChange={e => setForm(prev => ({ ...prev, sesion_id: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+              <select value={form.sesionId} onChange={e => setForm(prev => ({ ...prev, sesionId: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                 <option value="">Sin vincular</option>
                 {sessions.filter(s => s.activo).sort((a, b) => b.fecha.localeCompare(a.fecha)).map(s => (
-                  <option key={s.id} value={s.id}>{s.numero_correlativo || s.tipo} - {s.fecha}</option>
+                  <option key={s.id} value={s.id}>{s.numeroCorrelativo || s.tipo} - {s.fecha}</option>
                 ))}
               </select>
             </div>
@@ -111,17 +111,17 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
             </thead>
             <tbody>
               {activeOficios.map(o => {
-                const sesion = sessions.find(s => s.id === o.sesion_id);
+                const sesion = sessions.find(s => s.id === o.sesionId);
                 return (
                   <tr key={o.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-mono font-medium">{o.numero_oficio}</span>
+                      <span className="text-sm font-mono font-medium">{o.numeroOficio}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm">{new Date(o.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{o.organo_receptor}</span>
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{o.organoReceptor}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`text-sm max-w-xs truncate block ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{o.asunto}</span>
@@ -133,7 +133,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                           className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors"
                           title="Ver sesión vinculada"
                         >
-                          <Link className="w-3 h-3" /> {sesion.numero_correlativo || sesion.tipo}
+                          <Link className="w-3 h-3" /> {sesion.numeroCorrelativo || sesion.tipo}
                         </button>
                       ) : (
                         <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>Sin vincular</span>
@@ -141,7 +141,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingId(o.id); setForm({ numero_oficio: o.numero_oficio, fecha: o.fecha, organo_receptor: o.organo_receptor, asunto: o.asunto, sesion_id: o.sesion_id || '' }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                        <button onClick={() => { setEditingId(o.id); setForm({ numeroOficio: o.numeroOficio, fecha: o.fecha, organoReceptor: o.organoReceptor, asunto: o.asunto, sesionId: o.sesionId || '' }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button onClick={() => { onDelete(o.id); addToast('Oficio eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">

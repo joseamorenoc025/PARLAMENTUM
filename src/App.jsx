@@ -24,10 +24,10 @@ import {
 } from 'lucide-react';
 
 const defaultConfig = {
-  nombre_secretario: '',
+  nombreSecretario: '',
   cedula: '',
-  periodo_sesiones: '2026-2027',
-  fecha_configuracion: new Date().toISOString().split('T')[0],
+  periodoSesiones: '2026-2027',
+  fechaConfiguracion: new Date().toISOString().split('T')[0],
   setupComplete: false,
   darkMode: true
 };
@@ -147,7 +147,7 @@ export default function App() {
 
           {sidebarOpen && (
             <div className={`mx-3 mb-4 p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{user.nombre_completo || user.username}</p>
+              <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{user.nombreCompleto || user.username}</p>
               <p className={`text-[10px] uppercase font-bold tracking-tighter ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{user.role}</p>
             </div>
           )}

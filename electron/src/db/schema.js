@@ -132,12 +132,17 @@ export const documents = sqliteTable('documents', {
 export const laws = sqliteTable('laws', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   nombre: text('nombre'),
+  titulo: text('titulo'), // Nuevo: Título descriptivo extraído
+  expediente: text('expediente'), // Nuevo: Número de expediente
   gaceta: text('gaceta'),
   tipo: text('tipo'),
   anio: integer('anio'),
   fechaVigencia: text('fecha_vigencia'),
+  fechaPublicacion: text('fecha_publicacion'), // Nuevo: Fecha de publicación
   rutaPdf: text('ruta_pdf'),
   qrData: text('qr_data'),
   descargas: integer('descargas').default(0),
+  contenido: text('contenido'), // Nuevo: Texto completo extraído
+  fileHash: text('file_hash'), // Nuevo: Hash para deduplicación
   activo: integer('activo').default(1),
 });

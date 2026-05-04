@@ -11,6 +11,18 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 80,
+        branches: 70,
+        functions: 75,
+        statements: 80
+      },
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        '**/*.config.js',
+        'electron/src/db/migrations/**'
+      ]
     },
   },
   resolve: {

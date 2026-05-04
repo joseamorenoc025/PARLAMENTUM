@@ -9,19 +9,19 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const [editingId, setEditingId] = useState(null);
   const [isCitizenM3, setIsCitizenM3] = useState(false);
   
-  const [form, setForm] = useState({ nombre: '', partido_politico: '', contacto: '', notas: '' });
+  const [form, setForm] = useState({ nombre: '', partidoPolitico: '', contacto: '', notas: '' });
   const [commissionForm, setCommissionForm] = useState({ 
     nombre: '', 
-    presidente_id: '', 
-    vicepresidente_id: '',
-    miembro_1_id: '',
-    miembro_2_id: '',
-    miembro_3_id: '',
-    miembro_3_nombre: ''
+    presidenteId: '', 
+    vicepresidenteId: '',
+    miembro1Id: '',
+    miembro2Id: '',
+    miembro3Id: '',
+    miembro3Nombre: ''
   });
 
   const resetForm = () => { 
-    setForm({ nombre: '', partido_politico: '', contacto: '', notas: '' }); 
+    setForm({ nombre: '', partidoPolitico: '', contacto: '', notas: '' }); 
     setEditingId(null); 
     setShowForm(false); 
   };
@@ -29,12 +29,12 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const resetCommissionForm = () => { 
     setCommissionForm({ 
       nombre: '', 
-      presidente_id: '', 
-      vicepresidente_id: '',
-      miembro_1_id: '',
-      miembro_2_id: '',
-      miembro_3_id: '',
-      miembro_3_nombre: ''
+      presidenteId: '', 
+      vicepresidenteId: '',
+      miembro1Id: '',
+      miembro2Id: '',
+      miembro3Id: '',
+      miembro3Nombre: ''
     }); 
     setEditingId(null); 
     setShowForm(false);
@@ -58,12 +58,12 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
     const data = {
       ...commissionForm,
       id: editingId,
-      presidente_id: commissionForm.presidente_id ? Number(commissionForm.presidente_id) : null,
-      vicepresidente_id: commissionForm.vicepresidente_id ? Number(commissionForm.vicepresidente_id) : null,
-      miembro_1_id: commissionForm.miembro_1_id ? Number(commissionForm.miembro_1_id) : null,
-      miembro_2_id: commissionForm.miembro_2_id ? Number(commissionForm.miembro_2_id) : null,
-      miembro_3_id: isCitizenM3 ? null : (commissionForm.miembro_3_id ? Number(commissionForm.miembro_3_id) : null),
-      miembro_3_nombre: isCitizenM3 ? (commissionForm.miembro_3_nombre || 'Ciudadano') : null,
+      presidenteId: commissionForm.presidenteId ? Number(commissionForm.presidenteId) : null,
+      vicepresidenteId: commissionForm.vicepresidenteId ? Number(commissionForm.vicepresidenteId) : null,
+      miembro1Id: commissionForm.miembro1Id ? Number(commissionForm.miembro1Id) : null,
+      miembro2Id: commissionForm.miembro2Id ? Number(commissionForm.miembro2Id) : null,
+      miembro3Id: isCitizenM3 ? null : (commissionForm.miembro3Id ? Number(commissionForm.miembro3Id) : null),
+      miembro3Nombre: isCitizenM3 ? (commissionForm.miembro3Nombre || 'Ciudadano') : null,
       activo: 1
     };
     
@@ -77,7 +77,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   };
 
   const getLegislatorName = (id) => legislators.find(l => l.id === id)?.nombre || '—';
-  const getM3Display = (c) => c.miembro_3_nombre ? `${c.miembro_3_nombre} (Ciudadano)` : getLegislatorName(c.miembro_3_id);
+  const getM3Display = (c) => c.miembro3Nombre ? `${c.miembro3Nombre} (Ciudadano)` : getLegislatorName(c.miembro3Id);
 
   return (
     <div className="space-y-6">
@@ -137,7 +137,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                        {l.partido_politico || 'Independiente'}
+                        {l.partidoPolitico || 'Independiente'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs opacity-60 font-medium">{l.contacto || '—'}</td>
@@ -164,7 +164,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               <div className="flex items-start justify-between mb-5">
                 <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner"><Users className="w-6 h-6" /></div>
                 <div className="flex gap-1">
-                  <button onClick={() => { setEditingId(c.id); setCommissionForm(c); setIsCitizenM3(!!c.miembro_3_nombre); setShowForm(true); }} className={`p-2 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><Shield className="w-4 h-4 opacity-40" /></button>
+                  <button onClick={() => { setEditingId(c.id); setCommissionForm(c); setIsCitizenM3(!!c.miembro3Nombre); setShowForm(true); }} className={`p-2 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><Shield className="w-4 h-4 opacity-40" /></button>
                   <button onClick={() => { if(window.confirm('¿Eliminar comisión?')) onDeleteCommission(c.id); }} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
@@ -172,16 +172,16 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-xs">
                   <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Presidente</span>
-                  <span className="font-bold">{getLegislatorName(c.presidente_id)}</span>
+                  <span className="font-bold">{getLegislatorName(c.presidenteId)}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs border-t border-gray-50 dark:border-gray-800 pt-3">
                   <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Vicepresidente</span>
-                  <span className="font-medium">{getLegislatorName(c.vicepresidente_id)}</span>
+                  <span className="font-medium">{getLegislatorName(c.vicepresidenteId)}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-4">
-                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-I: ${getLegislatorName(c.miembro_1_id)}`} />
-                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-II: ${getLegislatorName(c.miembro_2_id)}`} />
-                  <div className={`h-1.5 rounded-full ${c.miembro_3_nombre ? 'bg-emerald-500/40' : 'bg-gray-100 dark:bg-gray-800'}`} title={`M-III: ${getM3Display(c)}`} />
+                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-I: ${getLegislatorName(c.miembro1Id)}`} />
+                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-II: ${getLegislatorName(c.miembro2Id)}`} />
+                  <div className={`h-1.5 rounded-full ${c.miembro3Nombre ? 'bg-emerald-500/40' : 'bg-gray-100 dark:bg-gray-800'}`} title={`M-III: ${getM3Display(c)}`} />
                 </div>
                 <p className="text-[10px] opacity-40 font-medium text-right">Miembros activos</p>
               </div>
@@ -200,7 +200,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             <div className="grid grid-cols-2 gap-4">
                <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Partido Político</label>
-                <input value={form.partido_politico} onChange={e => setForm({...form, partido_politico: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Siglas o Nombre" />
+                <input value={form.partidoPolitico} onChange={e => setForm({...form, partidoPolitico: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Siglas o Nombre" />
               </div>
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Contacto</label>
@@ -218,14 +218,14 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Presidente</label>
-                <select value={commissionForm.presidente_id} onChange={e => setCommissionForm({...commissionForm, presidente_id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                   <option value="">Seleccionar...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Vicepresidente</label>
-                <select value={commissionForm.vicepresidente_id} onChange={e => setCommissionForm({...commissionForm, vicepresidente_id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                   <option value="">Seleccionar...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
@@ -254,11 +254,11 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <select value={commissionForm.miembro_1_id} onChange={e => setCommissionForm({...commissionForm, miembro_1_id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro I...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
-                <select value={commissionForm.miembro_2_id} onChange={e => setCommissionForm({...commissionForm, miembro_2_id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro II...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
@@ -267,12 +267,12 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               {isCitizenM3 ? (
                 <input 
                   placeholder="Nombre completo del Ciudadano (M-III)" 
-                  value={commissionForm.miembro_3_nombre} 
-                  onChange={e => setCommissionForm({...commissionForm, miembro_3_nombre: e.target.value})} 
+                  value={commissionForm.miembro3Nombre} 
+                  onChange={e => setCommissionForm({...commissionForm, miembro3Nombre: e.target.value})} 
                   className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
                 />
               ) : (
-                <select value={commissionForm.miembro_3_id} onChange={e => setCommissionForm({...commissionForm, miembro_3_id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro III (Legislador)...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>

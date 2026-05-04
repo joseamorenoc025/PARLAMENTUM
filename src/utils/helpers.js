@@ -43,11 +43,11 @@ export const generateSessionNumber = (tipo, year, existingSessions) => {
     s.activo &&
     (s.tipo === 'Ordinaria' || s.tipo === 'Extraordinaria') &&
     s.tipo === tipo &&
-    s.numero_correlativo &&
-    s.numero_correlativo.endsWith(`-${year}`)
+    s.numeroCorrelativo &&
+    s.numeroCorrelativo.endsWith(`-${year}`)
   );
   const maxNum = yearSessions.reduce((max, s) => {
-    const parts = s.numero_correlativo.split('-');
+    const parts = s.numeroCorrelativo.split('-');
     const num = parseInt(parts[0], 10);
     return num > max ? num : max;
   }, 0);

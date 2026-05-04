@@ -32,8 +32,8 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
     return new Date(o.fecha + 'T12:00:00').getFullYear() === currentYear;
   }), [oficios, currentYear]);
 
-  const approvedLaws = useMemo(() => projects.filter(p => p.activo && (p.fase_actual === 'Aprobada' || p.fase_actual === 'Sancionada')), [projects]);
-  const activeProjects = useMemo(() => projects.filter(p => p.activo && p.fase_actual !== 'Sancionada'), [projects]);
+  const approvedLaws = useMemo(() => projects.filter(p => p.activo && (p.faseActual === 'Aprobada' || p.faseActual === 'Sancionada')), [projects]);
+  const activeProjects = useMemo(() => projects.filter(p => p.activo && p.faseActual !== 'Sancionada'), [projects]);
 
   const sessionTypeBreakdown = useMemo(() => {
     const counts = {};
@@ -42,13 +42,13 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
   }, [monthSessions]);
 
   const stalledProjects = useMemo(() => projects.filter(p => {
-    if (!p.activo || p.fase_actual === 'Sancionada') return false;
-    return getDaysSince(p.fecha_actualizacion) > 30;
+    if (!p.activo || p.faseActual === 'Sancionada') return false;
+    return getDaysSince(p.fechaActualizacion) > 30;
   }), [projects]);
 
   const alertProjects = useMemo(() => projects.filter(p => {
-    if (!p.activo || p.fase_actual === 'Sancionada') return false;
-    const days = getDaysSince(p.fecha_actualizacion);
+    if (!p.activo || p.faseActual === 'Sancionada') return false;
+    const days = getDaysSince(p.fechaActualizacion);
     return days >= 15 && days <= 30;
   }), [projects]);
 
@@ -102,7 +102,7 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
                     className="text-left w-full"
                   >
                     <p className="text-sm font-medium truncate hover:underline">{p.titulo}</p>
-                    <p className="text-xs text-red-400">{getDaysSince(p.fecha_actualizacion)} días sin actividad</p>
+                    <p className="text-xs text-red-400">{getDaysSince(p.fechaActualizacion)} días sin actividad</p>
                   </button>
                 </div>
                 <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500 ml-2" />
@@ -116,7 +116,7 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
                     className="text-left w-full"
                   >
                     <p className="text-sm font-medium truncate hover:underline">{p.titulo}</p>
-                    <p className="text-xs text-amber-400">{getDaysSince(p.fecha_actualizacion)} días sin actividad</p>
+                    <p className="text-xs text-amber-400">{getDaysSince(p.fechaActualizacion)} días sin actividad</p>
                   </button>
                 </div>
                 <span className="flex-shrink-0 w-2 h-2 rounded-full bg-amber-500 ml-2" />
@@ -141,7 +141,7 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
                 {l.nombre.split(' ').map(n => n[0]).join('').slice(0, 2)}
               </div>
               <p className="text-xs font-medium truncate">{l.nombre}</p>
-              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>{l.partido_politico}</p>
+              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>{l.partidoPolitico}</p>
             </div>
           ))}
         </div>

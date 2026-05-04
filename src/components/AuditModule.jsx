@@ -12,7 +12,7 @@ const AuditModule = ({ auditLogs, darkMode }) => {
   const filteredLogs = useMemo(() => {
     return auditLogs.filter(log => 
       log.action.toLowerCase().includes(search.toLowerCase()) ||
-      log.entity_type.toLowerCase().includes(search.toLowerCase()) ||
+      log.entityType.toLowerCase().includes(search.toLowerCase()) ||
       log.userId.toLowerCase().includes(search.toLowerCase())
     );
   }, [auditLogs, search]);
@@ -87,8 +87,8 @@ const AuditModule = ({ auditLogs, darkMode }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="text-xs font-medium">{log.entity_type}</span>
-                      <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>ID: {log.entity_id}</span>
+                      <span className="text-xs font-medium">{log.entityType}</span>
+                      <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>ID: {log.entityId}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 max-w-[150px]">

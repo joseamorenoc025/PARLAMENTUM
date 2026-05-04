@@ -9,7 +9,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const [form, setForm] = useState({
     username: '',
     password: '',
-    nombre_completo: '',
+    nombreCompleto: '',
     role: 'admin'
   });
 
@@ -54,8 +54,8 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         const hash = await window.legisAPI.auth.hash(form.password);
         await dbService.saveUser({
           username: form.username,
-          password_hash: hash,
-          nombre_completo: form.nombre_completo,
+          passwordHash: hash,
+          nombreCompleto: form.nombreCompleto,
           role: form.role
         });
         addToast('Usuario registrado exitosamente', 'success');
@@ -68,11 +68,11 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
           return;
         }
 
-        const isValid = await window.legisAPI.auth.verify(form.password, user.password_hash);
+        const isValid = await window.legisAPI.auth.verify(form.password, user.passwordHash);
         if (isValid) {
           await dbService.updateLastLogin(user.id);
           onLogin(user);
-          addToast(`Bienvenido, ${user.nombre_completo || user.username}`, 'success');
+          addToast(`Bienvenido, ${user.nombreCompleto || user.username}`, 'success');
         } else {
           addToast('Contraseña incorrecta', 'error');
         }
@@ -110,8 +110,8 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                   type="text"
                   placeholder="Ej: Dr. Juan Pérez"
                   className={`w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                  value={form.nombre_completo}
-                  onChange={e => setForm({ ...form, nombre_completo: e.target.value })}
+                  value={form.nombreCompleto}
+                  onChange={e => setForm({ ...form, nombreCompleto: e.target.value })}
                   required
                 />
               </div>

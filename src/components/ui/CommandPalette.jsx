@@ -28,16 +28,16 @@ const CommandPalette = ({ isOpen, onClose, sessions, oficios, projects, legislat
     
     if (sessions) {
       sessions.filter(s => s.activo).forEach(s => {
-        if (s.numero_correlativo?.toLowerCase().includes(q) || s.tipo?.toLowerCase().includes(q) || (s.fecha && s.fecha.includes(q))) {
-          found.push({ type: 'sesion', id: s.id, label: `${s.numero_correlativo || s.tipo} - ${s.fecha}` });
+        if (s.numeroCorrelativo?.toLowerCase().includes(q) || s.tipo?.toLowerCase().includes(q) || (s.fecha && s.fecha.includes(q))) {
+          found.push({ type: 'sesion', id: s.id, label: `${s.numeroCorrelativo || s.tipo} - ${s.fecha}` });
         }
       });
     }
     
     if (oficios) {
       oficios.filter(o => o.activo).forEach(o => {
-        if (o.numero_oficio?.toLowerCase().includes(q) || o.asunto?.toLowerCase().includes(q)) {
-          found.push({ type: 'oficio', id: o.id, label: `${o.numero_oficio} - ${o.asunto}` });
+        if (o.numeroOficio?.toLowerCase().includes(q) || o.asunto?.toLowerCase().includes(q)) {
+          found.push({ type: 'oficio', id: o.id, label: `${o.numeroOficio} - ${o.asunto}` });
         }
       });
     }

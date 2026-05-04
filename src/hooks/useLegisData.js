@@ -55,13 +55,13 @@ export const useLegisData = (defaultConfig) => {
   }, [loadAllData]);
 
   // Helper for audit logging
-  const logAction = async (action, entity_type, entity_id, changes = null) => {
+  const logAction = async (action, entityType, entityId, changes = null) => {
     await dbService.addAuditLog({
       action,
-      entity_type,
-      entity_id,
+      entityType,
+      entityId,
       changes,
-      userId: config.nombre_secretario || 'admin'
+      userId: config.nombreSecretario || 'admin'
     });
     setAuditLogs(await dbService.getAuditLogs());
   };
@@ -137,7 +137,7 @@ export const useLegisData = (defaultConfig) => {
   const saveDocument = async (document) => {
     const id = await dbService.saveDocument(document);
     await loadAllData();
-    await logAction('CREATE_DOCUMENT', 'documents', id, { nombre: document.nombre_original });
+    await logAction('CREATE_DOCUMENT', 'documents', id, { nombre: document.nombreOriginal });
   };
 
   const deleteDocument = async (id) => {

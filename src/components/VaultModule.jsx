@@ -8,22 +8,22 @@ import { fileToBase64 } from '../utils/helpers';
 const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToast, onSaveDocument, onDeleteDocument }) => {
   const [filterType, setFilterType] = useState('');
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ entidad_tipo: 'Sesion', entidad_id: '', fase_etiqueta: '', nombre_archivo: '' });
+  const [uploadForm, setUploadForm] = useState({ entidadTipo: 'Sesion', entidadId: '', faseEtiqueta: '', nombreOriginal: '' });
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
 
   const getEntityName = (doc) => {
-    if (doc.entidad_tipo === 'Sesion') {
-      const s = sessions.find(s => s.id === doc.entidad_id);
-      return s ? `${s.numero_correlativo || s.tipo} (${s.fecha})` : 'Sesión no encontrada';
+    if (doc.entidadTipo === 'Sesion') {
+      const s = sessions.find(s => s.id === doc.entidadId);
+      return s ? `${s.numeroCorrelativo || s.tipo} (${s.fecha})` : 'Sesión no encontrada';
     }
-    if (doc.entidad_tipo === 'Oficio') {
-      const o = oficios.find(o => o.id === doc.entidad_id);
-      return o ? o.numero_oficio : 'Oficio no encontrado';
+    if (doc.entidadTipo === 'Oficio') {
+      const o = oficios.find(o => o.id === doc.entidadId);
+      return o ? o.numeroOficio : 'Oficio no encontrado';
     }
-    if (doc.entidad_tipo === 'ProyectoLey') {
-      const p = projects.find(p => p.id === doc.entidad_id);
+    if (doc.entidadTipo === 'ProyectoLey') {
+      const p = projects.find(p => p.id === doc.entidadId);
       return p ? p.titulo : 'Proyecto no encontrado';
     }
     return '';
@@ -45,41 +45,41 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
       return;
     }
     setSelectedFile(file);
-    setUploadForm(prev => ({ ...prev, nombre_archivo: file.name }));
+    setUploadForm(prev => ({ ...prev, nombreOriginal: file.name }));
   };
 
   const handleUpload = async () => {
     if (!selectedFile) { addToast('Seleccione un archivo primero', 'error'); return; }
-    if (!uploadForm.entidad_id) { addToast('Seleccione una entidad vinculada', 'error'); return; }
-    if (!uploadForm.fase_etiqueta) { addToast('Seleccione la etiqueta de fase', 'error'); return; }
+    if (!uploadForm.entidadId) { addToast('Seleccione una entidad vinculada', 'error'); return; }
+    if (!uploadForm.faseEtiqueta) { addToast('Seleccione la etiqueta de fase', 'error'); return; }
     
     try {
       setUploadProgress(30);
       const base64Content = await fileToBase64(selectedFile);
       setUploadProgress(70);
       
-      const hash = `sha256:${Array.from(uploadForm.nombre_archivo).reduce((a, c) => a + c.charCodeAt(0), 0).toString(16).padStart(8, '0')}`;
+      const hash = `sha256:${Array.from(uploadForm.nombreOriginal).reduce((a, c) => a + c.charCodeAt(0), 0).toString(16).padStart(8, '0')}`;
       const newDoc = {
-        entidad_tipo: uploadForm.entidad_tipo,
-        entidad_id: Number(uploadForm.entidad_id),
-        fase_etiqueta: uploadForm.fase_etiqueta,
-        ruta_archivo: `/boveda/${uploadForm.entidad_tipo.toLowerCase()}/${uploadForm.entidad_id}/${uploadForm.nombre_archivo}`,
-        hash_integridad: hash,
-        nombre_original: uploadForm.nombre_archivo,
-        tipo_mime: selectedFile.type,
-        tamano_bytes: selectedFile.size,
-        fecha_subida: new Date().toISOString().split('T')[0],
-        contenido_base64: base64Content,
+        entidadTipo: uploadForm.entidadTipo,
+        entidadId: Number(uploadForm.entidadId),
+        faseEtiqueta: uploadForm.faseEtiqueta,
+        rutaArchivo: `/boveda/${uploadForm.entidadTipo.toLowerCase()}/${uploadForm.entidadId}/${uploadForm.nombreOriginal}`,
+        hashIntegridad: hash,
+        nombreOriginal: uploadForm.nombreOriginal,
+        tipoMime: selectedFile.type,
+        tamanoBytes: selectedFile.size,
+        fechaSubida: new Date().toISOString().split('T')[0],
+        contenidoBase64: base64Content,
         activo: true
       };
       
       await onSaveDocument?.(newDoc);
       setUploadProgress(100);
-      addToast(`✅ Documento "${uploadForm.nombre_archivo}" cargado`, 'success');
+      addToast(`✅ Documento "${uploadForm.nombreOriginal}" cargado`, 'success');
       setShowUpload(false);
       setSelectedFile(null);
       setUploadProgress(0);
-      setUploadForm({ entidad_tipo: 'Sesion', entidad_id: '', fase_etiqueta: '', nombre_archivo: '' });
+      setUploadForm({ entidadTipo: 'Sesion', entidadId: '', faseEtiqueta: '', nombreOriginal: '' });
     } catch (error) {
       console.error(error);
       addToast('Error al procesar el archivo', 'error');
@@ -90,7 +90,7 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
   const typeIcons = { Sesion: <CalendarDays className="w-5 h-5" />, Oficio: <FileText className="w-5 h-5" />, ProyectoLey: <Scale className="w-5 h-5" /> };
   const typeColors = { Sesion: 'text-blue-500 bg-blue-500/10', Oficio: 'text-purple-500 bg-purple-500/10', ProyectoLey: 'text-emerald-500 bg-emerald-500/10' };
 
-  const activeDocs = useMemo(() => documents.filter(d => d.activo && (!filterType || d.entidad_tipo === filterType)), [documents, filterType]);
+  const activeDocs = useMemo(() => documents.filter(d => d.activo && (!filterType || d.entidadTipo === filterType)), [documents, filterType]);
   const activeSessions = useMemo(() => sessions.filter(s => s.activo), [sessions]);
   const activeOficios = useMemo(() => oficios.filter(o => o.activo), [oficios]);
   const activeProjects = useMemo(() => projects.filter(p => p.activo), [projects]);
@@ -118,10 +118,10 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
           <div key={doc.id} className={`group rounded-2xl border p-5 transition-all hover:border-indigo-500/30 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
-                <div className={`p-2.5 rounded-xl ${typeColors[doc.entidad_tipo] || 'text-gray-500 bg-gray-500/10'}`}>{typeIcons[doc.entidad_tipo]}</div>
+                <div className={`p-2.5 rounded-xl ${typeColors[doc.entidadTipo] || 'text-gray-500 bg-gray-500/10'}`}>{typeIcons[doc.entidadTipo]}</div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold truncate leading-tight">{doc.nombre_original}</p>
-                  <p className={`text-[10px] mt-0.5 font-medium opacity-50 uppercase tracking-wider`}>{doc.entidad_tipo}</p>
+                  <p className="text-sm font-bold truncate leading-tight">{doc.nombreOriginal}</p>
+                  <p className={`text-[10px] mt-0.5 font-medium opacity-50 uppercase tracking-wider`}>{doc.entidadTipo}</p>
                 </div>
               </div>
               <button onClick={() => onDeleteDocument(doc.id)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -131,16 +131,16 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Vinculado a:</p>
               <p className="text-xs font-medium truncate">{getEntityName(doc)}</p>
               <div className="mt-2 flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 text-[10px] border dark:border-gray-700 font-medium">{doc.fase_etiqueta}</span>
-                <span className="text-[10px] font-mono opacity-40">{(doc.tamano_bytes / 1024).toFixed(1)} KB</span>
+                <span className="px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 text-[10px] border dark:border-gray-700 font-medium">{doc.faseEtiqueta}</span>
+                <span className="text-[10px] font-mono opacity-40">{(doc.tamanoBytes / 1024).toFixed(1)} KB</span>
               </div>
             </div>
 
             <div className="flex gap-2 mt-4">
-              {doc.contenido_base64 && (
+              {doc.contenidoBase64 && (
                 <a 
-                  href={doc.contenido_base64} 
-                  download={doc.nombre_original} 
+                  href={doc.contenidoBase64} 
+                  download={doc.nombreOriginal} 
                   className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-indigo-600 hover:text-white transition-all text-xs font-bold"
                 >
                   <Download className="w-3.5 h-3.5" /> Descargar
@@ -189,8 +189,8 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
             <div className="col-span-2">
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Tipo de Entidad</label>
               <select 
-                value={uploadForm.entidad_tipo} 
-                onChange={e => setUploadForm({...uploadForm, entidad_tipo: e.target.value, entidad_id: ''})} 
+                value={uploadForm.entidadTipo} 
+                onChange={e => setUploadForm({...uploadForm, entidadTipo: e.target.value, entidadId: ''})} 
                 className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               >
                 <option value="Sesion">Sesión Legislativa</option>
@@ -202,13 +202,13 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Vincular a:</label>
               <select 
-                value={uploadForm.entidad_id} 
-                onChange={e => setUploadForm({...uploadForm, entidad_id: e.target.value})} 
+                value={uploadForm.entidadId} 
+                onChange={e => setUploadForm({...uploadForm, entidadId: e.target.value})} 
                 className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               >
                 <option value="">Seleccionar...</option>
-                {(uploadForm.entidad_tipo === 'Sesion' ? activeSessions : uploadForm.entidad_tipo === 'Oficio' ? activeOficios : activeProjects).map(e => (
-                  <option key={e.id} value={e.id}>{e.numero_correlativo || e.numero_oficio || e.titulo}</option>
+                {(uploadForm.entidadTipo === 'Sesion' ? activeSessions : uploadForm.entidadTipo === 'Oficio' ? activeOficios : activeProjects).map(e => (
+                  <option key={e.id} value={e.id}>{e.numeroCorrelativo || e.numeroOficio || e.titulo}</option>
                 ))}
               </select>
             </div>
@@ -216,19 +216,19 @@ const VaultModule = ({ documents, sessions, oficios, projects, darkMode, addToas
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Fase/Etiqueta:</label>
               <select 
-                value={uploadForm.fase_etiqueta} 
-                onChange={e => setUploadForm({...uploadForm, fase_etiqueta: e.target.value})} 
+                value={uploadForm.faseEtiqueta} 
+                onChange={e => setUploadForm({...uploadForm, faseEtiqueta: e.target.value})} 
                 className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
               >
                 <option value="">Seleccionar...</option>
-                {getPhaseLabels(uploadForm.entidad_tipo).map(f => <option key={f} value={f}>{f}</option>)}
+                {getPhaseLabels(uploadForm.entidadTipo).map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
           </div>
 
           <button 
             onClick={handleUpload} 
-            disabled={!selectedFile || !uploadForm.entidad_id || !uploadForm.fase_etiqueta}
+            disabled={!selectedFile || !uploadForm.entidadId || !uploadForm.faseEtiqueta}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:grayscale"
           >
             {uploadProgress > 0 ? `Subiendo... ${uploadProgress}%` : 'Confirmar Carga'}
