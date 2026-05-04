@@ -12,7 +12,19 @@ import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { extractTextFromPDF, extractTitleFromContent } from '../services/fileIngestor.js';
 
+import { analytics } from '../services/analytics.js';
+
 export const setupIPCHandlers = (mainWindow) => {
+  // Analytics
+  ipcMain.handle('app:analytics:set-opt-in', async (_, enabled) => {
+    await analytics.setOptIn(enabled);
+    return { success: true };
+  });
+
+  ipcMain.handle('app:analytics:status', async () => {
+    return { enabled: analytics.enabled, anonymousId: analytics.anonymousId };
+  });
+
   // Laws
   ipcMain.handle('laws:import', async (_, rawData) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
@@ -183,6 +195,23 @@ export const setupIPCHandlers = (mainWindow) => {
     } catch (err) {
       logger.error('Drizzle stats error:', err);
       throw err;
+    }
+  });
+
+  ipcMain.handle('app:health', async () => {
+    try {
+      const dbCheck = sqlite.prepare('SELECT 1 as ok').get();
+      return {
+        status: 'ok',
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        database: dbCheck?.ok === 1 ? 'connected' : 'error',
+        timestamp: new Date().toISOString()
+      };
+    } catch (err) {
+      logger.error('Health check failed:', err);
+      return { status: 'error', error: err.message };
     }
   });
 

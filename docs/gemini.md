@@ -39,3 +39,7 @@
 - [x] Hash Chain activo en Auditoría.
 - [x] Soporte para Miembros Ciudadanos en Comisiones.
 - [x] Tablero Kanban operativo en Agenda.
+- [x] Validación de Input IPC con Zod (Seguridad).
+- [x] Endpoint de Health Check (app:health).
+- [ ] Cobertura de tests > 80%.
+- [ ] Exportación de datos a Google Drive automática.

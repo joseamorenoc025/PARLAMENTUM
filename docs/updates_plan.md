@@ -1704,11 +1704,11 @@ MIT © 2024 José A. Moreno. Ver LICENSE
 - [x] UX moderna: Command Palette, Dark Mode, Tailwind
 
 ## 🔄 En Progreso (Próximas 2-4 semanas)
-- [ ] Validación de input en IPC con Zod
-- [ ] Tests de integración para IPC handlers
-- [ ] Health check endpoint para monitoreo
-- [ ] Scripts de cobertura de tests + thresholds
-- [ ] Changelog automático con Conventional Commits
+- [x] Validación de input en IPC con Zod
+- [x] Tests de integración para IPC handlers
+- [x] Health check endpoint para monitoreo
+- [x] Scripts de cobertura de tests + thresholds
+- [x] Changelog automático con Conventional Commits
 - [ ] Releases automáticos con electron-builder
 - [ ] Sistema de plugins mínimo viable
 
@@ -1716,7 +1716,7 @@ MIT © 2024 José A. Moreno. Ver LICENSE
 - [ ] E2E tests con Playwright para flujos críticos
 - [ ] Búsqueda semántica opcional con transformers.js
 - [ ] Publicación en winget/chocolatey (Windows)
-- [ ] Analytics anónimo opt-in con controles de privacidad
+- [x] Analytics anónimo opt-in con controles de privacidad
 - [ ] Documentación completa para colaboradores OSS
 - [ ] Primeros plugins comunitarios de ejemplo
 - [ ] Plan de respuesta a breaking changes documentado

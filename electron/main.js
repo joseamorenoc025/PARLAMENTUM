@@ -7,6 +7,7 @@ import { db, sqlite } from './src/db/index.js';
 import { runMigrations } from './src/db/migrate.js';
 import { logger } from './src/lib/logger.js';
 import { setupIPCHandlers } from './src/ipc/handlers.js';
+import { analytics } from './src/services/analytics.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -58,8 +59,11 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow();
+  
+  // Inicializar servicios
+  await analytics.init();
   
   // Inicializar handlers de IPC una sola vez al arrancar
   setupIPCHandlers(mainWindow);
