@@ -82,6 +82,22 @@ export class SyncEngine {
   }
 
   /**
+   * Transforma un link de Google Drive a un link de descarga directa
+   */
+  transformDriveLink(url) {
+    if (!url || !url.includes('drive.google.com')) return url;
+    try {
+      const match = url.match(/\/d\/(.+?)(\/|$|\?)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+      }
+    } catch (e) {
+      logger.error('Error transformando link de Drive en SyncEngine:', e);
+    }
+    return url;
+  }
+
+  /**
    * Mezcla las leyes locales con las remotas preservando campos extra (como links de drive manuales).
    */
   mergeLaws(localLaws, remoteLaws) {
@@ -89,6 +105,7 @@ export class SyncEngine {
     
     const merged = localLaws.map(local => {
       const remote = remoteMap.get(local.id);
+      const rawLink = remote?.link_drive || (local.qrData?.startsWith('http') ? local.qrData : null);
       
       // Mapeo de campos de DB local a JSON público
       return {
@@ -98,8 +115,7 @@ export class SyncEngine {
         tipo: local.tipo,
         anio: local.anio,
         fecha_publicacion: local.fechaPublicacion,
-        // Preservamos el link de drive si ya existía remotamente, o usamos el qrData si parece un link
-        link_drive: remote?.link_drive || (local.qrData?.startsWith('http') ? local.qrData : null),
+        link_drive: this.transformDriveLink(rawLink),
         updated_at: new Date().toISOString()
       };
     });

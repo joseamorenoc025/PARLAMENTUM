@@ -166,14 +166,26 @@ export const setupIPCHandlers = (mainWindow) => {
 
       if (data.id) {
         const { id, ...updateData } = data;
-        return db.update(tableSchema)
+        const result = db.update(tableSchema)
           .set(updateData)
           .where(eq(tableSchema.id, id))
           .run();
+        
+        // Sincronización automática para leyes
+        if (table === 'laws') {
+          try { await enqueueTask('laws', id, 'update'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        return result;
       } else {
-        return db.insert(tableSchema)
+        const result = db.insert(tableSchema)
           .values(data)
           .run();
+        
+        // Sincronización automática para leyes
+        if (table === 'laws') {
+          try { await enqueueTask('laws', result.lastInsertRowid, 'add'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        return result;
       }
     } catch (err) {
       logger.error(`Upsert error [${table}]:`, err);

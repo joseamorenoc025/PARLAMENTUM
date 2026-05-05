@@ -11,7 +11,30 @@ export const runMigrations = (dbPath) => {
   try {
     const sqlite = new Database(dbPath);
     
-    // Healing: Asegurar columnas que suelen faltar si migraciones anteriores fallaron
+    // Healing: Asegurar tablas y columnas que suelen faltar si migraciones anteriores fallaron
+    
+    // 1. Asegurar tabla sync_queue (crítica para el motor de sincronización)
+    try {
+      sqlite.prepare(`
+        CREATE TABLE IF NOT EXISTS \`sync_queue\` (
+          \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+          \`entity_type\` text DEFAULT 'laws',
+          \`entity_id\` integer,
+          \`action\` text,
+          \`status\` text DEFAULT 'pending',
+          \`attempts\` integer DEFAULT 0,
+          \`last_error\` text,
+          \`next_retry\` text,
+          \`created_at\` text DEFAULT CURRENT_TIMESTAMP,
+          \`updated_at\` text
+        )
+      `).run();
+      logger.info('✅ Tabla sync_queue verificada/creada');
+    } catch (e) {
+      logger.error('Error asegurando tabla sync_queue:', e);
+    }
+
+    // 2. Asegurar columnas específicas
     const columnsToEnsure = [
       // Tabla: commissions
       { table: 'commissions', column: 'vicepresidente_id', type: 'INTEGER' },
