@@ -1,6 +1,26 @@
 [
   {
+    "id": 1,
+    "titulo": "Ley de Transparencia y Acceso a la Información",
+    "expediente": "2024-001",
+    "tipo": "Ordenanza",
+    "anio": 2024,
+    "fecha_publicacion": "2024-01-15T12:00:00.000Z",
+    "link_drive": "https://drive.google.com/file/d/example1",
+    "updated_at": "2024-05-05T14:00:00.000Z"
+  },
+  {
     "id": 2,
+    "titulo": "Reglamento Interno del Concejo Municipal",
+    "expediente": "2024-002",
+    "tipo": "Resolución",
+    "anio": 2024,
+    "fecha_publicacion": "2024-02-10T12:00:00.000Z",
+    "link_drive": "https://drive.google.com/file/d/example2",
+    "updated_at": "2024-05-05T14:10:00.000Z"
+  },
+  {
+    "id": 3,
     "titulo": "Ley consejos",
     "expediente": null,
     "tipo": "Extraordinaria",

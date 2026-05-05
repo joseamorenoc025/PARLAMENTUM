@@ -15,12 +15,13 @@ import LegislatorsModule from './components/LegislatorsModule';
 import VaultModule from './components/VaultModule';
 import LawsLibrary from './components/LawsLibrary';
 import AuditModule from './components/AuditModule';
+import SyncSettings from './components/SyncSettings';
 
 // Iconos
 import { 
   LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
   Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel, ShieldCheck,
-  LogOut, Database
+  LogOut, Database, Github
 } from 'lucide-react';
 
 const defaultConfig = {
@@ -50,7 +51,24 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [toasts, setToasts] = useState([]);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('synced'); // 'synced', 'pending', 'error'
   const darkMode = config.darkMode;
+
+  useEffect(() => {
+    const checkSync = async () => {
+      try {
+        const stats = await window.legisAPI.sync.github.getQueueStats();
+        if (stats.failed > 0) setSyncStatus('error');
+        else if (stats.pending > 0) setSyncStatus('pending');
+        else setSyncStatus('synced');
+      } catch (e) {
+        console.error('Sync check failed:', e);
+      }
+    };
+    checkSync();
+    const interval = setInterval(checkSync, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Atajos de teclado
   useEffect(() => {
@@ -95,6 +113,7 @@ export default function App() {
     { id: 'boveda', label: 'Bóveda', icon: <FolderOpen className="w-5 h-5" /> },
     { id: 'leyes', label: 'Biblioteca', icon: <Scale className="w-5 h-5" /> },
     { id: 'auditoria', label: 'Auditoría', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
 
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));
@@ -174,7 +193,23 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">{navItems.find(i => i.id === currentPage)?.label}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Sync Status Badge */}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                syncStatus === 'synced' ? (darkMode ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-green-50 border-green-200 text-green-600') :
+                syncStatus === 'pending' ? (darkMode ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' : 'bg-yellow-50 border-yellow-200 text-yellow-600') :
+                (darkMode ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-red-50 border-red-200 text-red-600')
+              }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  syncStatus === 'synced' ? 'bg-green-500' :
+                  syncStatus === 'pending' ? 'bg-yellow-500 animate-pulse' :
+                  'bg-red-500'
+                }`} />
+                {syncStatus === 'synced' ? 'PORTAL AL DÍA' : syncStatus === 'pending' ? 'SINCRONIZANDO...' : 'ERROR SYNC'}
+              </div>
+
+              <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+              
               <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-700'} transition-colors`}>
                 <Search className="w-4 h-4" />
                 <span className="hidden sm:inline">Buscar...</span>
@@ -208,6 +243,7 @@ export default function App() {
             {currentPage === 'boveda' && <VaultModule documents={documents} sessions={sessions} oficios={oficios} projects={projects} darkMode={darkMode} addToast={addToast} onSaveDocument={saveDocument} onDeleteDocument={deleteDocument} />}
             {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
+            {currentPage === 'sincronizacion' && <SyncSettings darkMode={darkMode} addToast={addToast} />}
           </main>
         </div>
 

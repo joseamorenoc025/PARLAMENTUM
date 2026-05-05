@@ -15,6 +15,13 @@
       "when": 1777853152723,
       "tag": "0001_melodic_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777891234567,
+      "tag": "0002_add_sync_queue",
+      "breakpoints": true
     }
   ]
 }

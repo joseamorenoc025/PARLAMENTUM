@@ -13,18 +13,10 @@ import { lawImportSchema } from './schemas/laws.js';
 import { extractTextFromPDF, extractTitleFromContent } from '../services/fileIngestor.js';
 
 import { analytics } from '../services/analytics.js';
+import { enqueueTask } from '../modules/sync/index.js';
 
 export const setupIPCHandlers = (mainWindow) => {
-  // Analytics
-  ipcMain.handle('app:analytics:set-opt-in', async (_, enabled) => {
-    await analytics.setOptIn(enabled);
-    return { success: true };
-  });
-
-  ipcMain.handle('app:analytics:status', async () => {
-    return { enabled: analytics.enabled, anonymousId: analytics.anonymousId };
-  });
-
+  // ...
   // Laws
   ipcMain.handle('laws:import', async (_, rawData) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
@@ -44,6 +36,14 @@ export const setupIPCHandlers = (mainWindow) => {
       };
       
       const result = db.insert(schema.laws).values(newLaw).run();
+      
+      // Encolar sincronización (Fase 3)
+      try {
+        await enqueueTask('laws', result.lastInsertRowid, 'add');
+      } catch (e) {
+        logger.error('Error auto-enqueuing law sync:', e);
+      }
+
       return { success: true, id: result.lastInsertRowid };
     } catch (err) {
       logger.error('Error importing law:', err);
@@ -212,6 +212,23 @@ export const setupIPCHandlers = (mainWindow) => {
     } catch (err) {
       logger.error('Health check failed:', err);
       return { status: 'error', error: err.message };
+    }
+  });
+
+  ipcMain.handle('app:analytics:status', () => {
+    return {
+      enabled: analytics.enabled,
+      anonymousId: analytics.anonymousId
+    };
+  });
+
+  ipcMain.handle('app:analytics:set-opt-in', async (_, enabled) => {
+    try {
+      await analytics.setOptIn(enabled);
+      return { success: true, enabled: analytics.enabled };
+    } catch (err) {
+      logger.error('Error setting analytics opt-in:', err);
+      throw err;
     }
   });
 

@@ -146,3 +146,17 @@ export const laws = sqliteTable('laws', {
   fileHash: text('file_hash'), // Nuevo: Hash para deduplicación
   activo: integer('activo').default(1),
 });
+
+// Cola de Sincronización para Resiliencia Offline
+export const syncQueue = sqliteTable('sync_queue', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  entityType: text('entity_type').default('laws'),
+  entityId: integer('entity_id'),
+  action: text('action'), // 'add', 'update', 'delete'
+  status: text('status').default('pending'), // 'pending', 'syncing', 'synced', 'failed'
+  attempts: integer('attempts').default(0),
+  lastError: text('last_error'),
+  nextRetry: text('next_retry'),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  updatedAt: text('updated_at'),
+});

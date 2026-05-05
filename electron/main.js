@@ -7,6 +7,7 @@ import { db, sqlite } from './src/db/index.js';
 import { runMigrations } from './src/db/migrate.js';
 import { logger } from './src/lib/logger.js';
 import { setupIPCHandlers } from './src/ipc/handlers.js';
+import { setupSyncHandlers } from './src/modules/sync/index.js';
 import { analytics } from './src/services/analytics.js';
 
 // Cargar variables de entorno
@@ -48,10 +49,10 @@ function createWindow() {
   });
 
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:5173/app.html');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/app.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -60,12 +61,16 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  createWindow();
-  
   // Inicializar servicios
   await analytics.init();
   
-  // Inicializar handlers de IPC una sola vez al arrancar
+  // Inicializar handlers de IPC una sola vez antes de crear la ventana
+  // Notar que algunos handlers podrían necesitar la referencia a mainWindow más tarde
+  await setupSyncHandlers();
+  
+  createWindow();
+  
+  // Si setupIPCHandlers necesita mainWindow, lo llamamos después de crearla
   setupIPCHandlers(mainWindow);
 
   app.on('activate', () => {

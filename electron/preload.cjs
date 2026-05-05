@@ -15,5 +15,18 @@ contextBridge.exposeInMainWorld('legisAPI', {
   },
   db: {
     backupLocal: () => ipcRenderer.invoke('db:backup:local')
+  },
+  sync: {
+    github: {
+      saveToken: (token) => ipcRenderer.invoke('sync:github:save-token', token),
+      hasToken: () => ipcRenderer.invoke('sync:github:has-token'),
+      validate: () => ipcRenderer.invoke('sync:github:validate'),
+      force: () => ipcRenderer.invoke('sync:github:force'),
+      clear: () => ipcRenderer.invoke('sync:github:clear'),
+      setRepo: (config) => ipcRenderer.invoke('sync:github:set-repo', config),
+      getRepo: () => ipcRenderer.invoke('sync:github:get-repo'),
+      getQueueStats: () => ipcRenderer.invoke('sync:queue:stats'),
+      enqueue: (data) => ipcRenderer.invoke('sync:queue:enqueue', data)
+    }
   }
 });
