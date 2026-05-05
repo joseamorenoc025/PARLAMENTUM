@@ -41,6 +41,7 @@ export default function App() {
     commissions, saveCommission, deleteCommission,
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
+    laws,
     documents, saveDocument, deleteDocument,
     auditLogs,
     isLoading
@@ -235,7 +236,7 @@ export default function App() {
 
           {/* Page Content */}
           <main className="p-6">
-            {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} legislators={legislators} darkMode={darkMode} onNavigate={navigateToEntity} />}
+            {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} onNavigate={navigateToEntity} />}
             {currentPage === 'sesiones' && <SessionsModule sessions={sessions} oficios={oficios} darkMode={darkMode} addToast={addToast} onSave={saveSession} onDelete={deleteSession} onNavigate={navigateToEntity} />}
             {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} />}
             {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} />}

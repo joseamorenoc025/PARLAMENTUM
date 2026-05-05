@@ -5,7 +5,7 @@ import {
 import StatCard from './ui/StatCard';
 import { getDaysSince } from '../utils/helpers';
 
-const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavigate }) => {
+const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMode, onNavigate }) => {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -32,7 +32,7 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
     return new Date(o.fecha + 'T12:00:00').getFullYear() === currentYear;
   }), [oficios, currentYear]);
 
-  const approvedLaws = useMemo(() => projects.filter(p => p.activo && (p.faseActual === 'Aprobada' || p.faseActual === 'Sancionada')), [projects]);
+  const libraryLawsCount = useMemo(() => laws.filter(l => l.activo).length, [laws]);
   const activeProjects = useMemo(() => projects.filter(p => p.activo && p.faseActual !== 'Sancionada'), [projects]);
 
   const sessionTypeBreakdown = useMemo(() => {
@@ -62,7 +62,7 @@ const Dashboard = ({ sessions, oficios, projects, legislators, darkMode, onNavig
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard darkMode={darkMode} icon={<CalendarDays className="w-5 h-5" />} label="Sesiones del Mes" value={monthSessions.length} color="blue" />
         <StatCard darkMode={darkMode} icon={<FileText className="w-5 h-5" />} label="Oficios del Mes" value={monthOficios.length} color="purple" />
-        <StatCard darkMode={darkMode} icon={<Scale className="w-5 h-5" />} label="Leyes Aprobadas" value={approvedLaws.length} color="emerald" />
+        <StatCard darkMode={darkMode} icon={<Scale className="w-5 h-5" />} label="Leyes en Biblioteca" value={libraryLawsCount} color="emerald" />
         <StatCard darkMode={darkMode} icon={<BarChart3 className="w-5 h-5" />} label="Proyectos Activos" value={activeProjects.length} color="amber" />
       </div>
 

@@ -8,6 +8,7 @@ export const useLegisData = (defaultConfig) => {
   const [commissions, setCommissions] = useState([]);
   const [oficios, setOficios] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [laws, setLaws] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +23,7 @@ export const useLegisData = (defaultConfig) => {
         dbCommissions,
         dbOficios,
         dbProjects,
+        dbLaws,
         dbDocuments,
         dbAuditLogs
       ] = await Promise.all([
@@ -31,6 +33,7 @@ export const useLegisData = (defaultConfig) => {
         dbService.getCommissions(),
         dbService.getOficios(),
         dbService.getProjects(),
+        dbService.getLaws(),
         dbService.getDocuments(),
         dbService.getAuditLogs()
       ]);
@@ -41,6 +44,7 @@ export const useLegisData = (defaultConfig) => {
       setCommissions(dbCommissions);
       setOficios(dbOficios);
       setProjects(dbProjects);
+      setLaws(dbLaws);
       setDocuments(dbDocuments);
       setAuditLogs(dbAuditLogs);
     } catch (err) {
@@ -157,6 +161,7 @@ export const useLegisData = (defaultConfig) => {
     commissions, saveCommission, deleteCommission,
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
+    laws,
     documents, saveDocument, deleteDocument,
     auditLogs,
     getProjectVersions,
