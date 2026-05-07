@@ -11,10 +11,66 @@ export const runMigrations = (dbPath) => {
   try {
     const sqlite = new Database(dbPath);
     
-    // Healing: Asegurar tabla sync_queue (si no existe por alguna razón)
-    try {
-      sqlite.prepare(`
-        CREATE TABLE IF NOT EXISTS \`sync_queue\` (
+    // Healing: Asegurar tablas críticas tras simplificación previa
+    const tables = [
+      {
+        name: 'legislators',
+        sql: `CREATE TABLE IF NOT EXISTS \`legislators\` (
+          \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+          \`nombre\` text NOT NULL,
+          \`partido_politico\` text,
+          \`contacto\` text,
+          \`notas\` text,
+          \`biografia\` text,
+          \`foto\` text,
+          \`activo\` integer DEFAULT 1
+        )`
+      },
+      {
+        name: 'commissions',
+        sql: `CREATE TABLE IF NOT EXISTS \`commissions\` (
+          \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+          \`nombre\` text NOT NULL,
+          \`presidente_id\` integer,
+          \`vicepresidente_id\` integer,
+          \`miembro1_id\` integer,
+          \`miembro2_id\` integer,
+          \`miembro3_id\` integer,
+          \`miembro3_nombre\` text,
+          \`activo\` integer DEFAULT 1
+        )`
+      },
+      {
+        name: 'projects',
+        sql: `CREATE TABLE IF NOT EXISTS \`projects\` (
+          \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+          \`expediente\` text,
+          \`titulo\` text NOT NULL,
+          \`extracto\` text,
+          \`fecha_presentacion\` text,
+          \`ponente_id\` integer,
+          \`comision_id\` integer,
+          \`estado\` text DEFAULT 'en_comision',
+          \`prioridad\` text DEFAULT 'media',
+          \`tags\` text,
+          \`ultima_actualizacion\` text DEFAULT CURRENT_TIMESTAMP,
+          \`activo\` integer DEFAULT 1
+        )`
+      },
+      {
+        name: 'project_versions',
+        sql: `CREATE TABLE IF NOT EXISTS \`project_versions\` (
+          \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+          \`project_id\` integer,
+          \`version\` integer NOT NULL,
+          \`motivo\` text,
+          \`snapshot\` text,
+          \`fecha_creacion\` text DEFAULT CURRENT_TIMESTAMP
+        )`
+      },
+      {
+        name: 'sync_queue',
+        sql: `CREATE TABLE IF NOT EXISTS \`sync_queue\` (
           \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
           \`entity_type\` text DEFAULT 'laws',
           \`entity_id\` integer,
@@ -25,28 +81,15 @@ export const runMigrations = (dbPath) => {
           \`next_retry\` text,
           \`created_at\` text DEFAULT CURRENT_TIMESTAMP,
           \`updated_at\` text
-        )
-      `).run();
-    } catch (e) {
-      // Ignorar
-    }
-
-    // Healing 2: Asegurar columnas de seguridad en la tabla users
-    const columnsToEnsure = [
-      { name: 'security_question', type: 'text' },
-      { name: 'security_answer_hash', type: 'text' },
-      { name: 'recovery_code_hash', type: 'text' },
-      { name: 'password_reset_required', type: 'integer DEFAULT 0' }
+        )`
+      }
     ];
 
-    for (const col of columnsToEnsure) {
+    for (const table of tables) {
       try {
-        sqlite.prepare(`ALTER TABLE \`users\` ADD COLUMN \`${col.name}\` ${col.type}`).run();
-        logger.info(`✅ Columna [${col.name}] añadida manualmente a la tabla users`);
+        sqlite.prepare(table.sql).run();
       } catch (e) {
-        if (!e.message.includes('duplicate column name')) {
-          logger.warn(`⚠️ No se pudo añadir la columna [${col.name}]: ${e.message}`);
-        }
+        logger.error(`Error healing table ${table.name}:`, e);
       }
     }
 
@@ -60,20 +103,13 @@ export const runMigrations = (dbPath) => {
       });
       logger.info('✅ Migraciones aplicadas exitosamente');
     } catch (error) {
-      // Si el error es por columna duplicada, es probable que el "healing" previo haya hecho su trabajo
-      // pero Drizzle no haya registrado la migración.
-      if (error.message.includes('duplicate column name')) {
-        logger.warn('⚠️ Se detectaron columnas duplicadas en la migración. El esquema parece estar actualizado pero el diario de Drizzle está desincronizado.');
-        logger.info('Intentando continuar con el esquema actual...');
-      } else {
-        throw error;
-      }
+      logger.error('❌ Error aplicando migraciones con Drizzle:', error);
+      throw error;
     }
     
     sqlite.close();
   } catch (error) {
-    logger.error('❌ Error aplicando migraciones:', error);
-    // No salimos del proceso aquí para permitir que la app intente arrancar o mostrar un error UI
+    logger.error('❌ Error en el proceso de migración:', error);
     throw error;
   }
 };

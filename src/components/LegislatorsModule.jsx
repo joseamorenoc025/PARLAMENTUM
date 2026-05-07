@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus, FileText, Camera, QrCode } from 'lucide-react';
 import Modal from './ui/Modal';
 import EmptyState from './ui/EmptyState';
 
@@ -10,7 +10,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const [editingId, setEditingId] = useState(null);
   const [isCitizenM3, setIsCitizenM3] = useState(false);
   
-  const [form, setForm] = useState({ nombre: '', partidoPolitico: '', contacto: '', notas: '' });
+  const [form, setForm] = useState({ nombre: '', partidoPolitico: '', contacto: '', notas: '', biografia: '', foto: '' });
   const [commissionForm, setCommissionForm] = useState({ 
     nombre: '', 
     presidenteId: '', 
@@ -22,7 +22,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   });
 
   const resetForm = () => { 
-    setForm({ nombre: '', partidoPolitico: '', contacto: '', notas: '' }); 
+    setForm({ nombre: '', partidoPolitico: '', contacto: '', notas: '', biografia: '', foto: '' }); 
     setEditingId(null); 
     setShowForm(false); 
   };
@@ -42,6 +42,21 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
     setIsCitizenM3(false);
   };
 
+  const handleSelectFoto = async () => {
+    try {
+      const result = await window.legisAPI.invoke('dialog:open-image');
+      if (result) {
+        // En un escenario real, guardaríamos el buffer o la ruta. 
+        // Por simplicidad en este MVP, convertimos a dataURL si es pequeño o guardamos ruta.
+        const dataUrl = `data:image/png;base64,${result.buffer.toString('base64')}`;
+        setForm(prev => ({ ...prev, foto: dataUrl }));
+        addToast('Foto seleccionada', 'success');
+      }
+    } catch (err) {
+      addToast('Error al seleccionar foto', 'error');
+    }
+  };
+
   const handleSaveLegislator = async () => {
     if (!form.nombre.trim()) return addToast('El nombre es obligatorio', 'error');
     try {
@@ -50,6 +65,31 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
       resetForm();
     } catch (err) {
       addToast('Error al guardar legislador', 'error');
+    }
+  };
+
+  const showLegislatorQR = async (legislator) => {
+    try {
+      // El QR apunta a la subpage de GitHub Pages
+      // Ejemplo: https://joseamorenoc025.github.io/cerebro_legislativo/legisladores/123
+      const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+      const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/legisladores/?id=${legislator.id}`;
+      
+      const dataURL = await window.legisAPI.qr.generate(url);
+      const win = window.open();
+      win.document.write(`
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;text-align:center;">
+          <h2 style="margin-bottom:10px;">Conoce a tu Legislador: ${legislator.nombre}</h2>
+          <p style="color:#666;margin-bottom:20px;">Escanea para ver perfil público y actividad legislativa</p>
+          <div style="padding:20px;border:2px solid #eee;border-radius:20px;background:white;">
+            <img src="${dataURL}" style="width:300px;height:300px;display:block;"/>
+          </div>
+          <p style="margin-top:20px;font-size:14px;color:#888;">Segundo Cerebro Legislativo • Transparencia</p>
+          <button onclick="window.print()" style="margin-top:30px;padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">Imprimir Código</button>
+        </div>
+      `);
+    } catch (err) {
+      addToast('Error al generar QR', 'error');
     }
   };
 
@@ -145,10 +185,17 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                     <tr key={l.id} className={`transition-colors ${darkMode ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50'}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs">
-                            {l.nombre.charAt(0)}
+                          {l.foto ? (
+                            <img src={l.foto} alt={l.nombre} className="w-8 h-8 rounded-lg object-cover border border-gray-700/50" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs">
+                              {l.nombre.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-bold block">{l.nombre}</span>
+                            {l.biografia && <p className="text-[10px] opacity-40 truncate max-w-[150px]">{l.biografia}</p>}
                           </div>
-                          <span className="font-bold">{l.nombre}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -159,6 +206,9 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                       <td className="px-6 py-4 text-xs opacity-60 font-medium">{l.contacto || '—'}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => showLegislatorQR(l)} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`} title="QR Perfil Público">
+                            <QrCode className="w-4 h-4 opacity-40 text-indigo-500" />
+                          </button>
                           <button onClick={() => { setEditingId(l.id); setForm(l); setShowForm(true); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                             <User className="w-4 h-4 opacity-40" />
                           </button>
@@ -226,6 +276,22 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
       <Modal isOpen={showForm} onClose={() => { setShowForm(false); resetForm(); resetCommissionForm(); }} title={formType === 'legislator' ? 'Registrar Legislador' : 'Configurar Comisión'} darkMode={darkMode}>
         {formType === 'legislator' ? (
           <div className="space-y-5">
+            <div className="flex justify-center mb-2">
+              <div 
+                onClick={handleSelectFoto}
+                className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-indigo-500/5 hover:border-indigo-500/50 relative overflow-hidden ${form.foto ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}
+              >
+                {form.foto ? (
+                  <img src={form.foto} alt="Vista previa" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <Camera className="w-6 h-6 text-gray-400 mb-1" />
+                    <span className="text-[8px] font-bold text-gray-500 uppercase">Foto</span>
+                  </>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Nombre y Apellido</label>
               <input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Dr. Juan Pérez" />
@@ -239,6 +305,15 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Contacto</label>
                 <input value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Teléfono o Email" />
               </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Biografía Corta</label>
+              <textarea 
+                value={form.biografia} 
+                onChange={e => setForm({...form, biografia: e.target.value})} 
+                className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-h-[100px] resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} 
+                placeholder="Resumen de trayectoria y formación..." 
+              />
             </div>
             <button onClick={handleSaveLegislator} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all mt-2 shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Guardar Legislador</button>
           </div>

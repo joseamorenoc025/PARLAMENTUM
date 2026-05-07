@@ -29,6 +29,20 @@
       "when": 1778114000657,
       "tag": "0003_add_onboarding_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778180276113,
+      "tag": "0004_simplify_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1778180299018,
+      "tag": "0005_add_simplified_fields",
+      "breakpoints": true
     }
   ]
 }

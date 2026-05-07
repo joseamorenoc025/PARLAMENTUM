@@ -13,7 +13,6 @@ import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema } from './sc
 import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { setupInitializeSchema } from './schemas/setup.js';
-import { extractTextFromPDF, extractTitleFromContent } from '../services/fileIngestor.js';
 
 import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
@@ -22,18 +21,15 @@ export const setupIPCHandlers = (mainWindow) => {
   // Laws
   ipcMain.handle('laws:import', async (_, rawData) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
-    const { filePath, metadata } = validation.data;
+    const { metadata } = validation.data;
     try {
-      const content = await extractTextFromPDF(filePath);
-      const title = metadata.titulo || extractTitleFromContent(content);
-      
       const newLaw = {
-        titulo: title,
-        nombre: title,
-        expediente: metadata.expediente || 'S/E',
-        contenido: content,
+        titulo: metadata.titulo,
+        nombre: metadata.titulo,
+        expediente: `${metadata.gaceta} - ${metadata.anio}`, // Usamos gaceta y año como identificador
+        contenido: `Enlace de descarga: ${metadata.driveLink}`,
         fechaPublicacion: new Date().toISOString(),
-        tipo: metadata.tipo || 'General',
+        tipo: metadata.gaceta,
         activo: 1
       };
       
@@ -173,9 +169,15 @@ export const setupIPCHandlers = (mainWindow) => {
           .where(eq(tableSchema.id, id))
           .run();
         
-        // Sincronización automática para leyes
+        // Sincronización automática
         if (table === 'laws') {
           try { await enqueueTask('laws', id, 'update'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        if (table === 'legislators' || table === 'commissions') {
+          try { await enqueueTask('legislators', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        if (table === 'projects') {
+          try { await enqueueTask('projects', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
         return result;
       } else {
@@ -183,9 +185,15 @@ export const setupIPCHandlers = (mainWindow) => {
           .values(data)
           .run();
         
-        // Sincronización automática para leyes
+        // Sincronización automática
         if (table === 'laws') {
           try { await enqueueTask('laws', result.lastInsertRowid, 'add'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        if (table === 'legislators' || table === 'commissions') {
+          try { await enqueueTask('legislators', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
+        }
+        if (table === 'projects') {
+          try { await enqueueTask('projects', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
         return result;
       }

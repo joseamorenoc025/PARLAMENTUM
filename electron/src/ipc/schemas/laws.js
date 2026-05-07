@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
 export const lawImportSchema = z.object({
-  filePath: z.string().min(1, 'La ruta del archivo es requerida'),
   metadata: z.object({
-    expediente: z.string().optional(),
-    titulo: z.string().optional(),
-    tipo: z.string().optional(),
-  }).optional().default({}),
+    titulo: z.string().min(3, 'El título debe tener al menos 3 caracteres'),
+    gaceta: z.enum(['Ordinaria', 'Extraordinaria'], {
+      errorMap: () => ({ message: 'La gaceta debe ser Ordinaria o Extraordinaria' })
+    }),
+    anio: z.number().int().min(1900).max(new Date().getFullYear() + 1),
+    driveLink: z.string().url('Debe ser una URL válida de Google Drive').or(z.string().min(1, 'El enlace de Drive es requerido')),
+  }),
 });
 
 export const lawSearchSchema = z.object({

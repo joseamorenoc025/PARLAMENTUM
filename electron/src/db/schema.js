@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 // Configuración global de la aplicación
 export const config = sqliteTable('config', {
@@ -6,7 +6,7 @@ export const config = sqliteTable('config', {
   value: text('value'),
 });
 
-// Auditoría inmutable
+// Auditoría para trazabilidad de documentos
 export const auditLogs = sqliteTable('audit_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   timestamp: text('timestamp').default('CURRENT_TIMESTAMP'),
@@ -19,42 +19,15 @@ export const auditLogs = sqliteTable('audit_logs', {
   signature: text('signature'),
 });
 
-// Legisladores
-export const legislators = sqliteTable('legislators', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  nombre: text('nombre').notNull(),
-  partidoPolitico: text('partido_politico'),
-  contacto: text('contacto'),
-  notas: text('notas'),
-  activo: integer('activo').default(1),
-});
-
-// Gestión de Usuarios (RBAC)
+// Gestión de Usuarios (Simplificado: Único registro para Secretario de Cámara)
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
-  role: text('role').default('legislador'), // admin, secretario, legislador, viewer
-  nombreCompleto: text('nombre_completo'),
-  ultimoLogin: text('ultimo_login'),
   securityQuestion: text('security_question'),
   securityAnswerHash: text('security_answer_hash'),
   recoveryCodeHash: text('recovery_code_hash'),
-  passwordResetRequired: integer('password_reset_required').default(0), // 0: no, 1: sí
-  activo: integer('activo').default(1),
-});
-
-// Comisiones
-export const commissions = sqliteTable('commissions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  nombre: text('nombre').notNull(),
-  presidenteId: integer('presidente_id').references(() => legislators.id),
-  vicepresidenteId: integer('vicepresidente_id').references(() => legislators.id),
-  miembro1Id: integer('miembro_1_id').references(() => legislators.id),
-  miembro2Id: integer('miembro_2_id').references(() => legislators.id),
-  miembro3Id: integer('miembro_3_id').references(() => legislators.id),
-  miembro3Nombre: text('miembro_3_nombre'),
-  activo: integer('activo').default(1),
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
 });
 
 // Sesiones Legislativas
@@ -68,16 +41,18 @@ export const sessions = sqliteTable('sessions', {
   horaCierre: text('hora_cierre'),
   periodo: text('periodo'),
   observaciones: text('observaciones'),
+  ordenDia: text('orden_dia'),
+  actaPdf: text('acta_pdf'),
   activo: integer('activo').default(1),
 });
 
-// Asistencia a Sesiones
-export const attendance = sqliteTable('attendance', {
+// Actas de Sesión (Minutes)
+export const minutes = sqliteTable('minutes', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  sesionId: integer('sesion_id').references(() => sessions.id),
-  legisladorId: integer('legislador_id').references(() => legislators.id),
-  presente: integer('presente').default(0),
-  timestamp: text('timestamp'),
+  sessionId: integer('session_id').references(() => sessions.id),
+  contenido: text('contenido'),
+  firmada: integer('firmada').default(0), // 0: no, 1: sí
+  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
 });
 
 // Oficios Salientes
@@ -87,33 +62,81 @@ export const oficios = sqliteTable('oficios', {
   fecha: text('fecha').notNull(),
   organoReceptor: text('organo_receptor'),
   asunto: text('asunto'),
+  contenido: text('contenido'),
+  vinculadoA: text('vinculado_a'),
   sesionId: integer('sesion_id').references(() => sessions.id),
   activo: integer('activo').default(1),
 });
 
-// Proyectos de Ley
-export const projects = sqliteTable('projects', {
+// Biblioteca de Leyes Sancionadas
+export const laws = sqliteTable('laws', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  titulo: text('titulo').notNull(),
-  origen: text('origen'), // Comisión, Gobernación, Votantes
-  comisionId: integer('comision_id').references(() => commissions.id),
-  ponenteId: integer('ponente_id').references(() => legislators.id),
-  faseActual: text('fase_actual'),
-  urgenciaParlamentaria: integer('urgencia_parlamentaria').default(0),
-  fechaIngreso: text('fecha_ingreso'),
-  fechaActualizacion: text('fecha_actualizacion'),
+  nombre: text('nombre'),
+  titulo: text('titulo'),
+  expediente: text('expediente'),
+  gaceta: text('gaceta'),
+  tipo: text('tipo'),
+  anio: integer('anio'),
+  fechaVigencia: text('fecha_vigencia'),
+  fechaPublicacion: text('fecha_publicacion'),
+  rutaPdf: text('ruta_pdf'),
+  qrData: text('qr_data'),
+  descargas: integer('descargas').default(0),
+  contenido: text('contenido'),
+  fileHash: text('file_hash'),
+  driveLink: text('drive_link'),
   activo: integer('activo').default(1),
 });
 
-// Versiones de Proyectos
+// Legisladores (Re-añadido y Ampliado para "Conoce a tu Legislador")
+export const legislators = sqliteTable('legislators', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nombre: text('nombre').notNull(),
+  partidoPolitico: text('partido_politico'),
+  contacto: text('contacto'),
+  notas: text('notas'),
+  biografia: text('biografia'),
+  foto: text('foto'), // Base64 o link
+  activo: integer('activo').default(1),
+});
+
+// Comisiones Legislativas
+export const commissions = sqliteTable('commissions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nombre: text('nombre').notNull(),
+  presidenteId: integer('presidente_id').references(() => legislators.id),
+  vicepresidenteId: integer('vicepresidente_id').references(() => legislators.id),
+  miembro1Id: integer('miembro1_id').references(() => legislators.id),
+  miembro2Id: integer('miembro2_id').references(() => legislators.id),
+  miembro3Id: integer('miembro3_id').references(() => legislators.id),
+  miembro3Nombre: text('miembro3_nombre'), // Para ciudadanos
+  activo: integer('activo').default(1),
+});
+
+// Proyectos de Ley (Agenda Legislativa)
+export const projects = sqliteTable('projects', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  expediente: text('expediente'),
+  titulo: text('titulo').notNull(),
+  extracto: text('extracto'),
+  fechaPresentacion: text('fecha_presentacion'),
+  ponenteId: integer('ponente_id').references(() => legislators.id),
+  comisionId: integer('comision_id').references(() => commissions.id),
+  estado: text('estado').default('en_comision'),
+  prioridad: text('prioridad').default('media'),
+  tags: text('tags'),
+  ultimaActualizacion: text('ultima_actualizacion').default('CURRENT_TIMESTAMP'),
+  activo: integer('activo').default(1),
+});
+
+// Versiones/Snapshots de Proyectos
 export const projectVersions = sqliteTable('project_versions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   projectId: integer('project_id').references(() => projects.id),
-  versionLabel: text('version_label'),
-  mensaje: text('mensaje'),
-  snapshot: text('snapshot'),
-  fechaCreacion: text('fecha_creacion'),
-  autor: text('autor'),
+  version: integer('version').notNull(),
+  motivo: text('motivo'),
+  snapshot: text('snapshot'), // JSON completo del estado
+  fechaCreacion: text('fecha_creacion').default('CURRENT_TIMESTAMP'),
 });
 
 // Bóveda Documental
@@ -132,32 +155,13 @@ export const documents = sqliteTable('documents', {
   activo: integer('activo').default(1),
 });
 
-// Biblioteca de Leyes Sancionadas
-export const laws = sqliteTable('laws', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  nombre: text('nombre'),
-  titulo: text('titulo'), // Nuevo: Título descriptivo extraído
-  expediente: text('expediente'), // Nuevo: Número de expediente
-  gaceta: text('gaceta'),
-  tipo: text('tipo'),
-  anio: integer('anio'),
-  fechaVigencia: text('fecha_vigencia'),
-  fechaPublicacion: text('fecha_publicacion'), // Nuevo: Fecha de publicación
-  rutaPdf: text('ruta_pdf'),
-  qrData: text('qr_data'),
-  descargas: integer('descargas').default(0),
-  contenido: text('contenido'), // Nuevo: Texto completo extraído
-  fileHash: text('file_hash'), // Nuevo: Hash para deduplicación
-  activo: integer('activo').default(1),
-});
-
-// Cola de Sincronización para Resiliencia Offline
+// Cola de Sincronización
 export const syncQueue = sqliteTable('sync_queue', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   entityType: text('entity_type').default('laws'),
   entityId: integer('entity_id'),
-  action: text('action'), // 'add', 'update', 'delete'
-  status: text('status').default('pending'), // 'pending', 'syncing', 'synced', 'failed'
+  action: text('action'),
+  status: text('status').default('pending'),
   attempts: integer('attempts').default(0),
   lastError: text('last_error'),
   nextRetry: text('next_retry'),

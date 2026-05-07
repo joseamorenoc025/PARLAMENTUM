@@ -1,95 +1,51 @@
 # Arquitectura: Segundo Cerebro Legislativo
 
-Este documento describe la estructura, patrones y estándares técnicos del software para garantizar su escalabilidad y mantenibilidad.
+Este documento describe la estructura y los flujos simplificados del sistema para garantizar ligereza y escalabilidad.
 
 ## 🏗️ Stack Tecnológico
 
-- **Runtime:** [Electron 30](https://www.electronjs.org/)
-- **Frontend:** [React 18](https://react.dev/) + [TailwindCSS](https://tailwindcss.com/)
-- **Base de Datos:** [SQLite](https://sqlite.org/) (vía `better-sqlite3`)
-- **ORM & Migraciones:** [Drizzle ORM](https://orm.drizzle.team/)
-- **Testing:** [Vitest](https://vitest.dev/) + [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
-- **Logging:** [Winston](https://github.com/winstonjs/winston)
+- **Runtime:** Electron 30
+- **Frontend:** React 18 + TailwindCSS
+- **Persistencia:** SQLite vía Drizzle ORM
+- **Publicación Web:** GitHub Pages (para Leyes y Legisladores)
+- **Integración:** Google Drive (Almacenamiento de archivos pesados)
+- **Seguridad:** Zod (IPC Validation) + Winston (Logging)
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Flujos de Información
 
-```text
-/
-├── .github/workflows/    # CI/CD (GitHub Actions)
-├── electron/             # Proceso Principal (Backend/OS)
-│   ├── main.js           # Punto de entrada de Electron
-│   ├── preload.cjs       # Puente seguro (Context Isolation)
-│   └── src/
-│       ├── db/           # Capa de Datos (Esquemas y Migraciones)
-│       └── lib/          # Utilidades del Proceso Principal (Logger, etc.)
-├── src/                  # Proceso de Renderizado (Frontend/UI)
-│   ├── components/       # Componentes React (UI y Módulos)
-│   ├── hooks/            # Lógica compartida de React
-│   ├── services/         # Comunicación con Electron (IPC)
-│   ├── utils/            # Funciones puras y helpers
-│   └── test/             # Configuración de tests
-└── legis.db              # Base de datos local (SQLite)
-```
+### 1. Gestión de Leyes (Híbrido)
+- La aplicación almacena solo metadatos (título, expediente, tipo) y el **enlace de Google Drive**.
+- Se sincroniza un archivo `leyes.json` con el repositorio de **GitHub Pages**.
+- La UI genera un QR que apunta a la URL de GitHub Pages donde se renderiza la lista de leyes con links de descarga.
+
+### 2. Perfiles de Legisladores (JSON + SPA)
+- Los datos se exportan a un archivo JSON centralizado en GitHub Pages.
+- Una **Single Page Application (SPA)** en GitHub lee estos datos dinámicamente según el ID solicitado.
+- Esto evita generar cientos de archivos HTML y facilita las actualizaciones globales de diseño.
+
+### 3. Administración y Acceso
+- **Acceso Restringido:** Solo el **Secretario de Cámara** tiene acceso a la aplicación.
+- Se ha eliminado la lógica de multi-rol para legisladores para cumplir con las competencias reglamentarias de la Secretaría.
+- El sistema de login se simplifica para asegurar que solo la autoridad competente gestione la data oficial.
 
 ---
 
-## 🛠️ Patrones y Estándares
+## 🔄 Estado de los Módulos
 
-### 1. Gestión de Base de Datos (Drizzle)
-Hemos migrado de SQL manual a **Drizzle ORM**. 
-- **Esquema:** Definido en `electron/src/db/schema.js`.
-- **Migraciones:** Se generan con `npx drizzle-kit generate` y se aplican automáticamente al iniciar la app mediante `electron/src/db/migrate.js`.
-- **Acceso:** Se debe preferir el uso de `db` (Drizzle) sobre `sqlite` (Raw) para nuevas funcionalidades.
-
-### 2. Comunicación IPC (Inter-Process Communication)
-El frontend **nunca** accede a la DB directamente.
-- El Proceso Principal expone handlers vía `ipcMain.handle`.
-- El Frontend utiliza `window.electron` (definido en `preload.cjs`) para invocar estos handlers.
-
-### 3. Estrategia de Testing (TDD)
-Seguimos una mentalidad de **Test-Driven Development**:
-- **Unitarios:** Pruebas de lógica pura en `src/utils/__tests__`.
-- **Componentes:** Pruebas de UI en `src/components/.../__tests__`.
-- **Comando:** `npm test` para ejecutar todas las pruebas.
-
-### 4. Observabilidad
-- Los errores no se muestran solo en consola; se registran en `%AppData%/cerebro-legislativo/logs/`.
-- Uso de `logger.info`, `logger.error` para trazabilidad en producción.
-
----
-
-## 🔄 Estado de Migración a Drizzle
-
-Actualmente el sistema se encuentra en una fase híbrida. El objetivo es eliminar `db:query` (SQL crudo) en favor de handlers específicos tipados.
-
-| Módulo | Estado | Notas |
+| Módulo | Estado | Implementación |
 | :--- | :--- | :--- |
-| **Infraestructura Base** | ✅ Completado | Configuración de Drizzle, Migraciones y Logger. |
-| **Estadísticas (Stats)** | ✅ Completado | Migrado a Drizzle (`db:get-stats`). |
-| **Usuarios/Auth** | ✅ Completado | Migrado vía `auth:get-user` y `db:upsert`. |
-| **Legisladores & Comisiones** | ✅ Completado | Migrado vía `db:select` y `db:upsert`. |
-| **Sesiones & Oficios** | ✅ Completado | Migrado vía `db:select` y `db:upsert`. |
-| **Proyectos & Versiones** | ✅ Completado | Migrado (Snapshot maneja JSON automáticamente). |
-| **Auditoría & Logs** | ✅ Completado | Migrado a `db:select` y `db:upsert`. |
-| **Leyes (Biblioteca)** | ⏳ Pendiente | Pendiente integrar selector PDF y Drive. |
+| **Infraestructura** | ✅ Completado | Drizzle, Migraciones, Logger. |
+| **Seguridad IPC** | ✅ Completado | Validación con Zod en handlers. |
+| **Auditoría** | ✅ Completado | Hash Chain funcional. |
+| **Leyes** | 🔄 Simplificando | Migración a flujo QR + Drive + JSON. |
+| **Legisladores** | 🔄 En mejora | Agregando exportación a Subpages. |
+| **Sync Engine** | ✅ Funcional | Sincronización con GitHub activa. |
 
 ---
 
-## 🚀 Guía para Desarrolladores
-
-### Agregar una nueva tabla:
-1. Definir la tabla en `electron/src/db/schema.js`.
-2. Ejecutar `npm.cmd run drizzle-kit generate` (en Windows) para crear la migración.
-3. El sistema aplicará el cambio al siguiente reinicio.
-
-### Crear un nuevo Componente:
-1. Crear el componente en `src/components/ui`.
-2. Crear su test en `__tests__` siguiendo el flujo TDD (Falla -> Implementa -> Pasa).
-
-### CI/CD:
-Cada Push/PR a `main` dispara:
-- Linting de código.
-- Ejecución de tests unitarios y de componentes.
-- Empaquetado automático para Windows, Mac y Linux (Artifacts).
+## 🚀 Estándares Técnicos
+- **No IA:** Se ha descartado el uso de modelos de lenguaje locales para mantener la app ligera.
+- **QR First:** El acceso a la información pública se prioriza mediante códigos QR generados dinámicamente.
+- **Local-First:** El grueso de la actividad parlamentaria vive en la DB local, sincronizando solo lo necesario para transparencia pública.

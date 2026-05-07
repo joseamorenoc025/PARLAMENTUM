@@ -25,31 +25,24 @@
                         <p>Transparencia y Acceso a la Información</p>
                     </div>
                 </div>
-                <div class="header-status">
-                    <span id="last-update">Cargando...</span>
-                </div>
+                <nav class="main-nav">
+                    <button class="nav-btn active" data-view="laws">Leyes</button>
+                    <button class="nav-btn" data-view="agenda">Agenda</button>
+                    <button class="nav-btn" data-view="legislators">Legisladores</button>
+                </nav>
             </div>
         </header>
 
         <!-- Search Section -->
-        <section class="search-section">
+        <section class="search-section" id="search-section">
             <div class="container">
                 <div class="search-card">
                     <div class="search-input-wrapper">
                         <i data-lucide="search" class="search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Buscar por título, expediente o palabra clave...">
+                        <input type="text" id="search-input" placeholder="Buscar...">
                     </div>
-                    <div class="filters">
-                        <select id="filter-year">
-                            <option value="">Todos los años</option>
-                        </select>
-                        <select id="filter-type">
-                            <option value="">Todos los tipos</option>
-                            <option value="General">General</option>
-                            <option value="Ordenanza">Ordenanza</option>
-                            <option value="Resolución">Resolución</option>
-                            <option value="Decreto">Decreto</option>
-                        </select>
+                    <div class="filters" id="filters-container">
+                        <!-- Filtros dinámicos según la vista -->
                     </div>
                 </div>
             </div>
@@ -58,20 +51,33 @@
         <!-- Main Content -->
         <main class="container">
             <div id="status-message" class="status-message hidden"></div>
-            <div id="laws-grid" class="laws-grid">
-                <!-- Las leyes se cargarán aquí -->
+            
+            <!-- Grid Universal para Leyes, Agenda y Legisladores -->
+            <div id="main-grid" class="main-grid">
                 <div class="loader">
                     <div class="spinner"></div>
-                    <p>Cargando biblioteca de leyes...</p>
+                    <p>Cargando información...</p>
                 </div>
+            </div>
+
+            <!-- Vista Detalle de Legislador (Hidden by default) -->
+            <div id="legislator-profile" class="legislator-profile hidden">
+                <!-- Se llena dinámicamente -->
             </div>
         </main>
 
         <!-- Footer -->
         <footer class="footer">
             <div class="container">
-                <p>&copy; 2026 <span id="footer-chamber-name">Cerebro Legislativo</span>. Todos los derechos reservados.</p>
-                <p class="footer-note">Desarrollado con Cerebro Legislativo</p>
+                <div class="footer-content">
+                    <div>
+                        <p>&copy; 2026 <span id="footer-chamber-name">Cerebro Legislativo</span></p>
+                        <p class="footer-note">Portal de Transparencia Parlamentaria</p>
+                    </div>
+                    <div class="header-status">
+                        <span id="last-update">Actualizado hoy</span>
+                    </div>
+                </div>
             </div>
         </footer>
     </div>

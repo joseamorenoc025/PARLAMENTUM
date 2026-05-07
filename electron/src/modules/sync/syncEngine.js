@@ -30,6 +30,8 @@ export class SyncEngine {
     this.owner = owner;
     this.repo = repo;
     this.lawsPath = 'leyes.json';
+    this.legislatorsPath = 'legisladores.json';
+    this.projectsPath = 'proyectos.json';
     this.configPath = 'config.json';
     this.logoPath = 'logo.png';
   }
@@ -37,26 +39,79 @@ export class SyncEngine {
   async syncLaws(client) {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
     const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
-    let remoteLaws = [];
-    if (remote.exists) {
-      try {
-        remoteLaws = JSON.parse(remote.content);
-        LeyesJsonSchema.parse(remoteLaws);
-      } catch (e) { 
-        logger.error('Error parsing remote laws, starting fresh', e);
-        remoteLaws = []; 
-      }
-    }
-    const updatedJson = this.mergeLaws(localLaws, remoteLaws);
-    const contentString = JSON.stringify(updatedJson, null, 2);
-    await client.updateFile(this.owner, this.repo, this.lawsPath, contentString, `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
-    return updatedJson.length;
+    
+    const lawsJson = localLaws.map(local => ({
+      id: local.id,
+      titulo: local.titulo,
+      gaceta: local.gaceta,
+      anio: local.anio,
+      expediente: local.expediente,
+      link_drive: this.transformDriveLink(local.contenido.replace('Enlace de descarga: ', '')),
+      fecha_publicacion: local.fechaPublicacion,
+      updated_at: new Date().toISOString()
+    }));
+
+    await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
+    return lawsJson.length;
+  }
+
+  async syncProjects(client) {
+    const localProjects = db.select().from(schema.projects).where(eq(schema.projects.activo, 1)).all();
+    const localLegislators = db.select().from(schema.legislators).all();
+    const localCommissions = db.select().from(schema.commissions).all();
+
+    const projectsJson = localProjects.map(p => ({
+      id: p.id,
+      expediente: p.expediente,
+      titulo: p.titulo,
+      extracto: p.extracto,
+      estado: p.estado,
+      prioridad: p.prioridad,
+      fecha_presentacion: p.fechaPresentacion,
+      ponente: localLegislators.find(l => l.id === p.ponenteId)?.nombre || 'No asignado',
+      comision: localCommissions.find(c => c.id === p.comisionId)?.nombre || 'No asignada',
+      updated_at: p.ultimaActualizacion
+    }));
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.projectsPath);
+    await client.updateFile(this.owner, this.repo, this.projectsPath, JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
+  }
+
+  async syncLegislators(client) {
+    const localLegislators = db.select().from(schema.legislators).where(eq(schema.legislators.activo, 1)).all();
+    const localCommissions = db.select().from(schema.commissions).where(eq(schema.commissions.activo, 1)).all();
+
+    const legislatorsJson = localLegislators.map(l => {
+      const coms = localCommissions.filter(c => 
+        c.presidenteId === l.id || 
+        c.vicepresidenteId === l.id || 
+        c.miembro1Id === l.id || 
+        c.miembro2Id === l.id || 
+        c.miembro3Id === l.id
+      ).map(c => ({
+        nombre: c.nombre,
+        cargo: c.presidenteId === l.id ? 'Presidente' : 
+               c.vicepresidenteId === l.id ? 'Vicepresidente' : 'Miembro'
+      }));
+
+      return {
+        id: l.id,
+        nombre: l.nombre,
+        partido: l.partidoPolitico,
+        biografia: l.biografia,
+        foto: l.foto,
+        comisiones: coms,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.legislatorsPath);
+    await client.updateFile(this.owner, this.repo, this.legislatorsPath, JSON.stringify(legislatorsJson, null, 2), `Sync: Legisladores ${new Date().toISOString()}`, remote.sha);
   }
 
   async syncConfig(client) {
     const localConfigs = db.select().from(schema.config).all();
     const configObj = localConfigs.reduce((acc, row) => {
-      // Solo sincronizar configs públicas
       if (['chamber_name', 'timezone'].includes(row.key)) {
         acc[row.key] = row.value;
       }
@@ -71,14 +126,11 @@ export class SyncEngine {
     const logoConfig = db.select().from(schema.config).where(eq(schema.config.key, 'logo_path')).all();
     if (logoConfig.length > 0 && fs.existsSync(logoConfig[0].value)) {
       const buffer = fs.readFileSync(logoConfig[0].value);
-      const remote = await client.getRemoteFile(this.owner, this.repo, this.logoPath); // Solo para el SHA
+      const remote = await client.getRemoteFile(this.owner, this.repo, this.logoPath);
       await client.updateFile(this.owner, this.repo, this.logoPath, buffer, `Sync: Logo ${new Date().toISOString()}`, remote.sha);
     }
   }
 
-  /**
-   * Ejecuta el proceso completo de sincronización.
-   */
   async run(type = 'all') {
     try {
       const token = await loadToken();
@@ -86,6 +138,8 @@ export class SyncEngine {
       const client = new GitHubClient(token);
       
       if (type === 'all' || type === 'laws') await this.syncLaws(client);
+      if (type === 'all' || type === 'legislators') await this.syncLegislators(client);
+      if (type === 'all' || type === 'projects') await this.syncProjects(client);
       if (type === 'all' || type === 'config') await this.syncConfig(client);
       if (type === 'all' || type === 'logo') await this.syncLogo(client);
 
