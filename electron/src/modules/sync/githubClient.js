@@ -73,15 +73,19 @@ export class GitHubClient {
    * @param {string} owner 
    * @param {string} repo 
    * @param {string} path 
-   * @param {string} content 
+   * @param {string|Buffer} contentOrBuffer 
    * @param {string} message 
    * @param {string} sha (opcional para actualizaciones)
    */
-  async updateFile(owner, repo, path, content, message, sha = null) {
+  async updateFile(owner, repo, path, contentOrBuffer, message, sha = null) {
     try {
+      const base64Content = Buffer.isBuffer(contentOrBuffer) 
+        ? contentOrBuffer.toString('base64')
+        : Buffer.from(contentOrBuffer).toString('base64');
+
       const body = {
         message,
-        content: Buffer.from(content).toString('base64'),
+        content: base64Content,
       };
 
       if (sha) {

@@ -2,6 +2,8 @@ import { ipcMain, dialog, app } from 'electron';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import { db, sqlite } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { eq, sql as drizzleSql } from 'drizzle-orm';
@@ -10,13 +12,13 @@ import { validateIPCInput } from './validate.js';
 import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema } from './schemas/auth.js';
 import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
+import { setupInitializeSchema } from './schemas/setup.js';
 import { extractTextFromPDF, extractTitleFromContent } from '../services/fileIngestor.js';
 
 import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
 
 export const setupIPCHandlers = (mainWindow) => {
-  // ...
   // Laws
   ipcMain.handle('laws:import', async (_, rawData) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
@@ -244,6 +246,21 @@ export const setupIPCHandlers = (mainWindow) => {
     }
   });
 
+  ipcMain.handle('app:get-logo', async () => {
+    try {
+      const logoPathConfig = db.select().from(schema.config).where(eq(schema.config.key, 'logo_path')).all();
+      if (logoPathConfig.length > 0 && fs.existsSync(logoPathConfig[0].value)) {
+        const buffer = fs.readFileSync(logoPathConfig[0].value);
+        const ext = path.extname(logoPathConfig[0].value).substring(1) || 'png';
+        return `data:image/${ext};base64,${buffer.toString('base64')}`;
+      }
+      return null;
+    } catch (err) {
+      logger.error('Error fetching logo:', err);
+      return null;
+    }
+  });
+
   // Misc
   ipcMain.handle('log', (_, { level, message }) => {
     logger.log(level, message);
@@ -267,5 +284,106 @@ export const setupIPCHandlers = (mainWindow) => {
     
     if (result.canceled) return null;
     return result.filePaths[0];
+  });
+
+  ipcMain.handle('dialog:open-image', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: 'Imágenes', extensions: ['jpg', 'png', 'jpeg'] }]
+    });
+    
+    if (result.canceled) return null;
+    const filePath = result.filePaths[0];
+    const buffer = fs.readFileSync(filePath);
+    return { filePath, buffer };
+  });
+
+  // Setup / Onboarding
+  ipcMain.handle('app:get-setup-status', async () => {
+    try {
+      const userCount = db.select({ count: drizzleSql`count(*)` }).from(schema.users).all();
+      const onboardingCompleted = db.select().from(schema.config).where(eq(schema.config.key, 'onboarding_completed')).all();
+      
+      return {
+        needsOnboarding: (userCount[0]?.count === 0) || (onboardingCompleted[0]?.value !== 'true'),
+        onboardingCompleted: onboardingCompleted[0]?.value === 'true',
+        hasUsers: (userCount[0]?.count || 0) > 0
+      };
+    } catch (err) {
+      logger.error('Error checking setup status:', err);
+      return { needsOnboarding: true, error: err.message };
+    }
+  });
+
+  ipcMain.handle('setup:initialize', async (_, rawData) => {
+    const validation = validateIPCInput(setupInitializeSchema, rawData, 'setup:initialize');
+    const { 
+      username, password, securityQuestion, securityAnswer, 
+      chamberName, timezone, logoBuffer 
+    } = validation.data;
+
+    try {
+      // 1. Hashear credenciales
+      const passwordHash = await bcrypt.hash(password, 10);
+      const securityAnswerHash = crypto.createHash('sha256').update(securityAnswer + 'salt-legislativo').digest('hex');
+      
+      // Generar código de recuperación
+      const rawRecoveryCode = crypto.randomBytes(4).toString('hex').toUpperCase().match(/.{1,4}/g).join('-');
+      const recoveryCodeHash = crypto.createHash('sha256').update(rawRecoveryCode).digest('hex');
+
+      // 2. Procesar Logo si existe
+      let logoPath = null;
+      if (logoBuffer) {
+        const assetsPath = path.join(app.getPath('userData'), 'assets');
+        if (!fs.existsSync(assetsPath)) fs.mkdirSync(assetsPath, { recursive: true });
+        
+        logoPath = path.join(assetsPath, 'logo.png');
+        // El logoBuffer viene como Uint8Array desde el frontend
+        fs.writeFileSync(logoPath, Buffer.from(logoBuffer));
+      }
+
+      // 3. Transacción atómica
+      db.transaction((tx) => {
+        // Crear Admin
+        tx.insert(schema.users).values({
+          username,
+          passwordHash,
+          role: 'admin',
+          nombreCompleto: 'Administrador General',
+          securityQuestion,
+          securityAnswerHash,
+          recoveryCodeHash,
+          passwordResetRequired: 0,
+          activo: 1
+        }).run();
+
+        // Guardar config institucional
+        const configs = [
+          { key: 'chamber_name', value: chamberName },
+          { key: 'timezone', value: timezone },
+          { key: 'onboarding_completed', value: 'true' }
+        ];
+        if (logoPath) configs.push({ key: 'logo_path', value: logoPath });
+
+        for (const c of configs) {
+          tx.insert(schema.config).values(c)
+            .onConflictDoUpdate({ target: schema.config.key, set: { value: c.value } })
+            .run();
+        }
+      });
+
+      // Encolar sincronización de Logo y Configuración tras éxito
+      try {
+        if (logoPath) await enqueueTask('logo', 0, 'sync');
+        await enqueueTask('config', 0, 'sync');
+      } catch (e) {
+        logger.error('Error enqueuing initial sync tasks:', e);
+      }
+
+      return { success: true, recoveryCode: rawRecoveryCode };
+    } catch (err) {
+      logger.error('Error during setup initialization:', err);
+      throw err;
+    }
   });
 };

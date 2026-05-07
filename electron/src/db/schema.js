@@ -37,6 +37,10 @@ export const users = sqliteTable('users', {
   role: text('role').default('legislador'), // admin, secretario, legislador, viewer
   nombreCompleto: text('nombre_completo'),
   ultimoLogin: text('ultimo_login'),
+  securityQuestion: text('security_question'),
+  securityAnswerHash: text('security_answer_hash'),
+  recoveryCodeHash: text('recovery_code_hash'),
+  passwordResetRequired: integer('password_reset_required').default(0), // 0: no, 1: sí
   activo: integer('activo').default(1),
 });
 

@@ -4,10 +4,12 @@
  */
 
 const select = async (table, where = {}) => {
+  if (!window.legisAPI) return [];
   return await window.legisAPI.invoke('db:select', { table, where });
 };
 
 const upsert = async (table, data) => {
+  if (!window.legisAPI) return { lastInsertRowid: 0 };
   return await window.legisAPI.invoke('db:upsert', { table, data });
 };
 
@@ -72,6 +74,7 @@ export const dbService = {
 
   // Versiones de Proyectos
   getProjectVersions: async (projectId) => {
+      if (!window.legisAPI) return [];
       // TODO: Migrar a handler específico si se requieren filtros complejos
       return await window.legisAPI.invoke('db:query', { 
           sql: 'SELECT * FROM project_versions WHERE project_id = ? ORDER BY fecha_creacion DESC', 
@@ -105,6 +108,7 @@ export const dbService = {
   // Usuarios y Autenticación
   getUsers: async () => select('users'),
   getUserByUsername: async (username) => {
+    if (!window.legisAPI) return null;
     return await window.legisAPI.invoke('auth:get-user', username);
   },
   saveUser: async (u) => {
@@ -112,11 +116,15 @@ export const dbService = {
     return u.id || result.lastInsertRowid;
   },
   updateLastLogin: async (id) => {
+    if (!window.legisAPI) return null;
     return await window.legisAPI.invoke('auth:update-login', id);
   },
 
   // Backups
-  createLocalBackup: async () => await window.legisAPI.db.backupLocal(),
+  createLocalBackup: async () => {
+    if (!window.legisAPI) return { success: false, error: 'Bridge not available' };
+    return await window.legisAPI.db.backupLocal();
+  },
 
   // Auditoría
   getAuditLogs: async () => select('auditLogs'),

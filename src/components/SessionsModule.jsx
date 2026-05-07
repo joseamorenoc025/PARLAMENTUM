@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  ChevronLeft, Plus, Edit3, Trash2, CalendarDays, RefreshCw, Link 
+  ChevronLeft, Plus, Edit3, Trash2, CalendarDays, RefreshCw, Link,
+  CalendarClock
 } from 'lucide-react';
 import { getSessionTypeByDate, generateSessionNumber } from '../utils/helpers';
+import EmptyState from './ui/EmptyState';
 
 const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
@@ -169,75 +171,84 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
         </button>
       </div>
 
-      <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tipo</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Horario</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Oficios</th>
-                <th className={`text-right px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeSessions.map(s => {
-                const ofs = getLinkedOficios(s.id);
-                return (
-                  <tr key={s.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-mono font-medium">{s.numeroCorrelativo || '—'}</span>
-                      {s.motivo && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>{s.motivo}</p>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${typeColors[s.tipo] || ''}`}>{s.tipo}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm">{new Date(s.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.horaInicio} - {s.horaCierre}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {ofs.length > 0 ? (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); onNavigate?.('oficio', ofs[0].id); }}
-                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors"
-                          title="Ver oficio vinculado"
-                        >
-                          <Link className="w-3 h-3" /> {ofs.length}
-                        </button>
-                      ) : (
-                        <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingId(s.id); setForm({ tipo: s.tipo, numeroCorrelativo: s.numeroCorrelativo, motivo: s.motivo, fecha: s.fecha, horaInicio: s.horaInicio, horaCierre: s.horaCierre, periodo: s.periodo, observaciones: s.observaciones }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {activeSessions.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <CalendarDays className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} />
-                    <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No hay sesiones registradas</p>
-                  </td>
+      {activeSessions.length === 0 ? (
+        <EmptyState 
+          icon={CalendarClock}
+          title="No hay sesiones registradas"
+          description="Registre la primera sesión ordinaria para habilitar el control de actas, asistencia y proyectos."
+          action={{
+            label: "Crear sesión",
+            onClick: () => { 
+              setView('form'); 
+              setEditingId(null); 
+              setForm({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' });
+            }
+          }}
+          dataTestId="empty-state-sesiones"
+        />
+      ) : (
+        <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tipo</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Horario</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Oficios</th>
+                  <th className={`text-right px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activeSessions.map(s => {
+                  const ofs = getLinkedOficios(s.id);
+                  return (
+                    <tr key={s.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-mono font-medium">{s.numeroCorrelativo || '—'}</span>
+                        {s.motivo && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>{s.motivo}</p>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-medium ${typeColors[s.tipo] || ''}`}>{s.tipo}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm">{new Date(s.fecha + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.horaInicio} - {s.horaCierre}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {ofs.length > 0 ? (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.('oficio', ofs[0].id); }}
+                            className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors"
+                            title="Ver oficio vinculado"
+                          >
+                            <Link className="w-3 h-3" /> {ofs.length}
+                          </button>
+                        ) : (
+                          <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setEditingId(s.id); setForm({ tipo: s.tipo, numeroCorrelativo: s.numeroCorrelativo, motivo: s.motivo, fecha: s.fecha, horaInicio: s.horaInicio, horaCierre: s.horaCierre, periodo: s.periodo, observaciones: s.observaciones }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(s.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

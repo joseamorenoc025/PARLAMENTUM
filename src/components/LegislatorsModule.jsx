@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Users, User, Shield, Phone, Mail } from 'lucide-react';
+import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
+import EmptyState from './ui/EmptyState';
 
 const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveCommission, onDeleteLegislator, onDeleteCommission, darkMode, addToast }) => {
   const [tab, setTab] = useState('legislators');
@@ -113,81 +114,113 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
       </div>
 
       {tab === 'legislators' ? (
-        <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className={`border-b ${darkMode ? 'border-gray-800 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} text-gray-500`}>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Nombre</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Partido</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Contacto</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {legislators.filter(l => l.activo).map(l => (
-                  <tr key={l.id} className={`transition-colors ${darkMode ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50'}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs">
-                          {l.nombre.charAt(0)}
-                        </div>
-                        <span className="font-bold">{l.nombre}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                        {l.partidoPolitico || 'Independiente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-xs opacity-60 font-medium">{l.contacto || '—'}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingId(l.id); setForm(l); setShowForm(true); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                          <User className="w-4 h-4 opacity-40" />
-                        </button>
-                        <button onClick={() => { if(window.confirm('¿Eliminar legislador?')) onDeleteLegislator(l.id); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+        legislators.filter(l => l.activo).length === 0 ? (
+          <EmptyState 
+            icon={UserPlus}
+            title="Directorio de legisladores vacío"
+            description="Registre a los miembros activos para gestionar sesiones, votaciones y directorio de transparencia."
+            action={{
+              label: "Agregar legislador",
+              onClick: () => { 
+                setFormType('legislator');
+                setShowForm(true); 
+              }
+            }}
+            dataTestId="empty-state-legisladores"
+          />
+        ) : (
+          <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className={`border-b ${darkMode ? 'border-gray-800 bg-gray-800/30' : 'border-gray-100 bg-gray-50'} text-gray-500`}>
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Nombre</th>
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Partido</th>
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px]">Contacto</th>
+                    <th className="px-6 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {commissions.filter(c => c.activo).map(c => (
-            <div key={c.id} className={`p-6 rounded-3xl border transition-all ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/30' : 'bg-white border-gray-200 hover:border-indigo-200 shadow-sm'}`}>
-              <div className="flex items-start justify-between mb-5">
-                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner"><Users className="w-6 h-6" /></div>
-                <div className="flex gap-1">
-                  <button onClick={() => { setEditingId(c.id); setCommissionForm(c); setIsCitizenM3(!!c.miembro3Nombre); setShowForm(true); }} className={`p-2 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><Shield className="w-4 h-4 opacity-40" /></button>
-                  <button onClick={() => { if(window.confirm('¿Eliminar comisión?')) onDeleteCommission(c.id); }} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-              <h3 className="font-black text-lg mb-6 leading-tight">{c.nombre}</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Presidente</span>
-                  <span className="font-bold">{getLegislatorName(c.presidenteId)}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs border-t border-gray-50 dark:border-gray-800 pt-3">
-                  <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Vicepresidente</span>
-                  <span className="font-medium">{getLegislatorName(c.vicepresidenteId)}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-I: ${getLegislatorName(c.miembro1Id)}`} />
-                  <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-II: ${getLegislatorName(c.miembro2Id)}`} />
-                  <div className={`h-1.5 rounded-full ${c.miembro3Nombre ? 'bg-emerald-500/40' : 'bg-gray-100 dark:bg-gray-800'}`} title={`M-III: ${getM3Display(c)}`} />
-                </div>
-                <p className="text-[10px] opacity-40 font-medium text-right">Miembros activos</p>
-              </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {legislators.filter(l => l.activo).map(l => (
+                    <tr key={l.id} className={`transition-colors ${darkMode ? 'hover:bg-gray-800/30' : 'hover:bg-gray-50'}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs">
+                            {l.nombre.charAt(0)}
+                          </div>
+                          <span className="font-bold">{l.nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                          {l.partidoPolitico || 'Independiente'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs opacity-60 font-medium">{l.contacto || '—'}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setEditingId(l.id); setForm(l); setShowForm(true); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                            <User className="w-4 h-4 opacity-40" />
+                          </button>
+                          <button onClick={() => { if(window.confirm('¿Eliminar legislador?')) onDeleteLegislator(l.id); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
+        )
+      ) : (
+        commissions.filter(c => c.activo).length === 0 ? (
+          <EmptyState 
+            icon={Users}
+            title="No se han configurado comisiones"
+            description="Las comisiones organizan el trabajo legislativo. Cree la primera para asignar legisladores y expedientes."
+            action={{
+              label: "Crear comisión",
+              onClick: () => { 
+                setFormType('commission');
+                setShowForm(true); 
+              }
+            }}
+            dataTestId="empty-state-comisiones"
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {commissions.filter(c => c.activo).map(c => (
+              <div key={c.id} className={`p-6 rounded-3xl border transition-all ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/30' : 'bg-white border-gray-200 hover:border-indigo-200 shadow-sm'}`}>
+                <div className="flex items-start justify-between mb-5">
+                  <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner"><Users className="w-6 h-6" /></div>
+                  <div className="flex gap-1">
+                    <button onClick={() => { setEditingId(c.id); setCommissionForm(c); setIsCitizenM3(!!c.miembro3Nombre); setShowForm(true); }} className={`p-2 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><Shield className="w-4 h-4 opacity-40" /></button>
+                    <button onClick={() => { if(window.confirm('¿Eliminar comisión?')) onDeleteCommission(c.id); }} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <h3 className="font-black text-lg mb-6 leading-tight">{c.nombre}</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Presidente</span>
+                    <span className="font-bold">{getLegislatorName(c.presidenteId)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs border-t border-gray-50 dark:border-gray-800 pt-3">
+                    <span className="opacity-40 font-bold uppercase tracking-widest text-[9px]">Vicepresidente</span>
+                    <span className="font-medium">{getLegislatorName(c.vicepresidenteId)}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-I: ${getLegislatorName(c.miembro1Id)}`} />
+                    <div className="bg-gray-100 dark:bg-gray-800 h-1.5 rounded-full" title={`M-II: ${getLegislatorName(c.miembro2Id)}`} />
+                    <div className={`h-1.5 rounded-full ${c.miembro3Nombre ? 'bg-emerald-500/40' : 'bg-gray-100 dark:bg-gray-800'}`} title={`M-III: ${getM3Display(c)}`} />
+                  </div>
+                  <p className="text-[10px] opacity-40 font-medium text-right">Miembros activos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
       <Modal isOpen={showForm} onClose={() => { setShowForm(false); resetForm(); resetCommissionForm(); }} title={formType === 'legislator' ? 'Registrar Legislador' : 'Configurar Comisión'} darkMode={darkMode}>

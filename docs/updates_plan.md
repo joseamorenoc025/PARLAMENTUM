@@ -16,6 +16,7 @@ Estado: En progreso → Objetivo: 🎯 Profesional Senior / Open Source Ready
 13. [Open Source: Plan de Publicación](#13-open-source-plan-de-publicación)
 14. [Checklist Final: Ruta al 10/10](#14-checklist-final-ruta-al-1010)
 15. [Estrategia de Backup: Local-Sync (Drive Desktop)](#15-estrategia-de-backup-local-sync-drive-desktop)
+16. [Simplificación: Portal de Sesiones (GitHub Pages)](#16-simplificación-portal-de-sesiones-github-pages)
 
 ## 12. Roadmap: Biblioteca de Leyes 2.0
 🔹 **Estado Actual:** 🛠️ Local-First. QR soporta enlaces manuales.
@@ -1788,4 +1789,11 @@ npm install zod
     💬 Reflexión final: Llegar a 10/10 no es sobre perfección, es sobre consistencia, automatización y comunidad. Ya tienes la base técnica excepcional. Ahora se trata de escalar tu práctica con los mismos principios que usaste para construir la app: iterar, validar, documentar, automatizar.
 
 Cuando completes la Biblioteca de Leyes MVP, estaremos listos para el plan de publicación Open Source.
+
+## 16. Simplificación: Portal de Sesiones (GitHub Pages)
+🔹 **Objetivo:** Desacoplar consulta de gestión. Admin único (Secretario).
+🔹 **Plan de Implementación:**
+- [ ] **Admin Centralizado:** Bloquear funciones de escritura solo para el rol "Secretario".
+- [ ] **Exportación Automática:** El `syncEngine` generará `sesiones.json` en el repo de GitHub.
+- [ ] **Portal Web:** Legisladores acceden vía URL pública/privada de GitHub Pages.
 

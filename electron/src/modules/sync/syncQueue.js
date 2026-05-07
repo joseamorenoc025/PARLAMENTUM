@@ -81,25 +81,23 @@ export class SyncQueueManager {
 
       logger.info(`Procesando cola de sincronización: ${pendingTasks.length} tareas.`);
 
-      // Por ahora, como nuestra sincronización es "todo o nada" (leyes.json completo),
-      // solo necesitamos ejecutar el SyncEngine una vez si hay cambios pendientes.
-      // En el futuro, si sincronizamos leyes individuales, procesaríamos uno a uno.
-      
+      const syncTypes = new Set(pendingTasks.map(t => t.entityType));
       const engine = new SyncEngine(this.owner, this.repo);
-      const result = await engine.run();
+      
+      for (const type of syncTypes) {
+        await engine.run(type);
+      }
 
-      if (result.success) {
-        // Marcar todas las tareas procesadas como sincronizadas
-        for (const task of pendingTasks) {
-          db.update(schema.syncQueue)
-            .set({ 
-              status: 'synced', 
-              updatedAt: new Date().toISOString(),
-              lastError: null
-            })
-            .where(eq(schema.syncQueue.id, task.id))
-            .run();
-        }
+      // Marcar todas las tareas procesadas como sincronizadas
+      for (const task of pendingTasks) {
+        db.update(schema.syncQueue)
+          .set({ 
+            status: 'synced', 
+            updatedAt: new Date().toISOString(),
+            lastError: null
+          })
+          .where(eq(schema.syncQueue.id, task.id))
+          .run();
       }
     } catch (error) {
       logger.error('Error al procesar la cola de sync:', error);

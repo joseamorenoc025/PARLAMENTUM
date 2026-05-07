@@ -14,20 +14,18 @@
 
 ## 🧩 Módulos Implementados
 *   **Autenticación:** Sistema de Sign-In / Sign-Up con medidor de fortaleza de contraseña.
-*   **Dashboard:** Resumen mensual de sesiones, oficios y proyectos con semáforo de estancamiento.
-*   **Sesiones:** Gestión completa con numeración correlativa manual/automática.
-*   **Oficios Salientes:** Control de comunicaciones oficiales vinculadas a sesiones.
-*   **Agenda Legislativa:** Seguimiento tipo Kanban (6 fases) con snapshots de versión.
-*   **Legisladores & Comisiones:** Directorio ampliado con junta directiva y soporte para miembros ciudadanos (M-III).
-*   **Bóveda Documental:** Carga y descarga de expedientes PDF/Word.
+*   **Dashboard:** Resumen mensual de sesiones, oficios y proyectos.
+*   **Sesiones & Oficios:** Gestión completa con numeración correlativa.
+*   **Agenda Legislativa:** Seguimiento tipo Kanban con snapshots.
+*   **Biblioteca de Leyes 1.0 (GitHub Sync):** Sincronización con GitHub Pages para visualización pública de leyes cargadas.
+*   **Bóveda Documental:** Carga de expedientes y vinculación de links externos (Drive).
 
-## 🚀 Próximos Pasos (Fase 3 & 4)
-*   **Módulo: Biblioteca de Leyes 2.0 (Pequeñas cosas pendientes):**
-    *   Implementar selector de archivos PDF real para cada ley registrada.
-    *   Integrar con Google Drive para alojar los PDFs públicamente.
-    *   Generar QR con el enlace de descarga directa del PDF en Drive para acceso ciudadano.
-*   **Módulo: Gestión de Usuarios Pro:** Panel administrativo para el Admin para gestionar el personal (Alta/Baja de usuarios).
-*   **Módulo: Automatización de Backup Cloud:** Sincronización automática de `legis.db` con Google Drive al cerrar el sistema.
+## 🚀 Próximos Pasos (Fase 4 & 5)
+*   **Módulo: Gestión de Usuarios Pro:** Panel administrativo para control de personal (Alta/Baja/Roles).
+*   **Módulo: Recuperación de Contraseña:** Implementación de preguntas de seguridad o reseteo vía Admin.
+*   **Módulo: Biblioteca 2.0:** Generación de QR nativa dentro de la app e integración fluida de links Drive.
+*   **Backup & Nube:** Alternativas de respaldo manual y sincronización simplificada (MVP).
+*   **Calidad:** Cobertura de tests > 80% y auditoría final.
 
 ## 🛠️ Guía de Desarrollo
 1. `npm install`

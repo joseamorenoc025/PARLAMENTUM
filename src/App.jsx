@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLegisData } from './hooks/useLegisData';
+import { Toaster, toast } from 'sonner';
 
 // Componentes UI
-import ToastContainer from './components/ui/ToastContainer';
 import CommandPalette from './components/ui/CommandPalette';
 import AuthScreen from './components/AuthScreen';
+import OnboardingWizard from './components/onboarding/OnboardingWizard';
 
 // Módulos de Funcionalidad
 import Dashboard from './components/Dashboard';
@@ -48,14 +49,48 @@ export default function App() {
   } = useLegisData(defaultConfig);
 
   const [user, setUser] = useState(null);
+  const [setupStatus, setSetupStatus] = useState({ needsOnboarding: false, isLoading: true });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [toasts, setToasts] = useState([]);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [syncStatus, setSyncStatus] = useState('synced'); // 'synced', 'pending', 'error'
+  const [logo, setLogo] = useState(null);
   const darkMode = config.darkMode;
 
+  // Verificar entorno Electron
+  const isElectron = window.legisAPI !== undefined;
+
   useEffect(() => {
+    if (!isElectron) return;
+
+    const checkSetup = async () => {
+      try {
+        const status = await window.legisAPI.invoke('app:get-setup-status');
+        setSetupStatus({ ...status, isLoading: false });
+        
+        // Cargar logo si está configurado
+        const logoData = await window.legisAPI.invoke('app:get-logo');
+        if (logoData) setLogo(logoData);
+      } catch (err) {
+        console.error('Setup status check failed:', err);
+        setSetupStatus({ needsOnboarding: true, isLoading: false });
+      }
+    };
+    checkSetup();
+  }, [isElectron]);
+
+  const onOnboardingComplete = useCallback(async () => {
+    setSetupStatus({ needsOnboarding: false, onboardingCompleted: true, isLoading: false });
+    // Recargar logo tras finalizar wizard
+    if (window.legisAPI) {
+      const logoData = await window.legisAPI.invoke('app:get-logo');
+      if (logoData) setLogo(logoData);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron) return;
+
     const checkSync = async () => {
       try {
         const stats = await window.legisAPI.sync.github.getQueueStats();
@@ -69,7 +104,7 @@ export default function App() {
     checkSync();
     const interval = setInterval(checkSync, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isElectron]);
 
   // Atajos de teclado
   useEffect(() => {
@@ -84,14 +119,23 @@ export default function App() {
   }, []);
 
   const addToast = useCallback((message, type = 'info') => {
-    const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  }, []);
+    const options = {
+      duration: type === 'error' ? Infinity : 4000,
+      closeButton: true,
+    };
+    
+    // Log error to Winston via IPC
+    if (type === 'error' && isElectron) {
+      window.legisAPI.invoke('log', { level: 'error', message: `toast:error - ${message}` })
+        .catch(err => console.error('Failed to log toast error:', err));
+    }
 
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
+    if (toast[type]) {
+      toast[type](message, options);
+    } else {
+      toast(message, options);
+    }
+  }, [isElectron]);
 
   const toggleDarkMode = () => setConfig({ darkMode: !config.darkMode });
 
@@ -117,14 +161,41 @@ export default function App() {
     { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
 
+  if (!isElectron) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center p-6 text-center">
+        <div className="max-w-md bg-white p-10 rounded-[2rem] shadow-2xl border border-red-100">
+          <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Gavel className="w-10 h-10" />
+          </div>
+          <h1 className="text-2xl font-black text-gray-900 mb-4">Entorno No Soportado</h1>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            Cerebro Legislativo requiere ser ejecutado a través de la aplicación de escritorio (**Electron**). 
+            No puede funcionar correctamente en un navegador web convencional.
+          </p>
+          <div className="bg-gray-50 p-4 rounded-xl text-left font-mono text-xs text-gray-500 mb-8">
+            Terminal: npm run dev
+          </div>
+          <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">
+            Por favor, use la ventana de la aplicación.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));
 
-  if (isLoading) {
+  if (isLoading || setupStatus.isLoading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
+  }
+
+  if (setupStatus.needsOnboarding) {
+    return <OnboardingWizard darkMode={darkMode} addToast={addToast} onComplete={onOnboardingComplete} />;
   }
 
   if (!user) {
@@ -137,13 +208,19 @@ export default function App() {
         {/* Sidebar */}
         <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r ${sidebarOpen ? 'w-64' : 'w-16'}`}>
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800/50">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <Gavel className="w-5 h-5 text-white" />
-            </div>
+            {logo ? (
+              <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700/50 bg-white">
+                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <Gavel className="w-5 h-5 text-white" />
+              </div>
+            )}
             {sidebarOpen && (
               <div className="min-w-0">
-                <p className="text-sm font-bold truncate">Segundo Cerebro</p>
-                <p className={`text-[10px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Legislativo</p>
+                <p className="text-sm font-bold truncate">{config.chamber_name || 'Segundo Cerebro'}</p>
+                <p className={`text-[10px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{config.chamber_name ? 'Legislativo' : 'Sistema de Gestión'}</p>
               </div>
             )}
           </div>
@@ -259,12 +336,11 @@ export default function App() {
           onNavigate={navigateToEntity}
         />
 
-        {/* Toasts */}
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        {/* Toaster */}
+        <Toaster position="bottom-right" theme={darkMode ? 'dark' : 'light'} richColors />
 
         {/* Global Styles */}
         <style>{`
-          @keyframes slide-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
           @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
           ::-webkit-scrollbar { width: 6px; }
           ::-webkit-scrollbar-track { background: transparent; }

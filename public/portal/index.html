@@ -17,10 +17,11 @@
             <div class="container">
                 <div class="logo-area">
                     <div class="logo-icon">
+                        <img id="institutional-logo" src="" alt="" style="width: 100%; height: 100%; object-fit: contain; display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
                         <i data-lucide="gavel"></i>
                     </div>
                     <div>
-                        <h1>Cerebro Legislativo</h1>
+                        <h1 id="chamber-name-display">Cerebro Legislativo</h1>
                         <p>Transparencia y Acceso a la Información</p>
                     </div>
                 </div>
@@ -69,7 +70,7 @@
         <!-- Footer -->
         <footer class="footer">
             <div class="container">
-                <p>&copy; 2026 Concejo Municipal. Todos los derechos reservados.</p>
+                <p>&copy; 2026 <span id="footer-chamber-name">Cerebro Legislativo</span>. Todos los derechos reservados.</p>
                 <p class="footer-note">Desarrollado con Cerebro Legislativo</p>
             </div>
         </footer>

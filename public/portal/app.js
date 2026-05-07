@@ -1,4 +1,8 @@
 let allLaws = [];
+let appConfig = {
+    chamber_name: 'Segundo Cerebro Legislativo',
+    timezone: 'UTC'
+};
 
 // Elementos del DOM
 const lawsGrid = document.getElementById('laws-grid');
@@ -7,11 +11,16 @@ const filterYear = document.getElementById('filter-year');
 const filterType = document.getElementById('filter-type');
 const lastUpdateSpan = document.getElementById('last-update');
 const statusMessage = document.getElementById('status-message');
+const chamberNameDisplay = document.getElementById('chamber-name-display');
+const institutionalLogo = document.getElementById('institutional-logo');
 
 /**
  * Inicialización
  */
 document.addEventListener('DOMContentLoaded', async () => {
+    // Cargar Configuración primero
+    await fetchConfig();
+    
     // Inicializar iconos de Lucide
     lucide.createIcons();
     
@@ -25,20 +34,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
+ * Obtiene la configuración institucional
+ */
+async function fetchConfig() {
+    try {
+        const response = await fetch('./config.json');
+        if (response.ok) {
+            appConfig = await response.json();
+            applyConfig();
+        }
+    } catch (error) {
+        console.warn('Usando configuración por defecto:', error);
+    }
+}
+
+/**
+ * Aplica la configuración a la UI
+ */
+function applyConfig() {
+    if (chamberNameDisplay) chamberNameDisplay.textContent = appConfig.chamber_name;
+    const footerChamberName = document.getElementById('footer-chamber-name');
+    if (footerChamberName) footerChamberName.textContent = appConfig.chamber_name;
+
+    if (institutionalLogo) {
+        // Intentar cargar logo.png, si falla se mantiene el por defecto
+        const img = new Image();
+        img.onload = () => institutionalLogo.src = './logo.png';
+        img.src = './logo.png';
+    }
+}
+
+/**
  * Obtiene las leyes desde el archivo JSON
  */
 async function fetchLaws() {
     try {
-        // Intentamos cargar leyes.json desde la raíz (subiendo dos niveles si estamos en public/portal)
-        const response = await fetch('../../leyes.json');
-        if (!response.ok) {
-            // Reintento en el mismo nivel por si acaso
-            const localResponse = await fetch('./leyes.json');
-            if (!localResponse.ok) throw new Error('No se pudo cargar la base de datos de leyes.');
-            allLaws = await localResponse.json();
-        } else {
-            allLaws = await response.json();
-        }
+        const response = await fetch('./leyes.json');
+        if (!response.ok) throw new Error('No se pudo cargar la base de datos de leyes.');
+        allLaws = await response.json();
         
         // Ordenar por fecha (más reciente primero)
         allLaws.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
@@ -89,13 +122,9 @@ function transformDriveLink(url) {
     if (!url.includes('drive.google.com')) return url;
     
     try {
-        // Extraer el ID del archivo
         const match = url.match(/\/d\/(.+?)(\/|$|\?)/);
         if (match && match[1]) {
-            const fileId = match[1];
-            // Retornar link de previsualización que suele ser más estable para el usuario común
-            // o de descarga directa: https://drive.google.com/uc?export=download&id=...
-            return `https://drive.google.com/uc?export=download&id=${fileId}`;
+            return `https://drive.google.com/uc?export=download&id=${match[1]}`;
         }
     } catch (e) {
         console.error('Error transformando link de Drive:', e);
@@ -118,7 +147,7 @@ function renderLaws() {
             (law.expediente && law.expediente.toLowerCase().includes(searchTerm));
         
         const matchesYear = !selectedYear || String(law.anio) === selectedYear;
-        const matchesType = !selectedType || law.type === selectedType;
+        const matchesType = !selectedType || law.tipo === selectedType;
         
         return matchesSearch && matchesYear && matchesType;
     });

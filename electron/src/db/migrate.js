@@ -31,6 +31,25 @@ export const runMigrations = (dbPath) => {
       // Ignorar
     }
 
+    // Healing 2: Asegurar columnas de seguridad en la tabla users
+    const columnsToEnsure = [
+      { name: 'security_question', type: 'text' },
+      { name: 'security_answer_hash', type: 'text' },
+      { name: 'recovery_code_hash', type: 'text' },
+      { name: 'password_reset_required', type: 'integer DEFAULT 0' }
+    ];
+
+    for (const col of columnsToEnsure) {
+      try {
+        sqlite.prepare(`ALTER TABLE \`users\` ADD COLUMN \`${col.name}\` ${col.type}`).run();
+        logger.info(`✅ Columna [${col.name}] añadida manualmente a la tabla users`);
+      } catch (e) {
+        if (!e.message.includes('duplicate column name')) {
+          logger.warn(`⚠️ No se pudo añadir la columna [${col.name}]: ${e.message}`);
+        }
+      }
+    }
+
     const db = drizzle(sqlite);
     
     logger.info('Iniciando migraciones de base de datos...');

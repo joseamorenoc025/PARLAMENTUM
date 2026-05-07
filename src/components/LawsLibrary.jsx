@@ -4,6 +4,7 @@ import {
   Info, FileText, Filter, Scale, FileUp, Loader2
 } from 'lucide-react';
 import { dbService } from '../services/db';
+import EmptyState from './ui/EmptyState';
 
 const LawsLibrary = ({ darkMode, addToast }) => {
   const [laws, setLaws] = useState([]);
@@ -171,9 +172,25 @@ const LawsLibrary = ({ darkMode, addToast }) => {
           <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
           <p>Cargando biblioteca...</p>
         </div>
+      ) : laws.length === 0 ? (
+        <EmptyState 
+          icon={Scale}
+          title="Biblioteca legislativa sin contenido"
+          description="Importe o registre leyes sancionadas para habilitar búsqueda, archivo digital y portal público."
+          action={{
+            label: "Registrar ley",
+            onClick: () => setShowForm(true)
+          }}
+          dataTestId="empty-state-leyes"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredLaws.map(law => (
+          {filteredLaws.length === 0 ? (
+             <div className="col-span-full py-20 text-center opacity-50">
+                <Search className="w-10 h-10 mx-auto mb-4" />
+                <p>No se encontraron leyes que coincidan con la búsqueda</p>
+             </div>
+          ) : filteredLaws.map(law => (
             <div key={law.id} className={`rounded-2xl border p-5 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} hover:shadow-lg transition-shadow`}>
               <div className="flex items-start justify-between mb-4">
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">

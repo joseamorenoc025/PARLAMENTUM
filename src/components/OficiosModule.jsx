@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, Edit3, Trash2, FileText, ChevronLeft, Link 
 } from 'lucide-react';
+import EmptyState from './ui/EmptyState';
 
 const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
@@ -96,74 +97,79 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
         </button>
       </div>
 
-      <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Número</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Receptor</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Asunto</th>
-                <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sesión</th>
-                <th className={`text-right px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeOficios.map(o => {
-                const sesion = sessions.find(s => s.id === o.sesionId);
-                return (
-                  <tr key={o.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-mono font-medium">{o.numeroOficio}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm">{new Date(o.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{o.organoReceptor}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm max-w-xs truncate block ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{o.asunto}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {sesion ? (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); onNavigate?.('sesion', sesion.id); }}
-                          className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors"
-                          title="Ver sesión vinculada"
-                        >
-                          <Link className="w-3 h-3" /> {sesion.numeroCorrelativo || sesion.tipo}
-                        </button>
-                      ) : (
-                        <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>Sin vincular</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditingId(o.id); setForm({ numeroOficio: o.numeroOficio, fecha: o.fecha, organoReceptor: o.organoReceptor, asunto: o.asunto, sesionId: o.sesionId || '' }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => { onDelete(o.id); addToast('Oficio eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {activeOficios.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <FileText className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-700' : 'text-gray-300'}`} />
-                    <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No hay oficios registrados</p>
-                  </td>
+      {activeOficios.length === 0 ? (
+        <EmptyState 
+          icon={FileText}
+          title="Bandeja de oficios vacía"
+          description="Los documentos oficiales generados aparecerán aquí. Comience redactando uno nuevo."
+          action={{
+            label: "Redactar oficio",
+            onClick: () => setView('form')
+          }}
+          dataTestId="empty-state-oficios"
+        />
+      ) : (
+        <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Número</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Receptor</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Asunto</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sesión</th>
+                  <th className={`text-right px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activeOficios.map(o => {
+                  const sesion = sessions.find(s => s.id === o.sesionId);
+                  return (
+                    <tr key={o.id} className={`border-b last:border-0 transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800/50' : 'border-gray-50 hover:bg-gray-50'}`}>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-mono font-medium">{o.numeroOficio}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm">{new Date(o.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{o.organoReceptor}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`text-sm max-w-xs truncate block ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{o.asunto}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {sesion ? (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.('sesion', sesion.id); }}
+                            className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors"
+                            title="Ver sesión vinculada"
+                          >
+                            <Link className="w-3 h-3" /> {sesion.numeroCorrelativo || sesion.tipo}
+                          </button>
+                        ) : (
+                          <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>Sin vincular</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setEditingId(o.id); setForm({ numeroOficio: o.numeroOficio, fecha: o.fecha, organoReceptor: o.organoReceptor, asunto: o.asunto, sesionId: o.sesionId || '' }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => { onDelete(o.id); addToast('Oficio eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

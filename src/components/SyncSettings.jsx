@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Github, Save, RefreshCw, Trash2, CheckCircle2, AlertCircle, ExternalLink, Shield } from 'lucide-react';
+import { Github, Save, RefreshCw, Trash2, CheckCircle2, AlertCircle, ExternalLink, Shield, CloudOff } from 'lucide-react';
+import EmptyState from './ui/EmptyState';
 
 export default function SyncSettings({ darkMode, addToast }) {
   const [token, setToken] = useState('');
@@ -9,6 +10,7 @@ export default function SyncSettings({ darkMode, addToast }) {
   const [syncStatus, setSyncStatus] = useState(null); // { success, user, error }
   const [queueStats, setQueueStats] = useState({ pending: 0, failed: 0, synced: 0 });
   const [isSaving, setIsSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     checkToken();
@@ -35,6 +37,7 @@ export default function SyncSettings({ darkMode, addToast }) {
     try {
       const config = await window.legisAPI.sync.github.getRepo();
       setRepoConfig(config);
+      if (config.owner) setShowForm(true);
     } catch (err) {
       console.error('Error loading repo config:', err);
     }
@@ -45,6 +48,7 @@ export default function SyncSettings({ darkMode, addToast }) {
     setHasToken(exists);
     if (exists) {
       validateConnection();
+      setShowForm(true);
     }
   };
 
@@ -118,6 +122,32 @@ export default function SyncSettings({ darkMode, addToast }) {
       setIsValidating(false);
     }
   };
+
+  if (!hasToken && !repoConfig.owner && !showForm) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-2">
+          <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+            <Github className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Sincronización con GitHub</h2>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Configura la publicación automática de leyes al portal ciudadano.</p>
+          </div>
+        </div>
+        <EmptyState 
+          icon={CloudOff}
+          title="Sincronización pendiente"
+          description="Configure su repositorio para publicar el portal de leyes. Los cambios se mantendrán locales hasta conectar."
+          action={{
+            label: "Configurar sincronización",
+            onClick: () => setShowForm(true)
+          }}
+          dataTestId="empty-state-sync"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
