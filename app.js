@@ -44,6 +44,7 @@ async function fetchLaws() {
         allLaws.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
         
         populateYearFilter();
+        populateTypeFilter();
         updateLastUpdate();
         renderLaws();
     } catch (error) {
@@ -51,6 +52,26 @@ async function fetchLaws() {
         showStatus('⚠️ Error: No se pudo conectar con la biblioteca de leyes. Intente más tarde.', 'error');
         lawsGrid.innerHTML = '';
     }
+}
+
+/**
+ * Llena el selector de tipos dinámicamente
+ */
+function populateTypeFilter() {
+    const types = [...new Set(allLaws.map(law => law.tipo || 'General').filter(Boolean))];
+    types.sort();
+    
+    // Limpiar opciones previas excepto la primera
+    while (filterType.options.length > 1) {
+        filterType.remove(1);
+    }
+    
+    types.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        filterType.appendChild(option);
+    });
 }
 
 /**
@@ -118,7 +139,7 @@ function renderLaws() {
             (law.expediente && law.expediente.toLowerCase().includes(searchTerm));
         
         const matchesYear = !selectedYear || String(law.anio) === selectedYear;
-        const matchesType = !selectedType || law.type === selectedType;
+        const matchesType = !selectedType || law.tipo === selectedType;
         
         return matchesSearch && matchesYear && matchesType;
     });
@@ -143,7 +164,7 @@ function renderLaws() {
             <span class="law-tag">${law.tipo || 'General'}</span>
             <h3 class="law-title">${law.titulo}</h3>
             <div class="law-meta">
-                <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> Exp: ${law.expediente || 'S/E'}</div>
+                <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${law.numero ? '#' + law.numero : 'Exp: ' + (law.expediente || 'S/E')}</div>
                 <div class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${date}</div>
             </div>
             <a href="${downloadUrl}" target="_blank" class="download-btn ${!law.link_drive ? 'disabled' : ''}">

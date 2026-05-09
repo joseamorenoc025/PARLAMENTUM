@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1777807755425,
-      "tag": "0000_quick_the_initiative",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1777853152723,
-      "tag": "0001_melodic_snowbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1777891234567,
-      "tag": "0002_add_sync_queue",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1778114000657,
-      "tag": "0003_add_onboarding_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1778180276113,
-      "tag": "0004_simplify_schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1778180299018,
-      "tag": "0005_add_simplified_fields",
+      "when": 1778334466036,
+      "tag": "0000_complete_supreme_intelligence",
       "breakpoints": true
     }
   ]

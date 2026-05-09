@@ -17,7 +17,9 @@ const LawsLibrary = ({ darkMode, addToast }) => {
   const [form, setForm] = useState({
     titulo: '',
     gaceta: 'Ordinaria',
+    numero: '',
     anio: new Date().getFullYear(),
+    fechaPublicacion: new Date().toISOString().split('T')[0],
     driveLink: ''
   });
 
@@ -50,14 +52,23 @@ const LawsLibrary = ({ darkMode, addToast }) => {
         metadata: {
           titulo: form.titulo,
           gaceta: form.gaceta,
+          numero: form.numero,
           anio: parseInt(form.anio),
+          fechaPublicacion: form.fechaPublicacion,
           driveLink: form.driveLink
         }
       });
 
       addToast('Ley registrada exitosamente', 'success');
       setShowForm(false);
-      setForm({ titulo: '', gaceta: 'Ordinaria', anio: new Date().getFullYear(), driveLink: '' });
+      setForm({ 
+        titulo: '', 
+        gaceta: 'Ordinaria', 
+        numero: '',
+        anio: new Date().getFullYear(), 
+        fechaPublicacion: new Date().toISOString().split('T')[0],
+        driveLink: '' 
+      });
       loadLaws();
     } catch (err) {
       addToast(err.message || 'Error al guardar la ley', 'error');
@@ -186,7 +197,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
               </div>
               <h3 className="font-bold text-lg mb-1 line-clamp-2">{law.titulo}</h3>
               <p className={`text-xs mb-4 font-medium ${law.tipo === 'Extraordinaria' ? 'text-amber-500' : 'text-indigo-500'}`}>
-                Gaceta {law.expediente}
+                Gaceta {law.tipo} {law.numero ? `#${law.numero}` : ''} ({law.anio})
               </p>
               
               <div className={`p-3 rounded-xl mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -253,6 +264,28 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                     type="number" 
                     value={form.anio}
                     onChange={e => setForm({...form, anio: e.target.value})}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Número de Gaceta/Ley</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej: 42.123"
+                    value={form.numero}
+                    onChange={e => setForm({...form, numero: e.target.value})}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Fecha de Publicación</label>
+                  <input 
+                    type="date" 
+                    value={form.fechaPublicacion}
+                    onChange={e => setForm({...form, fechaPublicacion: e.target.value})}
                     className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>

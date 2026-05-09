@@ -26,10 +26,13 @@ export const setupIPCHandlers = (mainWindow) => {
       const newLaw = {
         titulo: metadata.titulo,
         nombre: metadata.titulo,
-        expediente: `${metadata.gaceta} - ${metadata.anio}`, // Usamos gaceta y año como identificador
+        expediente: `${metadata.gaceta} #${metadata.numero || ''} (${metadata.anio})`,
         contenido: `Enlace de descarga: ${metadata.driveLink}`,
-        fechaPublicacion: new Date().toISOString(),
+        fechaPublicacion: metadata.fechaPublicacion,
         tipo: metadata.gaceta,
+        numero: metadata.numero,
+        anio: metadata.anio,
+        driveLink: metadata.driveLink,
         activo: 1
       };
       

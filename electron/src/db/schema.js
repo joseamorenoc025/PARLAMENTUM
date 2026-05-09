@@ -24,10 +24,15 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
+  role: text('role').default('user'),
+  nombreCompleto: text('nombre_completo'),
   securityQuestion: text('security_question'),
   securityAnswerHash: text('security_answer_hash'),
   recoveryCodeHash: text('recovery_code_hash'),
+  passwordResetRequired: integer('password_reset_required').default(0),
+  ultimoLogin: text('ultimo_login'),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  activo: integer('activo').default(1),
 });
 
 // Sesiones Legislativas
@@ -76,6 +81,7 @@ export const laws = sqliteTable('laws', {
   expediente: text('expediente'),
   gaceta: text('gaceta'),
   tipo: text('tipo'),
+  numero: text('numero'),
   anio: integer('anio'),
   fechaVigencia: text('fecha_vigencia'),
   fechaPublicacion: text('fecha_publicacion'),
