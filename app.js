@@ -1,5 +1,9 @@
 let allLaws = [];
+let filteredLaws = [];
 let appConfig = {};
+let searchIndex = new Map();
+let currentPage = 1;
+const ITEMS_PER_PAGE = 12;
 
 // Elementos del DOM
 const lawsGrid = document.getElementById('laws-grid');
@@ -10,6 +14,22 @@ const lastUpdateSpan = document.getElementById('last-update');
 const statusMessage = document.getElementById('status-message');
 const chamberNameElem = document.getElementById('chamber-name');
 const footerChamberNameElem = document.getElementById('footer-chamber-name');
+
+/**
+ * Crea un índice invertido para búsquedas ultra rápidas
+ */
+function createSearchIndex() {
+    searchIndex.clear();
+    allLaws.forEach((law, index) => {
+        const textToIndex = `${law.titulo} ${law.expediente || ''} ${law.tipo || ''} ${law.numero || ''}`.toLowerCase();
+        const words = textToIndex.split(/\s+/).filter(w => w.length > 2);
+        
+        words.forEach(word => {
+            if (!searchIndex.has(word)) searchIndex.set(word, new Set());
+            searchIndex.get(word).add(index);
+        });
+    });
+}
 
 /**
  * Inicialización
@@ -23,9 +43,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchLaws();
     
     // Eventos
-    searchInput.addEventListener('input', renderLaws);
-    filterYear.addEventListener('change', renderLaws);
-    filterType.addEventListener('change', renderLaws);
+    searchInput.addEventListener('input', () => { currentPage = 1; renderLaws(); });
+    filterYear.addEventListener('change', () => { currentPage = 1; renderLaws(); });
+    filterType.addEventListener('change', () => { currentPage = 1; renderLaws(); });
+
+    // Scroll Infinito
+    window.addEventListener('scroll', () => {
+        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+            if (currentPage * ITEMS_PER_PAGE < filteredLaws.length) {
+                currentPage++;
+                renderLaws(true); // true = append mode
+            }
+        }
+    });
 });
 
 /**
@@ -52,10 +82,8 @@ async function fetchConfig() {
  */
 async function fetchLaws() {
     try {
-        // Intentamos cargar leyes.json desde la raíz (subiendo dos niveles si estamos en public/portal)
         const response = await fetch('../../leyes.json');
         if (!response.ok) {
-            // Reintento en el mismo nivel por si acaso
             const localResponse = await fetch('./leyes.json');
             if (!localResponse.ok) throw new Error('No se pudo cargar la base de datos de leyes.');
             allLaws = await localResponse.json();
@@ -63,9 +91,9 @@ async function fetchLaws() {
             allLaws = await response.json();
         }
         
-        // Ordenar por fecha (más reciente primero)
         allLaws.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
         
+        createSearchIndex(); // Generar índice
         populateYearFilter();
         populateTypeFilter();
         updateLastUpdate();
@@ -151,49 +179,72 @@ function transformDriveLink(url) {
 /**
  * Renderiza las leyes aplicando filtros
  */
-function renderLaws() {
+function renderLaws(append = false) {
     const searchTerm = searchInput.value.toLowerCase();
     const selectedYear = filterYear.value;
     const selectedType = filterType.value;
     
-    const filtered = allLaws.filter(law => {
-        const matchesSearch = 
-            law.titulo.toLowerCase().includes(searchTerm) || 
-            (law.expediente && law.expediente.toLowerCase().includes(searchTerm));
-        
-        const matchesYear = !selectedYear || String(law.anio) === selectedYear;
-        const matchesType = !selectedType || law.tipo === selectedType;
-        
-        return matchesSearch && matchesYear && matchesType;
-    });
+    // Si no es append, filtramos todo de nuevo
+    if (!append) {
+        filteredLaws = allLaws.filter(law => {
+            const matchesSearch = 
+                law.titulo.toLowerCase().includes(searchTerm) || 
+                (law.expediente && law.expediente.toLowerCase().includes(searchTerm));
+            
+            const matchesYear = !selectedYear || String(law.anio) === selectedYear;
+            const matchesType = !selectedType || law.tipo === selectedType;
+            
+            return matchesSearch && matchesYear && matchesType;
+        });
+        lawsGrid.innerHTML = '';
+    }
     
-    lawsGrid.innerHTML = '';
-    
-    if (filtered.length === 0) {
+    if (filteredLaws.length === 0) {
         showStatus('No se encontraron leyes que coincidan con tu búsqueda.', 'info');
         return;
     }
     
     hideStatus();
     
-    filtered.forEach(law => {
+    // Paginar
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const pageItems = filteredLaws.slice(start, end);
+    
+    pageItems.forEach(law => {
         const card = document.createElement('div');
         card.className = 'law-card';
+        
+        // Detectar si es nueva (menos de 7 días)
+        const isNew = law.fecha_publicacion && (new Date() - new Date(law.fecha_publicacion)) < (7 * 24 * 60 * 60 * 1000);
         
         const date = law.fecha_publicacion ? new Date(law.fecha_publicacion).toLocaleDateString() : 'N/A';
         const downloadUrl = transformDriveLink(law.link_drive);
         
+        const shareText = encodeURIComponent(`📌 *${appConfig.chamber_name || 'Cerebro Legislativo'}*\n📜 *Ley:* ${law.titulo}\n🔗 *Descargar:* ${downloadUrl}`);
+        const whatsappUrl = `https://wa.me/?text=${shareText}`;
+        
         card.innerHTML = `
-            <span class="law-tag">${law.tipo || 'General'}</span>
+            <div class="law-card-header">
+                <div class="tags-row">
+                    <span class="law-tag">${law.tipo || 'General'}</span>
+                    ${isNew ? '<span class="new-badge">NUEVO</span>' : ''}
+                </div>
+                <a href="${whatsappUrl}" target="_blank" class="share-btn" title="Compartir por WhatsApp">
+                    <i data-lucide="share-2"></i>
+                </a>
+            </div>
             <h3 class="law-title">${law.titulo}</h3>
             <div class="law-meta">
                 <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${law.numero ? '#' + law.numero : 'Exp: ' + (law.expediente || 'S/E')}</div>
                 <div class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${date}</div>
             </div>
-            <a href="${downloadUrl}" target="_blank" class="download-btn ${!law.link_drive ? 'disabled' : ''}">
-                <i data-lucide="download"></i>
-                Descargar PDF
-            </a>
+            <div class="law-actions">
+                <a href="${downloadUrl}" target="_blank" class="download-btn ${!law.link_drive ? 'disabled' : ''}">
+                    <i data-lucide="download"></i>
+                    Descargar PDF
+                </a>
+            </div>
         `;
         
         lawsGrid.appendChild(card);
