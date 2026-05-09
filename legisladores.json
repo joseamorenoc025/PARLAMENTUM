@@ -1,0 +1,80 @@
+[
+  {
+    "id": 3,
+    "nombre": "Anayaime Coello",
+    "partido": "ENAMORATE",
+    "biografia": null,
+    "foto": null,
+    "comisiones": [
+      {
+        "nombre": "JUVENTUD",
+        "cargo": "Presidente"
+      },
+      {
+        "nombre": "Comision permanente de Desarrollo Economico",
+        "cargo": "Miembro"
+      }
+    ],
+    "updated_at": "2026-05-09T01:26:23.093Z"
+  },
+  {
+    "id": 4,
+    "nombre": "Nelson Moya",
+    "partido": "PSUV",
+    "biografia": null,
+    "foto": null,
+    "comisiones": [
+      {
+        "nombre": "JUVENTUD",
+        "cargo": "Vicepresidente"
+      },
+      {
+        "nombre": "Comision permanente de Desarrollo Economico",
+        "cargo": "Miembro"
+      }
+    ],
+    "updated_at": "2026-05-09T01:26:23.094Z"
+  },
+  {
+    "id": 5,
+    "nombre": "Luis Romero",
+    "partido": "PSUV",
+    "biografia": null,
+    "foto": null,
+    "comisiones": [
+      {
+        "nombre": "Comision permanente de Desarrollo Economico",
+        "cargo": "Presidente"
+      }
+    ],
+    "updated_at": "2026-05-09T01:26:23.094Z"
+  },
+  {
+    "id": 6,
+    "nombre": "Milta Antoima",
+    "partido": "PSUV",
+    "biografia": null,
+    "foto": null,
+    "comisiones": [
+      {
+        "nombre": "Comision permanente de Desarrollo Economico",
+        "cargo": "Miembro"
+      }
+    ],
+    "updated_at": "2026-05-09T01:26:23.094Z"
+  },
+  {
+    "id": 7,
+    "nombre": "Aismelys Flores",
+    "partido": "PSUV",
+    "biografia": null,
+    "foto": null,
+    "comisiones": [
+      {
+        "nombre": "Comision permanente de Desarrollo Economico",
+        "cargo": "Vicepresidente"
+      }
+    ],
+    "updated_at": "2026-05-09T01:26:23.094Z"
+  }
+]
