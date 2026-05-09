@@ -246,9 +246,9 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Gaceta</label>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Tipo de Gaceta</label>
                   <select 
                     value={form.gaceta}
                     onChange={e => setForm({...form, gaceta: e.target.value})}
@@ -257,15 +257,6 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                     <option value="Ordinaria">Ordinaria</option>
                     <option value="Extraordinaria">Extraordinaria</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Año</label>
-                  <input 
-                    type="number" 
-                    value={form.anio}
-                    onChange={e => setForm({...form, anio: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
-                  />
                 </div>
               </div>
 

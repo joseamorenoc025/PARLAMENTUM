@@ -139,6 +139,9 @@ export class SyncEngine {
       if (!token) throw new Error('Token de GitHub no configurado.');
       const client = new GitHubClient(token);
       
+      if (type === 'all' || type === 'config') await this.syncConfig(client);
+      if (type === 'all' || type === 'logo') await this.syncLogo(client);
+
       const results = {
         laws: (type === 'all' || type === 'laws') ? await this.syncLaws(client) : 0,
         legislators: (type === 'all' || type === 'legislators') ? await this.syncLegislators(client) : 0,

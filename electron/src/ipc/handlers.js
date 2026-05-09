@@ -23,15 +23,17 @@ export const setupIPCHandlers = (mainWindow) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
     const { metadata } = validation.data;
     try {
+      const year = metadata.fechaPublicacion ? new Date(metadata.fechaPublicacion).getFullYear() : new Date().getFullYear();
+      
       const newLaw = {
         titulo: metadata.titulo,
         nombre: metadata.titulo,
-        expediente: `${metadata.gaceta} #${metadata.numero || ''} (${metadata.anio})`,
+        expediente: `${metadata.gaceta} #${metadata.numero || ''} (${year})`,
         contenido: `Enlace de descarga: ${metadata.driveLink}`,
         fechaPublicacion: metadata.fechaPublicacion,
         tipo: metadata.gaceta,
         numero: metadata.numero,
-        anio: metadata.anio,
+        anio: year,
         driveLink: metadata.driveLink,
         activo: 1
       };

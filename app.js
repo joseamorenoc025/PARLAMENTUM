@@ -1,4 +1,5 @@
 let allLaws = [];
+let appConfig = {};
 
 // Elementos del DOM
 const lawsGrid = document.getElementById('laws-grid');
@@ -7,6 +8,8 @@ const filterYear = document.getElementById('filter-year');
 const filterType = document.getElementById('filter-type');
 const lastUpdateSpan = document.getElementById('last-update');
 const statusMessage = document.getElementById('status-message');
+const chamberNameElem = document.getElementById('chamber-name');
+const footerChamberNameElem = document.getElementById('footer-chamber-name');
 
 /**
  * Inicialización
@@ -15,7 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializar iconos de Lucide
     lucide.createIcons();
     
-    // Cargar datos
+    // Cargar configuración y datos
+    await fetchConfig();
     await fetchLaws();
     
     // Eventos
@@ -23,6 +27,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     filterYear.addEventListener('change', renderLaws);
     filterType.addEventListener('change', renderLaws);
 });
+
+/**
+ * Obtiene la configuración del portal
+ */
+async function fetchConfig() {
+    try {
+        const response = await fetch('./config.json');
+        if (response.ok) {
+            appConfig = await response.json();
+            if (appConfig.chamber_name) {
+                if (chamberNameElem) chamberNameElem.textContent = appConfig.chamber_name;
+                if (footerChamberNameElem) footerChamberNameElem.textContent = appConfig.chamber_name;
+                document.title = `${appConfig.chamber_name} | Portal Ciudadano`;
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching config:', error);
+    }
+}
 
 /**
  * Obtiene las leyes desde el archivo JSON
