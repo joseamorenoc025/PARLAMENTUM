@@ -131,7 +131,15 @@ export const projects = sqliteTable('projects', {
   estado: text('estado').default('en_comision'),
   prioridad: text('prioridad').default('media'),
   tags: text('tags'),
-  ultimaActualizacion: text('ultima_actualizacion').default('CURRENT_TIMESTAMP'),
+  faseActual: text('fase_actual').default('Estudio en Comisión'),
+  linkPrimeraDiscusion: text('link_1ra_discusion'),
+  linkConsultaPublica: text('link_consulta_publica'),
+  linkSegundaDiscusion: text('link_2da_discusion'),
+  linkTerceraDiscusion: text('link_3ra_discusion'),
+  fechaConsultaPublica: text('fecha_consulta_publica'),
+  urgenciaParlamentaria: integer('urgencia_parlamentaria').default(0),
+  fechaIngreso: text('fecha_ingreso'),
+  fechaActualizacion: text('fecha_actualizacion').default('CURRENT_TIMESTAMP'),
   activo: integer('activo').default(1),
 });
 
@@ -158,6 +166,17 @@ export const documents = sqliteTable('documents', {
   hashIntegridad: text('hash_integridad'),
   fechaSubida: text('fecha_subida'),
   contenidoBase64: text('contenido_base64'),
+  activo: integer('activo').default(1),
+});
+
+// Acuerdos de Cámara
+export const agreements = sqliteTable('agreements', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  numeroCorrelativo: text('numero_correlativo').unique(),
+  fecha: text('fecha').notNull(),
+  objeto: text('objeto').notNull(),
+  sesionId: integer('sesion_id').references(() => sessions.id),
+  driveLink: text('drive_link'),
   activo: integer('activo').default(1),
 });
 

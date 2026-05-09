@@ -64,6 +64,14 @@ export const dbService = {
   },
   deleteOficio: async (id) => upsert('oficios', { id, activo: 0 }),
 
+  // Acuerdos
+  getAgreements: async () => select('agreements'),
+  saveAgreement: async (a) => {
+    const result = await upsert('agreements', a);
+    return a.id || result.lastInsertRowid;
+  },
+  deleteAgreement: async (id) => upsert('agreements', { id, activo: 0 }),
+
   // Proyectos
   getProjects: async () => select('projects'),
   saveProject: async (p) => {

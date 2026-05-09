@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Gavel, User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Gavel, User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
 import { dbService } from '../services/db';
 
 const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRestore, setShowRestore] = useState(false);
+  const [restorePassword, setRestorePassword] = useState('');
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -196,19 +198,73 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
-          <button
-            onClick={() => { setIsSignUp(!isSignUp); setForm({...form, password: ''}); }}
-            className={`text-sm font-medium transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'} flex items-center justify-center gap-2 mx-auto`}
-          >
-            {isSignUp ? (
-              <>¿Ya tienes cuenta? Iniciar Sesión</>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                Registrar nuevo Administrador
-              </>
-            )}
-          </button>
+          {showRestore ? (
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <p className="text-xs font-bold text-amber-500 uppercase">Restauración de Sistema</p>
+              <input
+                type="password"
+                placeholder="Contraseña del respaldo"
+                className={`w-full px-4 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                value={restorePassword}
+                onChange={e => setRestorePassword(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowRestore(false)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold ${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!restorePassword) {
+                      addToast('Ingresa la contraseña del respaldo', 'warning');
+                      return;
+                    }
+                    if (window.confirm('ATENCIÓN: Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?')) {
+                      try {
+                        const result = await window.legisAPI.backup.import(restorePassword);
+                        if (result.success) {
+                          alert(result.message);
+                          window.close();
+                        }
+                      } catch (err) {
+                        addToast('Error al restaurar: Contraseña incorrecta o archivo dañado.', 'error');
+                      }
+                    }
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg shadow-amber-500/20"
+                >
+                  Confirmar Restauración
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => { setIsSignUp(!isSignUp); setForm({...form, password: ''}); }}
+                className={`text-sm font-medium transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'} flex items-center justify-center gap-2 mx-auto`}
+              >
+                {isSignUp ? (
+                  <>¿Ya tienes cuenta? Iniciar Sesión</>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    Registrar nuevo Administrador
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowRestore(true)}
+                className={`text-xs font-medium transition-colors ${darkMode ? 'text-amber-400 hover:text-amber-300' : 'text-amber-600 hover:text-amber-700'} flex items-center justify-center gap-2 mx-auto mt-4`}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Restaurar sistema desde respaldo (.clbak)
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

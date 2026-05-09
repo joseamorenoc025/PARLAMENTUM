@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Github, Save, RefreshCw, Trash2, CheckCircle2, AlertCircle, ExternalLink, Shield, CloudOff } from 'lucide-react';
+import { Github, Save, RefreshCw, Trash2, CheckCircle2, AlertCircle, ExternalLink, Shield, CloudOff, Activity, Cloud, CloudUpload, CloudDownload } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
 export default function SyncSettings({ darkMode, addToast }) {
@@ -11,14 +11,26 @@ export default function SyncSettings({ darkMode, addToast }) {
   const [queueStats, setQueueStats] = useState({ pending: 0, failed: 0, synced: 0 });
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [analyticsStatus, setAnalyticsStatus] = useState({ enabled: false, anonymousId: '' });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     checkToken();
     loadRepoConfig();
     loadQueueStats();
+    loadAnalyticsStatus();
     const interval = setInterval(loadQueueStats, 10000); // Actualizar cada 10s
     return () => clearInterval(interval);
   }, []);
+
+  const loadAnalyticsStatus = async () => {
+    try {
+      const status = await window.legisAPI.analytics.status();
+      setAnalyticsStatus(status);
+    } catch (err) {
+      console.error('Error loading analytics status:', err);
+    }
+  };
 
   const loadQueueStats = async () => {
     try {
@@ -103,6 +115,59 @@ export default function SyncSettings({ darkMode, addToast }) {
       setHasToken(false);
       setSyncStatus(null);
       addToast('Token eliminado', 'info');
+    }
+  };
+
+  const handleCloudUpload = async () => {
+    const password = document.getElementById('backup-password-input')?.value;
+    if (!password) {
+      addToast('Ingresa la contraseña del backup para cifrar la subida.', 'warning');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const result = await window.legisAPI.invoke('backup:cloud:upload', password);
+      if (result.success) {
+        addToast('Respaldo subido a la nube correctamente', 'success');
+      }
+    } catch (err) {
+      addToast('Error al subir a la nube', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCloudDownload = async () => {
+    const password = document.getElementById('backup-password-input')?.value;
+    if (!password) {
+      addToast('Ingresa la contraseña del backup para descifrar la descarga.', 'warning');
+      return;
+    }
+
+    if (!window.confirm('Esto reemplazará todos tus datos locales con la versión de la nube. ¿Continuar?')) return;
+
+    setIsSyncing(true);
+    try {
+      const result = await window.legisAPI.invoke('backup:cloud:download', password);
+      if (result.success) {
+        addToast(result.message, 'success');
+      }
+    } catch (err) {
+      addToast('Error al descargar de la nube', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleAnalytics = async () => {
+    try {
+      const newEnabled = !analyticsStatus.enabled;
+      const result = await window.legisAPI.analytics.setOptIn(newEnabled);
+      setAnalyticsStatus(prev => ({ ...prev, enabled: result.enabled }));
+      addToast(result.enabled ? 'Analíticas activadas (Privacidad respetada)' : 'Analíticas desactivadas', 'info');
+    } catch (err) {
+      addToast('Error al cambiar configuración de privacidad', 'error');
     }
   };
 
@@ -328,8 +393,145 @@ export default function SyncSettings({ darkMode, addToast }) {
           </div>
         </div>
       </div>
+      <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className={`p-2 rounded-lg ${darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-100 text-amber-600'}`}>
+            <Save className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Respaldos Locales</h2>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Exporta una copia de seguridad cifrada para guardarla en un dispositivo externo.</p>
+          </div>
+        </div>
 
-      <div className={`p-4 rounded-xl border ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium">Exportación Manual (.clbak)</p>
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Este archivo contiene toda la base de datos y configuraciones institucionales. 
+              Necesitarás la contraseña que ingreses aquí para restaurarlo en el futuro.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <input 
+              type="password"
+              placeholder="Contraseña del backup"
+              id="backup-password-input"
+              className={`px-3 py-2 rounded-lg text-sm border outline-none focus:ring-2 focus:ring-amber-500 ${
+                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+              }`}
+            />
+            <button
+              onClick={async () => {
+                const passwordInput = document.getElementById('backup-password-input');
+                const password = passwordInput?.value;
+                if (!password) {
+                  addToast('Por favor, ingresa una contraseña para el backup.', 'warning');
+                  return;
+                }
+                
+                try {
+                  const result = await window.legisAPI.backup.export(password);
+                  if (result.success) {
+                    addToast(`Respaldo guardado exitosamente en: ${result.path}`, 'success');
+                    passwordInput.value = ''; // Limpiar tras éxito
+                  }
+                } catch (err) {
+                  addToast('Error al generar el respaldo. Inténtalo de nuevo.', 'error');
+                }
+              }}
+              className={`px-6 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                darkMode ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Exportar Backup Ahora
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+            <Cloud className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">GitHub Cloud Sync (Oficina-Casa)</h2>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Sincroniza tu base de datos cifrada para trabajar desde diferentes lugares de forma segura.
+            </p>
+          </div>
+        </div>
+
+        <div className={`p-4 rounded-xl border mb-6 ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+          <p className="text-xs text-indigo-500 flex items-center gap-2">
+            <Shield className="w-3 h-3" />
+            Cifrado AES-256 activo: Tus datos están protegidos por tu contraseña de backup antes de salir de este equipo.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={handleCloudUpload}
+            disabled={isSyncing}
+            className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+              darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
+            }`}
+          >
+            <CloudUpload className={`w-8 h-8 mb-2 ${isSyncing ? 'animate-bounce text-indigo-500' : 'text-gray-400'}`} />
+            <span className="font-bold">Subir a la Nube</span>
+            <span className="text-[10px] text-gray-500">Enviar sesión actual</span>
+          </button>
+
+          <button
+            onClick={handleCloudDownload}
+            disabled={isSyncing}
+            className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+              darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
+            }`}
+          >
+            <CloudDownload className={`w-8 h-8 mb-2 ${isSyncing ? 'animate-bounce text-indigo-500' : 'text-gray-400'}`} />
+            <span className="font-bold">Descargar de la Nube</span>
+            <span className="text-[10px] text-gray-500">Recuperar última sesión</span>
+          </button>
+        </div>
+      </div>
+
+      <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+              <Activity className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Analíticas Anónimas</h2>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Ayúdanos a mejorar el sistema enviando métricas técnicas anónimas (uso de CPU, errores, frecuencia de uso).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleAnalytics}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              analyticsStatus.enabled ? 'bg-indigo-600' : (darkMode ? 'bg-gray-700' : 'bg-gray-200')
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                analyticsStatus.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        {analyticsStatus.enabled && (
+          <div className={`mt-4 p-3 rounded-xl text-[10px] font-mono ${darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
+            ID Anónimo: {analyticsStatus.anonymousId}
+          </div>
+        )}
+      </div>
+
+      <div className={`p-4 rounded-xl border ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'} mt-6`}>
         <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2">Resiliencia Offline</h4>
         <p className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           Si no hay conexión, los cambios se guardarán en la cola de <b>Pendientes</b> y se reintentarán automáticamente 

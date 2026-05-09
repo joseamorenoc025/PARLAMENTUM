@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:report": "npm run test:coverage && echo '📊 Reporte generado en coverage/index.html'",
+    "test:e2e": "playwright test",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "lint": "eslint src electron --ext .js,.jsx",
     "prepare": "husky"
@@ -28,7 +29,10 @@
     "drizzle-orm": "^0.45.2",
     "electron": "^30.0.0",
     "electron-builder": "^24.13.3",
+    "electron-updater": "^6.8.3",
     "googleapis": "^171.4.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.469.0",
     "qrcode": "^1.5.3",
     "react": "^18.3.1",
@@ -42,6 +46,7 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@electron/rebuild": "^4.0.4",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.3.0",
@@ -59,5 +64,49 @@
     "vite": "^5.2.12",
     "vitest": "^4.1.5",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.cerebrolegislativo.app",
+    "productName": "Cerebro Legislativo",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "joseamorenoc025",
+        "repo": "cerebro_legislativo"
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "public"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "package.json",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md}"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-win.${ext}",
+      "icon": "public/logo.png"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-mac.${ext}",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "artifactName": "${productName}-${version}-linux.${ext}"
+    }
   }
 }

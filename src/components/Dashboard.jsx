@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { 
-  CalendarDays, FileText, Scale, BarChart3, AlertTriangle, Check 
+  CalendarDays, FileText, Scale, BarChart3, TriangleAlert, Check, FileDown 
 } from 'lucide-react';
 import StatCard from './ui/StatCard';
 import { getDaysSince } from '../utils/helpers';
+import { generateManagementReport } from '../utils/reports';
 
-const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMode, onNavigate }) => {
+const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMode, config, onNavigate }) => {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -54,9 +55,26 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Resumen del mes de {now.toLocaleDateString('es-ES', { month: 'long' })} {currentYear}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Resumen del mes de {now.toLocaleDateString('es-ES', { month: 'long' })} {currentYear}</p>
+        </div>
+        <button
+          onClick={() => generateManagementReport({
+            month: now.toLocaleDateString('es-ES', { month: 'long' }),
+            year: currentYear,
+            sessions: monthSessions,
+            oficios: monthOficios,
+            laws: laws,
+            projects: activeProjects,
+            chamberName: config?.chamber_name || 'Cámara Legislativa'
+          })}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-600/20"
+        >
+          <FileDown className="w-4 h-4" />
+          Exportar Informe Mensual
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -90,7 +108,7 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
 
         <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <TriangleAlert className="w-4 h-4 text-amber-500" />
             Semáforo de Proyectos
           </h3>
           <div className="space-y-3 max-h-64 overflow-y-auto">

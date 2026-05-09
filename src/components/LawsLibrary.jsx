@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Plus, Search, Download, Trash2, QrCode, 
-  Loader2, Scale, ExternalLink
+  Loader2, Scale, ExternalLink, ShieldCheck, FileCheck, TriangleAlert
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
@@ -13,6 +13,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [editingId, setEditingId] = useState(null);
   
   const [form, setForm] = useState({
     titulo: '',
@@ -20,7 +21,9 @@ const LawsLibrary = ({ darkMode, addToast }) => {
     numero: '',
     anio: new Date().getFullYear(),
     fechaPublicacion: new Date().toISOString().split('T')[0],
-    driveLink: ''
+    driveLink: '',
+    localFilePath: '',
+    fileHash: ''
   });
 
   const loadLaws = React.useCallback(async () => {
@@ -50,24 +53,29 @@ const LawsLibrary = ({ darkMode, addToast }) => {
       // Usar el nuevo canal IPC laws:import que configuramos en handlers.js
       await window.legisAPI.invoke('laws:import', {
         metadata: {
+          id: editingId,
           titulo: form.titulo,
           gaceta: form.gaceta,
           numero: form.numero,
           anio: parseInt(form.anio),
           fechaPublicacion: form.fechaPublicacion,
-          driveLink: form.driveLink
+          driveLink: form.driveLink,
+          fileHash: form.fileHash
         }
       });
 
-      addToast('Ley registrada exitosamente', 'success');
+      addToast(editingId ? 'Ley actualizada exitosamente' : 'Ley registrada exitosamente', 'success');
       setShowForm(false);
+      setEditingId(null);
       setForm({ 
         titulo: '', 
         gaceta: 'Ordinaria', 
         numero: '',
         anio: new Date().getFullYear(), 
         fechaPublicacion: new Date().toISOString().split('T')[0],
-        driveLink: '' 
+        driveLink: '',
+        localFilePath: '',
+        fileHash: ''
       });
       loadLaws();
     } catch (err) {
@@ -85,6 +93,28 @@ const LawsLibrary = ({ darkMode, addToast }) => {
       loadLaws();
     } catch (err) {
       addToast('Error al eliminar', 'error');
+    }
+  };
+
+  const handleAudit = async (law) => {
+    if (!law.fileHash) {
+      addToast('Esta ley no tiene un sello de integridad registrado.', 'info');
+      return;
+    }
+
+    try {
+      const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+      if (!filePath) return;
+
+      const currentHash = await window.legisAPI.invoke('app:file-hash', filePath);
+      
+      if (currentHash === law.fileHash) {
+        addToast('✅ Integridad Confirmada: El documento coincide con el sello original.', 'success');
+      } else {
+        addToast('❌ Alerta de Integridad: El documento ha sido modificado o es incorrecto.', 'error');
+      }
+    } catch (err) {
+      addToast('Error durante la auditoría', 'error');
     }
   };
 
@@ -109,6 +139,21 @@ const LawsLibrary = ({ darkMode, addToast }) => {
     } catch (err) {
       addToast('Error al generar QR', 'error');
     }
+  };
+
+  const handleEdit = (law) => {
+    setEditingId(law.id);
+    setForm({
+      titulo: law.titulo,
+      gaceta: law.tipo,
+      numero: law.numero || '',
+      anio: law.anio,
+      fechaPublicacion: law.fechaPublicacion,
+      driveLink: law.driveLink || law.contenido.replace('Enlace de descarga: ', ''),
+      fileHash: law.fileHash || '',
+      localFilePath: ''
+    });
+    setShowForm(true);
   };
 
   const filteredLaws = useMemo(() => {
@@ -187,8 +232,16 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                   <Scale className="w-5 h-5" />
                 </div>
                 <div className="flex gap-1">
+                  {law.fileHash && (
+                    <button onClick={() => handleAudit(law)} className={`p-2 rounded-lg transition-colors text-emerald-500 ${darkMode ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-50'}`} title="Auditar Integridad">
+                      <ShieldCheck className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => showQR(law)} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`} title="Ver Código QR">
                     <QrCode className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleEdit(law)} className={`p-2 rounded-lg transition-colors text-indigo-500 ${darkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50'}`} title="Editar Ley">
+                    <Plus className="w-4 h-4 rotate-45" />
                   </button>
                   <button onClick={() => handleDelete(law.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10" title="Eliminar">
                     <Trash2 className="w-4 h-4" />
@@ -225,6 +278,15 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                   <Download className="w-3 h-3" /> Descargar
                 </a>
               </div>
+
+              {law.fileHash && (
+                <div className={`mt-3 pt-3 border-t flex items-center gap-2 ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-[10px] font-mono text-gray-500 truncate" title={law.fileHash}>
+                    Sello: {law.fileHash.substring(0, 16)}...
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -233,7 +295,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className={`w-full max-w-lg rounded-3xl border p-8 shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <h2 className="text-2xl font-bold mb-6">Registrar Ley</h2>
+            <h2 className="text-2xl font-bold mb-6">{editingId ? 'Editar Ley' : 'Registrar Ley'}</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Título de la Ley</label>
@@ -281,7 +343,6 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Enlace de Google Drive</label>
                 <input 
@@ -293,11 +354,53 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 />
                 <p className="text-[10px] mt-2 text-gray-500 italic">Este enlace se usará para generar el código QR público.</p>
               </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Sello de Integridad (Opcional)</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      const result = await window.legisAPI.invoke('dialog:open-pdf');
+                      if (result) {
+                        setForm(prev => ({ ...prev, localFilePath: result }));
+                        // Solicitar cálculo de hash al backend
+                        try {
+                          const hash = await window.legisAPI.invoke('app:file-hash', result);
+                          setForm(prev => ({ ...prev, fileHash: hash }));
+                        } catch (err) {
+                          addToast('Error al calcular sello de integridad', 'error');
+                        }
+                      }
+                    }}
+                    className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      form.fileHash 
+                        ? (darkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-600')
+                        : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-indigo-500')
+                    }`}
+                  >
+                    {form.fileHash ? <FileCheck className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                    {form.fileHash ? 'Documento Vinculado' : 'Generar Sello SHA-256'}
+                  </button>
+                  {form.fileHash && (
+                    <button 
+                      onClick={() => setForm(prev => ({ ...prev, fileHash: '', localFilePath: '' }))}
+                      className="p-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {form.fileHash && (
+                  <p className="text-[9px] mt-1.5 font-mono text-emerald-500 truncate px-1">
+                    SHA-256: {form.fileHash}
+                  </p>
+                )}
+              </div>
             </div>
             
             <div className="flex gap-3 mt-10">
               <button 
-                onClick={() => setShowForm(false)} 
+                onClick={() => { setShowForm(false); setEditingId(null); }} 
                 disabled={isSaving}
                 className="flex-1 py-3.5 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
@@ -308,7 +411,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 disabled={isSaving}
                 className="flex-1 py-3.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
               >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Registrar'}
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Actualizar' : 'Registrar')}
               </button>
             </div>
           </div>

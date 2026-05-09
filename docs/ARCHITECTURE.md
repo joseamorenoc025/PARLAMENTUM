@@ -25,10 +25,10 @@ Este documento describe la estructura y los flujos simplificados del sistema par
 - Una **Single Page Application (SPA)** en GitHub lee estos datos dinámicamente según el ID solicitado.
 - Esto evita generar cientos de archivos HTML y facilita las actualizaciones globales de diseño.
 
-### 3. Administración y Acceso
-- **Acceso Restringido:** Solo el **Secretario de Cámara** tiene acceso a la aplicación.
-- Se ha eliminado la lógica de multi-rol para legisladores para cumplir con las competencias reglamentarias de la Secretaría.
-- El sistema de login se simplifica para asegurar que solo la autoridad competente gestione la data oficial.
+### 3. Administración y Acceso (Single User)
+- **Acceso Exclusivo:** El sistema está diseñado para uso exclusivo del **Secretario de Cámara**.
+- **Seguridad:** Autenticación simplificada. Se elimina la complejidad de roles para evitar vectores de ataque innecesarios y cumplir con la normativa de gestión de fe pública parlamentaria.
+- **Auditoría Técnica:** Se mantiene un registro de actividad técnica (logs) para mantenimiento, pero se prescinde de auditoría de cadena de bloques por redundancia en entorno monousuario.
 
 ---
 
@@ -38,9 +38,9 @@ Este documento describe la estructura y los flujos simplificados del sistema par
 | :--- | :--- | :--- |
 | **Infraestructura** | ✅ Completado | Drizzle, Migraciones, Logger. |
 | **Seguridad IPC** | ✅ Completado | Validación con Zod en handlers. |
-| **Auditoría** | ✅ Completado | Hash Chain funcional. |
-| **Leyes** | 🔄 Simplificando | Migración a flujo QR + Drive + JSON. |
-| **Legisladores** | 🔄 En mejora | Agregando exportación a Subpages. |
+| **Auditoría** | ✅ Técnica | Registro de logs vía Winston. |
+| **Leyes 2.0** | ✅ Completado | QR + Drive + JSON (Search Indexed). |
+| **Legisladores** | 📅 Planificado | Pendiente maquetación visual 2.0. |
 | **Sync Engine** | ✅ Funcional | Sincronización con GitHub activa. |
 
 ---

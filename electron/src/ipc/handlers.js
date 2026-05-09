@@ -13,9 +13,16 @@ import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema } from './sc
 import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { setupInitializeSchema } from './schemas/setup.js';
+import { backupExportSchema, backupImportSchema } from './schemas/backup.js';
+import { qrGenerateSchema, logSchema } from './schemas/misc.js';
+import { analyticsSetOptInSchema } from './schemas/analytics.js';
 
 import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
+import { createBackupBuffer, restoreFromBuffer } from '../modules/backup/localBackup.js';
+import { uploadBackupToGitHub, downloadBackupFromGitHub } from '../modules/backup/githubBackup.js';
+import { loadToken } from '../modules/sync/tokenStorage.js';
+import { getRepoConfig } from '../modules/sync/index.js';
 
 export const setupIPCHandlers = (mainWindow) => {
   // Laws
@@ -25,7 +32,7 @@ export const setupIPCHandlers = (mainWindow) => {
     try {
       const year = metadata.fechaPublicacion ? new Date(metadata.fechaPublicacion).getFullYear() : new Date().getFullYear();
       
-      const newLaw = {
+      const lawData = {
         titulo: metadata.titulo,
         nombre: metadata.titulo,
         expediente: `${metadata.gaceta} #${metadata.numero || ''} (${year})`,
@@ -35,19 +42,27 @@ export const setupIPCHandlers = (mainWindow) => {
         numero: metadata.numero,
         anio: year,
         driveLink: metadata.driveLink,
+        fileHash: metadata.fileHash || null,
         activo: 1
       };
       
-      const result = db.insert(schema.laws).values(newLaw).run();
-      
-      // Encolar sincronización (Fase 3)
-      try {
-        await enqueueTask('laws', result.lastInsertRowid, 'add');
-      } catch (e) {
-        logger.error('Error auto-enqueuing law sync:', e);
+      if (metadata.id) {
+        db.update(schema.laws).set(lawData).where(eq(schema.laws.id, metadata.id)).run();
+        try {
+          await enqueueTask('laws', metadata.id, 'update');
+        } catch (e) {
+          logger.error('Error auto-enqueuing law update sync:', e);
+        }
+        return { success: true, id: metadata.id };
+      } else {
+        const result = db.insert(schema.laws).values(lawData).run();
+        try {
+          await enqueueTask('laws', result.lastInsertRowid, 'add');
+        } catch (e) {
+          logger.error('Error auto-enqueuing law add sync:', e);
+        }
+        return { success: true, id: result.lastInsertRowid };
       }
-
-      return { success: true, id: result.lastInsertRowid };
     } catch (err) {
       logger.error('Error importing law:', err);
       throw err;
@@ -91,7 +106,67 @@ export const setupIPCHandlers = (mainWindow) => {
     }
   });
 
-  // DB
+  // DB & Backups
+  ipcMain.handle('backup:export', async (_, rawData) => {
+    const validation = validateIPCInput(backupExportSchema, rawData, 'backup:export');
+    const password = validation.data;
+    try {
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json'); // Ajustar si config.json está en otro lugar
+
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Exportar Respaldo de Seguridad',
+        defaultPath: `respaldo_legislativo_${new Date().toISOString().split('T')[0]}.clbak`,
+        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }]
+      });
+
+      if (canceled || !filePath) return { success: false, message: 'Operación cancelada' };
+
+      const backupBuffer = await createBackupBuffer(dbPath, configPath, password);
+      fs.writeFileSync(filePath, backupBuffer);
+
+      return { success: true, path: filePath };
+    } catch (err) {
+      logger.error('Error al exportar backup:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:import', async (_, rawData) => {
+    const validation = validateIPCInput(backupImportSchema, rawData, 'backup:import');
+    const password = validation.data;
+    try {
+      const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Seleccionar Archivo de Respaldo',
+        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }],
+        properties: ['openFile']
+      });
+
+      if (canceled || filePaths.length === 0) return { success: false, message: 'Operación cancelada' };
+
+      const backupBuffer = fs.readFileSync(filePaths[0]);
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      // Cerrar conexión actual para poder sobrescribir el archivo
+      sqlite.close();
+
+      try {
+        await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
+        return { success: true, message: 'Sistema restaurado correctamente. La aplicación debe reiniciarse.' };
+      } catch (restoreErr) {
+        // Intentar reabrir la conexión si falla la restauración
+        // Nota: En una app real, podrías querer restaurar un backup temporal primero
+        throw restoreErr;
+      }
+    } catch (err) {
+      logger.error('Error al importar backup:', err);
+      throw err;
+    }
+  });
+
   ipcMain.handle('db:backup:local', async () => {
     try {
       const BACKUP_PATH = path.join(app.getPath('userData'), 'backups');
@@ -101,6 +176,53 @@ export const setupIPCHandlers = (mainWindow) => {
       return { success: true, path: backupFile };
     } catch (err) {
       logger.error('Backup error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:cloud:upload', async (_, password) => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      const backupBuffer = await createBackupBuffer(dbPath, configPath, password);
+      const tempPath = path.join(app.getPath('temp'), 'cloud_sync.clbak');
+      fs.writeFileSync(tempPath, backupBuffer);
+
+      const token = await loadToken();
+      const { owner, repo } = await getRepoConfig();
+      if (!token) throw new Error('No hay token de GitHub configurado');
+      
+      await uploadBackupToGitHub(token, owner, repo, tempPath);
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+      return { success: true };
+    } catch (err) {
+      logger.error('Error in backup:cloud:upload:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:cloud:download', async (_, password) => {
+    try {
+      const token = await loadToken();
+      const { owner, repo } = await getRepoConfig();
+      if (!token) throw new Error('No hay token de GitHub configurado');
+      
+      const tempPath = path.join(app.getPath('temp'), 'cloud_restore.clbak');
+      await downloadBackupFromGitHub(token, owner, repo, tempPath);
+      
+      const backupBuffer = fs.readFileSync(tempPath);
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      sqlite.close();
+      await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+      return { success: true, message: 'Sistema sincronizado desde la nube. Reinicie la aplicación.' };
+    } catch (err) {
+      logger.error('Error in backup:cloud:download:', err);
       throw err;
     }
   });
@@ -249,12 +371,27 @@ export const setupIPCHandlers = (mainWindow) => {
     };
   });
 
-  ipcMain.handle('app:analytics:set-opt-in', async (_, enabled) => {
+  ipcMain.handle('app:analytics:set-opt-in', async (_, rawData) => {
+    const validation = validateIPCInput(analyticsSetOptInSchema, rawData, 'app:analytics:set-opt-in');
+    const enabled = validation.data;
     try {
       await analytics.setOptIn(enabled);
       return { success: true, enabled: analytics.enabled };
     } catch (err) {
       logger.error('Error setting analytics opt-in:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('app:file-hash', async (_, filePath) => {
+    try {
+      if (!fs.existsSync(filePath)) throw new Error('Archivo no encontrado');
+      const fileBuffer = fs.readFileSync(filePath);
+      const hashSum = crypto.createHash('sha256');
+      hashSum.update(fileBuffer);
+      return hashSum.digest('hex');
+    } catch (err) {
+      logger.error('Error calculating file hash:', err);
       throw err;
     }
   });
@@ -275,12 +412,16 @@ export const setupIPCHandlers = (mainWindow) => {
   });
 
   // Misc
-  ipcMain.handle('log', (_, { level, message }) => {
+  ipcMain.handle('log', (_, rawData) => {
+    const validation = validateIPCInput(logSchema, rawData, 'log');
+    const { level, message } = validation.data;
     logger.log(level, message);
     return true;
   });
 
-  ipcMain.handle('qr:generate', async (_, data) => {
+  ipcMain.handle('qr:generate', async (_, rawData) => {
+    const validation = validateIPCInput(qrGenerateSchema, rawData, 'qr:generate');
+    const data = validation.data;
     try {
       return await QRCode.toDataURL(data);
     } catch (err) {
@@ -398,5 +539,15 @@ export const setupIPCHandlers = (mainWindow) => {
       logger.error('Error during setup initialization:', err);
       throw err;
     }
+  });
+
+
+  ipcMain.handle('dialog:open-pdf', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: 'Documentos PDF', extensions: ['pdf'] }]
+    });
+    if (result.canceled) return null;
+    return result.filePaths[0];
   });
 };

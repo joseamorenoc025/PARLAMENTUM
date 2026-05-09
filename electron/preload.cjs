@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('legisAPI', {
   db: {
     backupLocal: () => ipcRenderer.invoke('db:backup:local')
   },
+  backup: {
+    export: (password) => ipcRenderer.invoke('backup:export', password),
+    import: (password) => ipcRenderer.invoke('backup:import', password)
+  },
   sync: {
     github: {
       saveToken: (token) => ipcRenderer.invoke('sync:github:save-token', token),
@@ -28,5 +32,12 @@ contextBridge.exposeInMainWorld('legisAPI', {
       getQueueStats: () => ipcRenderer.invoke('sync:queue:stats'),
       enqueue: (data) => ipcRenderer.invoke('sync:queue:enqueue', data)
     }
+  },
+  analytics: {
+    status: () => ipcRenderer.invoke('app:analytics:status'),
+    setOptIn: (enabled) => ipcRenderer.invoke('app:analytics:set-opt-in', enabled)
+  },
+  app: {
+    fileHash: (path) => ipcRenderer.invoke('app:file-hash', path)
   }
 });

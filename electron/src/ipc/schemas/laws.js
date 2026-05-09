@@ -10,6 +10,7 @@ export const lawImportSchema = z.object({
     numero: z.string().optional().default(''),
     fechaPublicacion: z.string().optional().default(() => new Date().toISOString()),
     driveLink: z.string().url('Debe ser una URL válida de Google Drive').or(z.string().min(1, 'El enlace de Drive es requerido')),
+    fileHash: z.string().optional().default(''),
   }),
 });
 
