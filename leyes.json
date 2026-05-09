@@ -1,22 +1,14 @@
 [
   {
-    "id": 5,
-    "titulo": "Ley de Consejos Legislativos",
+    "id": 2,
+    "titulo": "Constitucion Estadal Delta Amacuro",
+    "tipo": "Extraordinaria",
+    "numero": "36",
     "gaceta": null,
-    "anio": null,
-    "expediente": "Extraordinaria - 2026",
-    "link_drive": "https://docs.google.com/document/d/1CQr-ne75wrfDNXgQplf_XBRnyjAko27V/edit?usp=sharing&ouid=101840327228486105451&rtpof=true&sd=true",
-    "fecha_publicacion": "2026-05-09T01:05:47.571Z",
-    "updated_at": "2026-05-09T02:23:27.372Z"
-  },
-  {
-    "id": 6,
-    "titulo": "rof",
-    "gaceta": null,
-    "anio": null,
-    "expediente": "Ordinaria - 2026",
-    "link_drive": "https://drive.google.com/uc?export=download&id=1SB2OS-Py4O5OVChvuLoDZbxmxYiUrFBy",
-    "fecha_publicacion": "2026-05-09T02:22:58.115Z",
-    "updated_at": "2026-05-09T02:23:27.372Z"
+    "anio": 2015,
+    "expediente": "Extraordinaria #36 (2015)",
+    "link_drive": "https://drive.google.com/uc?export=download&id=10avjRb5kQtz67Dw8Kw-9Si6_yaEBmBwl",
+    "fecha_publicacion": "2015-12-16",
+    "updated_at": "2026-05-09T14:01:40.955Z"
   }
 ]
