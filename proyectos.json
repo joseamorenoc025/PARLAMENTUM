@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "expediente": null,
+    "titulo": "Ley de la Juventud",
+    "extracto": null,
+    "fase_actual": "Promulgada",
+    "origen": "Comisión",
+    "urgencia": 0,
+    "estado": "en_comision",
+    "prioridad": "media",
+    "fecha_ingreso": "2026-05-03",
+    "ponente": "Anayaime Coello",
+    "comision": "JUVENTUD",
+    "updated_at": null
+  },
+  {
+    "id": 2,
+    "expediente": null,
+    "titulo": "Proyecto de reforma de Ley Estadal para el Desarrollo Economico Sustentable",
+    "extracto": null,
+    "fase_actual": null,
+    "origen": null,
+    "urgencia": 0,
+    "estado": "en_comision",
+    "prioridad": "media",
+    "fecha_ingreso": null,
+    "ponente": "Luis Romero",
+    "comision": "JUVENTUD",
+    "updated_at": "2026-05-09 00:31:04"
+  }
+]
