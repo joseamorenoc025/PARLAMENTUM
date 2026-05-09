@@ -15,7 +15,7 @@
         "cargo": "Miembro"
       }
     ],
-    "updated_at": "2026-05-09T01:26:23.093Z"
+    "updated_at": "2026-05-09T01:26:39.373Z"
   },
   {
     "id": 4,
@@ -33,7 +33,7 @@
         "cargo": "Miembro"
       }
     ],
-    "updated_at": "2026-05-09T01:26:23.094Z"
+    "updated_at": "2026-05-09T01:26:39.373Z"
   },
   {
     "id": 5,
@@ -47,7 +47,7 @@
         "cargo": "Presidente"
       }
     ],
-    "updated_at": "2026-05-09T01:26:23.094Z"
+    "updated_at": "2026-05-09T01:26:39.373Z"
   },
   {
     "id": 6,
@@ -61,7 +61,7 @@
         "cargo": "Miembro"
       }
     ],
-    "updated_at": "2026-05-09T01:26:23.094Z"
+    "updated_at": "2026-05-09T01:26:39.373Z"
   },
   {
     "id": 7,
@@ -75,6 +75,6 @@
         "cargo": "Vicepresidente"
       }
     ],
-    "updated_at": "2026-05-09T01:26:23.094Z"
+    "updated_at": "2026-05-09T01:26:39.373Z"
   }
 ]
