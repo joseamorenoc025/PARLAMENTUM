@@ -81,11 +81,10 @@ export const setupSyncHandlers = async () => {
   // Forzar sincronización
   ipcMain.handle('sync:github:force', async () => {
     try {
-      logger.info('Iniciando sincronización forzada con GitHub...');
-      const { owner, repo } = await getRepoConfig();
-      const engine = new SyncEngine(owner, repo);
-      const result = await engine.run();
-      return { success: true, message: `Sincronización completada: ${result.count} leyes actualizadas.` };
+      logger.info('Iniciando sincronización forzada (Manual)...');
+      if (!queueManager) await initQueueManager();
+      await queueManager.processQueue(true); // Forzar procesamiento de toda la cola ignorando backoff
+      return { success: true, message: `Sincronización forzada completada exitosamente.` };
     } catch (error) {
       logger.error('Error en sync:github:force:', error);
       return { success: false, error: error.message };

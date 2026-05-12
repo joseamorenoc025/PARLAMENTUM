@@ -55,10 +55,11 @@ export const generateSessionNumber = (tipo, year, existingSessions) => {
 };
 
 export const getRoutePhases = (origen) => {
+  const commonPhases = ['Estudio en Comisión', '1ra Discusión', 'Consulta Pública', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
   if (origen === 'Comisión') {
-    return ['Estudio en Comisión', 'Informe de Dirección', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
+    return ['Estudio en Comisión', 'Informe de Dirección', ...commonPhases.slice(1)];
   }
-  return ['Entrada al Pleno', 'Estudio en Comisión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Sancionada'];
+  return ['Entrada al Pleno', ...commonPhases];
 };
 
 export const fileToBase64 = (file) => {

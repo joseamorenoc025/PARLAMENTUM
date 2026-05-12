@@ -9,10 +9,11 @@ import * as schema from '../db/schema.js';
 import { eq, sql as drizzleSql } from 'drizzle-orm';
 import { logger } from '../lib/logger.js';
 import { validateIPCInput } from './validate.js';
-import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema } from './schemas/auth.js';
+import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema, authHashSchema } from './schemas/auth.js';
 import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { setupInitializeSchema } from './schemas/setup.js';
+import { logSchema, qrGenerateSchema, analyticsOptInSchema } from './schemas/misc.js';
 
 import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
@@ -50,7 +51,9 @@ export const setupIPCHandlers = (mainWindow) => {
   });
 
   // Auth
-  ipcMain.handle('auth:hash', async (_, password) => {
+  ipcMain.handle('auth:hash', async (_, rawData) => {
+    const validation = validateIPCInput(authHashSchema, rawData, 'auth:hash');
+    const password = validation.data;
     return await bcrypt.hash(password, 10);
   });
 
@@ -138,7 +141,21 @@ export const setupIPCHandlers = (mainWindow) => {
 
   ipcMain.handle('db:upsert', async (_, rawData) => {
     const validation = validateIPCInput(dbUpsertSchema, rawData, 'db:upsert');
-    const { table, data } = validation.data;
+    const { table, data: rawDataObj } = validation.data;
+
+    // Normalizar datos para SQLite (Drizzle/Better-SQLite3)
+    const data = Object.entries(rawDataObj).reduce((acc, [key, value]) => {
+      if (value === undefined) return acc;
+      if (typeof value === 'boolean') {
+        acc[key] = value ? 1 : 0;
+      } else if (value !== null && typeof value === 'object' && !Buffer.isBuffer(value)) {
+        acc[key] = JSON.stringify(value);
+      } else {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
     try {
       const tableSchema = schema[table];
       if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
@@ -244,8 +261,10 @@ export const setupIPCHandlers = (mainWindow) => {
     };
   });
 
-  ipcMain.handle('app:analytics:set-opt-in', async (_, enabled) => {
+  ipcMain.handle('app:analytics:set-opt-in', async (_, rawData) => {
     try {
+      const validation = validateIPCInput(analyticsOptInSchema, rawData, 'app:analytics:set-opt-in');
+      const enabled = validation.data;
       await analytics.setOptIn(enabled);
       return { success: true, enabled: analytics.enabled };
     } catch (err) {
@@ -270,13 +289,17 @@ export const setupIPCHandlers = (mainWindow) => {
   });
 
   // Misc
-  ipcMain.handle('log', (_, { level, message }) => {
+  ipcMain.handle('log', (_, rawData) => {
+    const validation = validateIPCInput(logSchema, rawData, 'log');
+    const { level, message } = validation.data;
     logger.log(level, message);
     return true;
   });
 
-  ipcMain.handle('qr:generate', async (_, data) => {
+  ipcMain.handle('qr:generate', async (_, rawData) => {
     try {
+      const validation = validateIPCInput(qrGenerateSchema, rawData, 'qr:generate');
+      const data = validation.data;
       return await QRCode.toDataURL(data);
     } catch (err) {
       logger.error('Error generating QR:', err);

@@ -1,1 +1,8 @@
 node_modules
+/reports
+/logs
+/test-results
+/playwright-report
+*.log
+.env
+.env.local

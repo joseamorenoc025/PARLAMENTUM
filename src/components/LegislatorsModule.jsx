@@ -71,9 +71,9 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const showLegislatorQR = async (legislator) => {
     try {
       // El QR apunta a la subpage de GitHub Pages
-      // Ejemplo: https://joseamorenoc025.github.io/cerebro_legislativo/legisladores/123
+      // Ejemplo: https://joseamorenoc025.github.io/cerebro_legislativo/legislador/123
       const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
-      const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/legisladores/?id=${legislator.id}`;
+      const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/legislador/${legislator.id}`;
       
       const dataURL = await window.legisAPI.qr.generate(url);
       const win = window.open();
@@ -127,15 +127,41 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           <h1 className="text-2xl font-bold mb-1">Legisladores y Comisiones</h1>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Directorio y organización del cuerpo legislativo</p>
         </div>
-        <button 
-          onClick={() => { 
-            setFormType(tab === 'legislators' ? 'legislator' : 'commission');
-            setShowForm(true); 
-          }} 
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
-        >
-          <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : 'Comisión'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              try {
+                const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+                const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/?view=legislators`;
+                const dataURL = await window.legisAPI.qr.generate(url);
+                const win = window.open();
+                win.document.write(`
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;padding:20px;text-align:center;">
+                    <h1 style="margin-bottom:10px;">Conoce a tus Legisladores</h1>
+                    <p style="color:#666;margin-bottom:20px;">Escanea para ver el directorio completo y perfiles públicos</p>
+                    <div style="padding:20px;border:2px solid #eee;border-radius:20px;background:white;">
+                      <img src="${dataURL}" style="width:300px;height:300px;display:block;"/>
+                    </div>
+                    <p style="margin-top:20px;font-size:14px;color:#888;">Segundo Cerebro Legislativo • Transparencia</p>
+                    <button onclick="window.print()" style="margin-top:30px;padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">Imprimir Código</button>
+                  </div>
+                `);
+              } catch (e) { addToast('Error al generar QR Portal', 'error'); }
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            <QrCode className="w-4 h-4 text-indigo-500" /> QR Portal Público
+          </button>
+          <button 
+            onClick={() => { 
+              setFormType(tab === 'legislators' ? 'legislator' : 'commission');
+              setShowForm(true); 
+            }} 
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+          >
+            <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : 'Comisión'}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit">

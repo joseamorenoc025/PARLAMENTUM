@@ -16,11 +16,30 @@ export class GitHubClient {
   }
 
   /**
+   * Helper para peticiones con timeout
+   */
+  async fetchWithTimeout(url, options = {}, timeout = 15000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  }
+
+  /**
    * Valida el token actual obteniendo la información del usuario.
    */
   async validateToken() {
     try {
-      const response = await fetch(`${GITHUB_API_URL}/user`, { headers: this.headers });
+      const response = await this.fetchWithTimeout(`${GITHUB_API_URL}/user`, { headers: this.headers });
       if (!response.ok) {
         throw new Error(`Error de validación: ${response.status} ${response.statusText}`);
       }
@@ -41,7 +60,7 @@ export class GitHubClient {
    */
   async getRemoteFile(owner, repo, path) {
     try {
-      const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
+      const response = await this.fetchWithTimeout(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
         headers: this.headers
       });
 
@@ -92,7 +111,7 @@ export class GitHubClient {
         body.sha = sha;
       }
 
-      const response = await fetch(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
+      const response = await this.fetchWithTimeout(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
         method: 'PUT',
         headers: this.headers,
         body: JSON.stringify(body)

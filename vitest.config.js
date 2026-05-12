@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    exclude: ['node_modules/**', 'dist/**', 'test/e2e/**', 'electron/src/db/migrations/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

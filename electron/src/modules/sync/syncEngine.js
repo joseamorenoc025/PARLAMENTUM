@@ -46,7 +46,7 @@ export class SyncEngine {
       gaceta: local.gaceta,
       anio: local.anio,
       expediente: local.expediente,
-      link_drive: this.transformDriveLink(local.contenido.replace('Enlace de descarga: ', '')),
+      link_drive: this.transformDriveLink((local.contenido || '').replace('Enlace de descarga: ', '')),
       fecha_publicacion: local.fechaPublicacion,
       updated_at: new Date().toISOString()
     }));
@@ -65,9 +65,12 @@ export class SyncEngine {
       expediente: p.expediente,
       titulo: p.titulo,
       extracto: p.extracto,
+      fase_actual: p.faseActual,
+      origen: p.origen,
+      urgencia: p.urgenciaParlamentaria,
       estado: p.estado,
       prioridad: p.prioridad,
-      fecha_presentacion: p.fechaPresentacion,
+      fecha_ingreso: p.fechaIngreso,
       ponente: localLegislators.find(l => l.id === p.ponenteId)?.nombre || 'No asignado',
       comision: localCommissions.find(c => c.id === p.comisionId)?.nombre || 'No asignada',
       updated_at: p.ultimaActualizacion

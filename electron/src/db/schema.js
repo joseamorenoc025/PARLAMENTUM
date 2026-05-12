@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
 // Configuración global de la aplicación
 export const config = sqliteTable('config', {
@@ -9,7 +10,7 @@ export const config = sqliteTable('config', {
 // Auditoría para trazabilidad de documentos
 export const auditLogs = sqliteTable('audit_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  timestamp: text('timestamp').default('CURRENT_TIMESTAMP'),
+  timestamp: text('timestamp').default(sql`CURRENT_TIMESTAMP`),
   level: text('level'),
   userId: text('userId'),
   action: text('action'),
@@ -24,10 +25,13 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
+  role: text('role').default('admin'),
+  nombreCompleto: text('nombre_completo'),
+  ultimoLogin: text('ultimo_login'),
   securityQuestion: text('security_question'),
   securityAnswerHash: text('security_answer_hash'),
   recoveryCodeHash: text('recovery_code_hash'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
 // Sesiones Legislativas
@@ -52,7 +56,7 @@ export const minutes = sqliteTable('minutes', {
   sessionId: integer('session_id').references(() => sessions.id),
   contenido: text('contenido'),
   firmada: integer('firmada').default(0), // 0: no, 1: sí
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
 // Oficios Salientes
@@ -119,13 +123,16 @@ export const projects = sqliteTable('projects', {
   expediente: text('expediente'),
   titulo: text('titulo').notNull(),
   extracto: text('extracto'),
-  fechaPresentacion: text('fecha_presentacion'),
+  origen: text('origen'),
+  faseActual: text('fase_actual').default('Estudio en Comisión'),
+  urgenciaParlamentaria: integer('urgencia_parlamentaria').default(0),
+  fechaIngreso: text('fecha_ingreso'),
   ponenteId: integer('ponente_id').references(() => legislators.id),
   comisionId: integer('comision_id').references(() => commissions.id),
   estado: text('estado').default('en_comision'),
   prioridad: text('prioridad').default('media'),
   tags: text('tags'),
-  ultimaActualizacion: text('ultima_actualizacion').default('CURRENT_TIMESTAMP'),
+  ultimaActualizacion: text('ultima_actualizacion').default(sql`CURRENT_TIMESTAMP`),
   activo: integer('activo').default(1),
 });
 
@@ -136,7 +143,7 @@ export const projectVersions = sqliteTable('project_versions', {
   version: integer('version').notNull(),
   motivo: text('motivo'),
   snapshot: text('snapshot'), // JSON completo del estado
-  fechaCreacion: text('fecha_creacion').default('CURRENT_TIMESTAMP'),
+  fechaCreacion: text('fecha_creacion').default(sql`CURRENT_TIMESTAMP`),
 });
 
 // Bóveda Documental
@@ -165,6 +172,7 @@ export const syncQueue = sqliteTable('sync_queue', {
   attempts: integer('attempts').default(0),
   lastError: text('last_error'),
   nextRetry: text('next_retry'),
-  createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at'),
 });
+

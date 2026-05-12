@@ -1,0 +1,38 @@
+# .semgrep.yml
+rules:
+  - id: electron-unsafe-ipc-no-zod
+    patterns:
+      - pattern: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... })
+      - pattern-not: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... validate($DATA, $SCHEMA) ... })
+      - pattern-not: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... $SCHEMA.parse($DATA) ... })
+    message: "⚠️ IPC handler sin validación aparente detectada. Asegúrate de usar 'validate(data, schema)' o un esquema Zod directamente antes de procesar la entrada."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: insecure-crypto-md5-sha1
+    patterns:
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+    message: "❌ MD5/SHA1 no son seguros para integridad. Usar SHA-256 o superior."
+    languages: [javascript]
+    severity: ERROR
+
+  - id: eval-usage-detected
+    pattern: eval($CODE)
+    message: "❌ eval() es extremadamente inseguro. Usar alternativas seguras como JSON.parse() o Function constructor con sandbox."
+    languages: [javascript]
+    severity: ERROR
+
+  - id: electron-node-integration-renderer
+    pattern: |
+      new BrowserWindow({
+        ...,
+        webPreferences: {
+          ...,
+          nodeIntegration: true,
+          ...
+        }
+      })
+    message: "⚠️ nodeIntegration: true en el renderer es un riesgo alto de seguridad. Debe ser false."
+    languages: [javascript]
+    severity: ERROR

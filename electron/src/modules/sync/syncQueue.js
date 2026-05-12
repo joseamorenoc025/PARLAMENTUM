@@ -56,30 +56,32 @@ export class SyncQueueManager {
 
   /**
    * Procesa las tareas pendientes en la cola.
+   * @param {boolean} force Si es true, ignora los tiempos de reintento y procesa todo.
    */
-  async processQueue() {
+  async processQueue(force = false) {
     if (this.isProcessing) return;
     this.isProcessing = true;
 
     try {
       const now = new Date().toISOString();
-      const pendingTasks = db.select()
+      let query = db.select()
         .from(schema.syncQueue)
         .where(
           and(
             or(eq(schema.syncQueue.status, 'pending'), eq(schema.syncQueue.status, 'failed')),
-            or(eq(schema.syncQueue.nextRetry, null), lte(schema.syncQueue.nextRetry, now))
+            force ? sql`1=1` : or(eq(schema.syncQueue.nextRetry, null), lte(schema.syncQueue.nextRetry, now))
           )
         )
-        .orderBy(asc(schema.syncQueue.createdAt))
-        .all();
+        .orderBy(asc(schema.syncQueue.createdAt));
+      
+      const pendingTasks = query.all();
 
       if (pendingTasks.length === 0) {
         this.isProcessing = false;
         return;
       }
 
-      logger.info(`Procesando cola de sincronización: ${pendingTasks.length} tareas.`);
+      logger.info(`Procesando cola de sincronización: ${pendingTasks.length} tareas. (Force: ${force})`);
 
       const syncTypes = new Set(pendingTasks.map(t => t.entityType));
       const engine = new SyncEngine(this.owner, this.repo);

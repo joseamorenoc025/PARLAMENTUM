@@ -80,7 +80,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
   const showQR = async (law) => {
     try {
       // Extraer el link de contenido (guardado como "Enlace de descarga: ...")
-      const driveLink = law.contenido.replace('Enlace de descarga: ', '');
+      const driveLink = law.contenido ? law.contenido.replace('Enlace de descarga: ', '') : '#';
       const dataURL = await window.legisAPI.qr.generate(driveLink);
       
       const win = window.open();
@@ -102,7 +102,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
 
   const filteredLaws = useMemo(() => {
     return laws.filter(l => 
-      (l.titulo.toLowerCase().includes(search.toLowerCase()) || l.expediente.includes(search)) &&
+      (l.titulo.toLowerCase().includes(search.toLowerCase()) || (l.expediente && l.expediente.includes(search))) &&
       (!filterType || l.tipo === filterType)
     );
   }, [laws, search, filterType]);
@@ -196,23 +196,25 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 <div className="flex items-center gap-2 overflow-hidden">
                   <ExternalLink className="w-3 h-3 flex-shrink-0 text-gray-400" />
                   <span className="text-xs truncate text-gray-500 italic">
-                    {law.contenido.replace('Enlace de descarga: ', '')}
+                    {law.contenido ? law.contenido.replace('Enlace de descarga: ', '') : 'Sin enlace'}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                  {new Date(law.fechaPublicacion).toLocaleDateString()}
+                  {law.fechaPublicacion ? new Date(law.fechaPublicacion).toLocaleDateString() : '---'}
                 </span>
-                <a 
-                  href={law.contenido.replace('Enlace de descarga: ', '')} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="text-xs font-bold text-indigo-500 hover:underline flex items-center gap-1"
-                >
-                  <Download className="w-3 h-3" /> Descargar
-                </a>
+                {law.contenido && (
+                  <a 
+                    href={law.contenido.replace('Enlace de descarga: ', '')} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-xs font-bold text-indigo-500 hover:underline flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" /> Descargar
+                  </a>
+                )}
               </div>
             </div>
           ))}

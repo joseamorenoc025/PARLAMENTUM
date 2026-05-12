@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -16,8 +16,8 @@
         <header class="header">
             <div class="container">
                 <div class="logo-area">
-                    <div class="logo-icon">
-                        <img id="institutional-logo" src="" alt="" style="width: 100%; height: 100%; object-fit: contain; display: none;" onload="this.style.display='block'; this.previousElementSibling.style.display='none';">
+                    <img id="institutional-logo" src="logo.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="logo-icon" style="display:none">
                         <i data-lucide="gavel"></i>
                     </div>
                     <div>
@@ -25,23 +25,38 @@
                         <p>Transparencia y Acceso a la Información</p>
                     </div>
                 </div>
-                <nav class="main-nav">
-                    <button class="nav-btn active" data-view="laws">Leyes</button>
-                    <button class="nav-btn" data-view="agenda">Agenda</button>
-                    <button class="nav-btn" data-view="legislators">Legisladores</button>
-                </nav>
+                <div class="header-status">
+                    <span id="last-update">Sincronizado</span>
+                </div>
             </div>
         </header>
 
+        <!-- Navigation Bar -->
+        <nav class="nav-bar">
+            <div class="container">
+                <div class="nav-links">
+                    <button class="nav-btn active" data-view="laws">
+                        <i data-lucide="scale"></i> Biblioteca de Leyes
+                    </button>
+                    <button class="nav-btn" data-view="agenda">
+                        <i data-lucide="calendar"></i> Agenda Legislativa
+                    </button>
+                    <button class="nav-btn" data-view="legislators">
+                        <i data-lucide="users"></i> Conoce a tus Legisladores
+                    </button>
+                </div>
+            </div>
+        </nav>
+
         <!-- Search Section -->
-        <section class="search-section" id="search-section">
+        <section id="search-section" class="search-section">
             <div class="container">
                 <div class="search-card">
                     <div class="search-input-wrapper">
                         <i data-lucide="search" class="search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Buscar...">
+                        <input type="text" id="search-input" placeholder="Buscar información...">
                     </div>
-                    <div class="filters" id="filters-container">
+                    <div id="filters-container" class="filters">
                         <!-- Filtros dinámicos según la vista -->
                     </div>
                 </div>
@@ -52,7 +67,7 @@
         <main class="container">
             <div id="status-message" class="status-message hidden"></div>
             
-            <!-- Grid Universal para Leyes, Agenda y Legisladores -->
+            <!-- Grid Principal (Leyes, Proyectos, Legisladores) -->
             <div id="main-grid" class="main-grid">
                 <div class="loader">
                     <div class="spinner"></div>
@@ -60,24 +75,17 @@
                 </div>
             </div>
 
-            <!-- Vista Detalle de Legislador (Hidden by default) -->
+            <!-- Detalle de Legislador (Perfil) -->
             <div id="legislator-profile" class="legislator-profile hidden">
-                <!-- Se llena dinámicamente -->
+                <!-- Se carga dinámicamente -->
             </div>
         </main>
 
         <!-- Footer -->
         <footer class="footer">
             <div class="container">
-                <div class="footer-content">
-                    <div>
-                        <p>&copy; 2026 <span id="footer-chamber-name">Cerebro Legislativo</span></p>
-                        <p class="footer-note">Portal de Transparencia Parlamentaria</p>
-                    </div>
-                    <div class="header-status">
-                        <span id="last-update">Actualizado hoy</span>
-                    </div>
-                </div>
+                <p>&copy; 2026 <span id="footer-chamber-name">CLEBDA</span>. Todos los derechos reservados.</p>
+                <p class="footer-note">Sistema Segundo Cerebro Legislativo</p>
             </div>
         </footer>
     </div>

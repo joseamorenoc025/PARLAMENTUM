@@ -56,7 +56,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     }
   };
 
-  const phases = ['Estudio en Comisión', '1ra Discusión', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
+  const phases = ['Estudio en Comisión', '1ra Discusión', 'Consulta Pública', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
 
   const handleAdvancePhase = async (project) => {
     const currentIdx = phases.indexOf(project.faseActual);
@@ -112,7 +112,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${detailProject.origen === 'Comisión' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>{detailProject.origen}</span>
               <h2 className="text-3xl font-black leading-tight">{detailProject.titulo}</h2>
               {commission && (
-                <div className="flex items-center gap-2 p-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-800 w-fit border border-gray-100 dark:border-gray-700">
+                <div className={`flex items-center gap-2 p-2 px-3 rounded-xl w-fit border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
                   <Gavel className="w-4 h-4 text-indigo-500" />
                   <span className="text-xs font-bold opacity-70">{commission.nombre}</span>
                 </div>
