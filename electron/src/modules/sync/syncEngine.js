@@ -29,11 +29,11 @@ export class SyncEngine {
   constructor(owner, repo) {
     this.owner = owner;
     this.repo = repo;
-    this.lawsPath = 'leyes.json';
-    this.legislatorsPath = 'legisladores.json';
-    this.projectsPath = 'proyectos.json';
-    this.configPath = 'config.json';
-    this.logoPath = 'logo.png';
+    this.lawsPath = 'public/portal/leyes.json';
+    this.legislatorsPath = 'public/portal/legisladores.json';
+    this.projectsPath = 'public/portal/proyectos.json';
+    this.configPath = 'public/portal/config.json';
+    this.logoPath = 'public/portal/logo.png';
   }
 
   async syncLaws(client) {

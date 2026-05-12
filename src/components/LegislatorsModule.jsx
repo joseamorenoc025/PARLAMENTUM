@@ -70,10 +70,10 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
 
   const showLegislatorQR = async (legislator) => {
     try {
-      // El QR apunta a la subpage de GitHub Pages
-      // Ejemplo: https://joseamorenoc025.github.io/cerebro_legislativo/legislador/123
+      // El QR apunta a la subpage del portal ciudadano en GitHub Pages
+      // Ejemplo: https://owner.github.io/repo/public/portal/?id=123
       const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
-      const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/legislador/${legislator.id}`;
+      const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/public/portal/?id=${legislator.id}`;
       
       const dataURL = await window.legisAPI.qr.generate(url);
       const win = window.open();
@@ -132,7 +132,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             onClick={async () => {
               try {
                 const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
-                const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/?view=legislators`;
+                const url = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/public/portal/?view=legislators`;
                 const dataURL = await window.legisAPI.qr.generate(url);
                 const win = window.open();
                 win.document.write(`

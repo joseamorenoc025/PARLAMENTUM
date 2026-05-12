@@ -55,6 +55,11 @@ function handleRouting() {
     const params = new URLSearchParams(window.location.search);
     const legislatorId = params.get('id');
     const view = params.get('view');
+    const query = params.get('q');
+
+    if (query) {
+        searchInput.value = query;
+    }
 
     if (legislatorId) {
         switchView('profile', legislatorId);

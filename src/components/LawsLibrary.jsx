@@ -79,9 +79,10 @@ const LawsLibrary = ({ darkMode, addToast }) => {
 
   const showQR = async (law) => {
     try {
-      // Extraer el link de contenido (guardado como "Enlace de descarga: ...")
-      const driveLink = law.contenido ? law.contenido.replace('Enlace de descarga: ', '') : '#';
-      const dataURL = await window.legisAPI.qr.generate(driveLink);
+      const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+      // Apuntar al portal con el expediente/título como búsqueda
+      const portalUrl = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/public/portal/?q=${encodeURIComponent(law.titulo)}`;
+      const dataURL = await window.legisAPI.qr.generate(portalUrl);
       
       const win = window.open();
       win.document.write(`
@@ -91,7 +92,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
           <div style="padding:20px;border:2px solid #eee;border-radius:20px;background:white;">
             <img src="${dataURL}" style="width:300px;height:300px;display:block;"/>
           </div>
-          <p style="margin-top:20px;font-size:14px;color:#888;">Escanea para descargar desde Google Drive</p>
+          <p style="margin-top:20px;font-size:14px;color:#888;">Escanea para ver en el Portal Ciudadano</p>
           <button onclick="window.print()" style="margin-top:30px;padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">Imprimir Código</button>
         </div>
       `);
