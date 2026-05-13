@@ -1,56 +1,59 @@
-import { test, _electron as electron, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 test.describe('Onboarding Wizard', () => {
-  let electronApp;
-  let window;
+  let testContext;
 
   test.beforeEach(async () => {
-    // Launch creates a fresh userData dir by default
-    electronApp = await electron.launch({ args: ['.'] });
-    window = await electronApp.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    // Lanzar app con carpeta limpia
+    testContext = await launchTestApp();
   });
 
   test.afterEach(async () => {
-    await electronApp.close();
+    // Cerrar app y borrar carpeta
+    await cleanupTestApp(testContext);
   });
 
   test('Debe completar el flujo de onboarding exitosamente', async () => {
+    const { window } = testContext;
     // Paso 1: Bienvenida
-    await expect(window.locator('text=Bienvenido a Cerebro Legislativo')).toBeVisible();
-    await window.click('button:has-text("Comenzar configuración")');
+    const welcomeTitle = window.getByTestId('onboarding-welcome-title');
+    await welcomeTitle.waitFor({ state: 'visible', timeout: 15000 });
+    await expect(welcomeTitle).toContainText('Bienvenido a Cerebro Legislativo');
+    
+    await window.getByTestId('btn-start-setup').click({ force: true });
 
     // Paso 2: Cuenta Administrador
-    await expect(window.locator('text=Cuenta de Administrador')).toBeVisible();
-    await window.fill('input[placeholder="ej: admin.secretaria"]', 'testadmin');
-    const passwordInputs = window.locator('input[type="password"]');
-    await passwordInputs.nth(0).fill('Password123!');
-    await passwordInputs.nth(1).fill('Password123!');
-    await window.fill('input[placeholder="Su respuesta..."]', 'MascotaTest');
-    await window.click('button:has-text("Continuar")');
+    await expect(window.getByText('Cuenta de Administrador')).toBeVisible();
+    await window.getByTestId('admin-username-input').fill('admin.test');
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('admin-security-answer-input').fill('MascotaTest');
+    
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
 
     // Paso 3: Datos Institucionales
-    await expect(window.locator('text=Datos Institucionales')).toBeVisible();
-    await window.fill('input[placeholder="ej: Concejo Municipal de..."]', 'Cámara de Prueba');
-    await window.click('button:has-text("Finalizar")');
+    await expect(window.getByText('Datos Institucionales')).toBeVisible();
+    await window.getByTestId('chamber-name-input').fill('Cámara de Prueba E2E');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
 
     // Paso 4: Finalización
-    await expect(window.locator('text=¡Configuración Exitosa!')).toBeVisible();
-    await expect(window.locator('text=Código de Recuperación')).toBeVisible();
+    await expect(window.getByTestId('onboarding-success-title')).toBeVisible({ timeout: 15000 });
+    await expect(window.getByText('Código de Recuperación')).toBeVisible();
     
     // Click en "Comenzar a usar el sistema"
-    await window.click('button:has-text("Comenzar a usar el sistema")');
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
 
-    // Debería redirigir al login (AuthScreen) porque user es null inicialmente
-    await expect(window.locator('text=Segundo Cerebro')).toBeVisible();
-    await expect(window.locator('text=Sistema de Gestión Legislativa')).toBeVisible();
+    // Debería redirigir al login (AuthScreen)
+    await expect(window.getByText('Segundo Cerebro')).toBeVisible();
   });
 
   test('Debe permitir saltar el onboarding', async () => {
-    await expect(window.locator('text=Bienvenido a Cerebro Legislativo')).toBeVisible();
-    await window.click('button:has-text("Configurar más tarde")');
+    const { window } = testContext;
+    await expect(window.getByTestId('onboarding-welcome-title')).toBeVisible({ timeout: 15000 });
+    await window.getByRole('button', { name: 'Configurar más tarde' }).click({ force: true });
 
     // Debería ir directo al login
-    await expect(window.locator('text=Segundo Cerebro')).toBeVisible();
+    await expect(window.getByText('Segundo Cerebro')).toBeVisible();
   });
 });

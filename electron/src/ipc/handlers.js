@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { db, sqlite } from '../db/index.js';
+import { db, sqlite, dbManager } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { eq, sql as drizzleSql } from 'drizzle-orm';
 import { logger } from '../lib/logger.js';
@@ -19,18 +19,42 @@ import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
 
 export const setupIPCHandlers = (mainWindow) => {
+  // DB Ready Check
+  ipcMain.handle('db:isReady', async () => {
+    return dbManager.isReady();
+  });
+
+  // DB Reset para Tests
+  ipcMain.handle('db:reset-for-tests', async (_, options) => {
+    return await dbManager.resetForTests(options);
+  });
+
   // Laws
   ipcMain.handle('laws:import', async (_, rawData) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
     const { metadata } = validation.data;
     try {
+      let rutaPdf = null;
+      if (metadata.localFilePath && fs.existsSync(metadata.localFilePath)) {
+        const docsPath = path.join(app.getPath('userData'), 'documents');
+        if (!fs.existsSync(docsPath)) fs.mkdirSync(docsPath, { recursive: true });
+        
+        const fileName = `ley_${Date.now()}_${path.basename(metadata.localFilePath).replace(/\s+/g, '_')}`;
+        rutaPdf = path.join(docsPath, fileName);
+        fs.copyFileSync(metadata.localFilePath, rutaPdf);
+      }
+
       const newLaw = {
         titulo: metadata.titulo,
         nombre: metadata.titulo,
         expediente: `${metadata.gaceta} - ${metadata.anio}`, // Usamos gaceta y año como identificador
-        contenido: `Enlace de descarga: ${metadata.driveLink}`,
+        contenido: metadata.driveLink ? `Enlace de descarga: ${metadata.driveLink}` : null,
+        driveLink: metadata.driveLink || null,
+        rutaPdf: rutaPdf,
         fechaPublicacion: new Date().toISOString(),
         tipo: metadata.gaceta,
+        anio: metadata.anio,
+        gaceta: metadata.gaceta,
         activo: 1
       };
       
@@ -93,6 +117,9 @@ export const setupIPCHandlers = (mainWindow) => {
   ipcMain.handle('db:backup:local', async () => {
     try {
       const BACKUP_PATH = path.join(app.getPath('userData'), 'backups');
+      if (!fs.existsSync(BACKUP_PATH)) {
+        fs.mkdirSync(BACKUP_PATH, { recursive: true });
+      }
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const backupFile = path.join(BACKUP_PATH, `legis-backup-${timestamp}.db`);
       await sqlite.backup(backupFile);
@@ -327,6 +354,19 @@ export const setupIPCHandlers = (mainWindow) => {
     const filePath = result.filePaths[0];
     const buffer = fs.readFileSync(filePath);
     return { filePath, buffer };
+  });
+
+  ipcMain.handle('dialog:open-backup', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Cerebro Backup (.clbak, .enc)', extensions: ['clbak', 'enc'] },
+        { name: 'Todos los archivos', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) return null;
+    return result.filePaths[0];
   });
 
   // Setup / Onboarding

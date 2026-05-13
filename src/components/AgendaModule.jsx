@@ -177,6 +177,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] mb-3 ml-1">Título del Proyecto</label>
             <textarea 
               placeholder="Escribe el título institucional completo..." 
+              data-testid="project-title-input"
               value={form.titulo} 
               onChange={e => setForm({...form, titulo: e.target.value})} 
               className={`w-full p-5 rounded-3xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none h-40 text-lg font-bold leading-tight ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
@@ -225,7 +226,13 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
           <div className="flex gap-4 pt-4">
             <button onClick={resetForm} className={`flex-1 py-5 rounded-2xl font-black transition-all uppercase tracking-[0.2em] text-xs ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
-            <button onClick={handleSave} className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-2xl shadow-indigo-500/30 uppercase tracking-[0.2em] text-xs">Registrar Proyecto</button>
+            <button 
+              onClick={handleSave} 
+              data-testid="btn-save-project"
+              className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-2xl shadow-indigo-500/30 uppercase tracking-[0.2em] text-xs"
+            >
+              Registrar Proyecto
+            </button>
           </div>
         </div>
       </div>
@@ -236,7 +243,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     <div className="space-y-8 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black mb-1">Agenda Legislativa</h1>
+          <h1 data-testid="agenda-page-title" className="text-3xl font-black mb-1">Agenda Legislativa</h1>
           <p className={`text-sm font-bold opacity-40 uppercase tracking-widest`}>Control Parlamentario en Tiempo Real</p>
         </div>
         <div className="flex gap-4">
@@ -244,7 +251,11 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
              <button onClick={() => setView('kanban')} className={`p-2.5 rounded-xl transition-all ${view === 'kanban' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Layout className="w-5 h-5" /></button>
              <button onClick={() => setView('list')} className={`p-2.5 rounded-xl transition-all ${view === 'list' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Plus className="w-5 h-5 rotate-45" /></button>
           </div>
-          <button onClick={() => setView('form')} className="flex items-center gap-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs">
+          <button 
+            onClick={() => setView('form')} 
+            data-testid="btn-new-project"
+            className="flex items-center gap-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs"
+          >
             <Plus className="w-5 h-5" /> Nuevo Proyecto
           </button>
         </div>

@@ -14,7 +14,12 @@ contextBridge.exposeInMainWorld('legisAPI', {
     verify: (password, hash) => ipcRenderer.invoke('auth:verify', { password, hash })
   },
   db: {
-    backupLocal: () => ipcRenderer.invoke('db:backup:local')
+    backupLocal: () => ipcRenderer.invoke('db:backup:local'),
+    exportBackup: (password) => ipcRenderer.invoke('db:backup:export', { password }),
+    restoreBackup: (filePath, password) => ipcRenderer.invoke('backup:validateAndRestore', { filePath, password })
+  },
+  dialog: {
+    openBackup: () => ipcRenderer.invoke('dialog:open-backup')
   },
   sync: {
     github: {

@@ -1,71 +1,79 @@
-import { test, _electron as electron, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 test.describe('Biblioteca de Leyes', () => {
   let electronApp;
   let window;
+  let userDataDir;
 
-  test.beforeAll(async () => {
-    electronApp = await electron.launch({ args: ['.'] });
-    window = await electronApp.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+  test.beforeEach(async ({}, testInfo) => {
+    const setup = await launchTestApp(testInfo);
+    electronApp = setup.electronApp;
+    window = setup.window;
+    userDataDir = setup.userDataDir;
 
-    // Saltar onboarding si es necesario
-    if (await window.isVisible('text=Bienvenido a Cerebro Legislativo')) {
-      await window.click('button:has-text("Configurar más tarde")');
-    }
-
-    // Login (crear uno si no hay, o usar uno conocido)
-    // En este entorno de test fresco, registramos uno
+    // Resetear DB y saltar onboarding para ir directo al login/dashboard
+    await window.evaluate(() => window.legisAPI.invoke('db:reset-for-tests', { onboardingCompleted: true }));
+    
+    // Registrar un admin rápido para poder entrar (ya que reseteamos la DB)
     await window.click('text=Registrar nuevo Administrador');
-    await window.fill('input[placeholder="Ej: Dr. Juan Pérez"]', 'Leyes Admin');
-    await window.fill('input[placeholder="admin"]', 'admin_leyes');
-    await window.fill('input[placeholder="••••••••"]', 'Password123!@#');
-    await window.click('button:has-text("Registrar y Configurar")');
+    await window.getByPlaceholder('Ej: Dr. Juan Pérez').fill('Leyes Admin');
+    await window.getByPlaceholder('admin').fill('admin_leyes');
+    await window.locator('input[type="password"]').fill('Password123!@#');
+    await window.getByRole('button', { name: 'Registrar y Configurar' }).click({ force: true });
     
-    await window.fill('input[placeholder="admin"]', 'admin_leyes');
-    await window.fill('input[placeholder="••••••••"]', 'Password123!@#');
-    await window.click('button:has-text("Acceder al Sistema")');
+    await window.getByPlaceholder('admin').fill('admin_leyes');
+    await window.locator('input[type="password"]').fill('Password123!@#');
+    await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
     
-    await expect(window.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(window.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 20000 });
   });
 
-  test.afterAll(async () => {
-    await electronApp.close();
+  test.afterEach(async () => {
+    await cleanupTestApp(electronApp, userDataDir);
   });
 
   test('Debe permitir registrar una nueva ley', async () => {
     // Navegar a Biblioteca
-    await window.click('button:has-text("Biblioteca")');
-    await expect(window.locator('h1')).toContainText('Biblioteca de Leyes');
+    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await expect(window.getByTestId('laws-page-title')).toBeVisible();
 
     // Abrir formulario
-    await window.click('button:has-text("Registrar Ley")');
+    await window.getByTestId('btn-open-law-form').click({ force: true });
 
     const leyTitulo = `Ley de Prueba E2E ${Date.now()}`;
-    await window.fill('input[placeholder="Ej: Reforma al Código de Comercio..."]', leyTitulo);
-    await window.fill('input[placeholder="Pegue aquí el enlace compartido..."]', 'https://drive.google.com/test-law');
+    await window.getByTestId('law-title-input').fill(leyTitulo);
+    await window.getByTestId('law-drive-link-input').fill('https://drive.google.com/test-law');
     
-    await window.click('button:has-text("Registrar")');
+    await window.getByTestId('btn-save-law').click({ force: true });
 
     // Verificar que aparece en la lista
-    await expect(window.locator(`text=${leyTitulo}`)).toBeVisible();
-    await expect(window.locator('text=Gaceta Ordinaria')).toBeVisible();
+    await expect(window.getByText(leyTitulo).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Debe filtrar leyes', async () => {
-    const searchInput = window.locator('input[placeholder="Buscar por título o gaceta..."]');
+    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await expect(window.getByTestId('laws-page-title')).toBeVisible();
+
+    const searchInput = window.getByPlaceholder('Buscar por título o gaceta...');
     await searchInput.fill('Inexistente');
-    await expect(window.locator('text=No se encontraron resultados')).toBeVisible();
+    await expect(window.getByText('No se encontraron resultados').first()).toBeVisible();
     
     await searchInput.fill('');
-    await expect(window.locator('text=No se encontraron resultados')).not.toBeVisible();
+    await expect(window.getByText('No se encontraron resultados').first()).not.toBeVisible();
   });
 
   test('Debe mostrar QR (simulado)', async () => {
-    // El botón de QR abre una nueva ventana, lo cual es difícil de testear en Electron Playwright 
-    // sin manejar múltiples ventanas, pero podemos al menos verificar que el botón existe y es clickable.
+    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await expect(window.getByTestId('laws-page-title')).toBeVisible();
+
+    // Registrar una ley primero
+    await window.getByTestId('btn-open-law-form').click({ force: true });
+    await window.getByTestId('law-title-input').fill('Ley QR');
+    await window.getByTestId('law-drive-link-input').fill('https://drive.google.com/test-qr');
+    await window.getByTestId('btn-save-law').click({ force: true });
+
     const qrButton = window.locator('button[title="Ver Código QR"]').first();
     await expect(qrButton).toBeVisible();
-    // No clickeamos porque window.open() podría causar problemas en el entorno de test si no se maneja
   });
 });

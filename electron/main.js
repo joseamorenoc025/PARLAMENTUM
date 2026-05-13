@@ -3,34 +3,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
-import { db, sqlite } from './src/db/index.js';
-import { runMigrations } from './src/db/migrate.js';
-import { logger } from './src/lib/logger.js';
-import { setupIPCHandlers } from './src/ipc/handlers.js';
-import { setupSyncHandlers } from './src/modules/sync/index.js';
-import { analytics } from './src/services/analytics.js';
 
 // Cargar variables de entorno
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 📁 Rutas de datos persistentes
-const userDataPath = app.getPath('userData');
-const DB_PATH = path.join(userDataPath, 'legis.db');
-const BACKUP_PATH = path.join(userDataPath, 'backups');
-
-// Asegurar que las carpetas existan
-[BACKUP_PATH].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-
-// 🚀 Ejecutar Migraciones Robustas
-try {
-  runMigrations(DB_PATH);
-} catch (err) {
-  logger.error('Critical: Migration failed', err);
-}
+// 📁 Importar dbManager (sin ejecutar nada al nivel superior)
+import { dbManager } from './src/db/index.js';
+import { logger } from './src/lib/logger.js';
+import { setupIPCHandlers } from './src/ipc/handlers.js';
+import { setupSyncHandlers } from './src/modules/sync/index.js';
+import { setupBackupHandlers } from './src/ipc/backup.handlers.js';
+import { analytics } from './src/services/analytics.js';
 
 let mainWindow;
 
@@ -61,27 +46,38 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Inicializar servicios
-  await analytics.init();
-  
-  // Inicializar handlers de IPC una sola vez antes de crear la ventana
-  // Notar que algunos handlers podrían necesitar la referencia a mainWindow más tarde
-  await setupSyncHandlers();
-  
-  createWindow();
-  
-  // Si setupIPCHandlers necesita mainWindow, lo llamamos después de crearla
-  setupIPCHandlers(mainWindow);
+  try {
+    console.log('[MAIN] Starting application initialization...');
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-      // Si la ventana se recrea, podrías necesitar actualizar la referencia en los handlers si estos la usan
-    }
-  });
+    // 1. Inicializar DB y Migraciones
+    await dbManager.initialize({
+      dataDir: app.getPath('userData'),
+      testMode: process.env.CEREBO_TEST_MODE === 'true'
+    });
+
+    // 2. Inicializar servicios que dependen de DB
+    await analytics.init();
+    await setupSyncHandlers();
+    
+    // 3. Crear ventana y registrar handlers IPC
+    createWindow();
+    setupIPCHandlers(mainWindow);
+    setupBackupHandlers(mainWindow);
+
+    console.log('[MAIN] Initialization complete.');
+  } catch (error) {
+    console.error('[MAIN] FATAL STARTUP ERROR:', error);
+    dialog.showErrorBox('Error de Inicio', `No se pudo inicializar la aplicación:\n${error.message}`);
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-

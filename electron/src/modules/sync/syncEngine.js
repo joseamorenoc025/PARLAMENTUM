@@ -40,18 +40,46 @@ export class SyncEngine {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
     const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
     
-    const lawsJson = localLaws.map(local => ({
-      id: local.id,
-      titulo: local.titulo,
-      gaceta: local.gaceta,
-      anio: local.anio,
-      expediente: local.expediente,
-      link_drive: this.transformDriveLink((local.contenido || '').replace('Enlace de descarga: ', '')),
-      fecha_publicacion: local.fechaPublicacion,
-      updated_at: new Date().toISOString()
-    }));
+    const lawsJson = localLaws.map(local => {
+      let link = local.driveLink ? this.transformDriveLink(local.driveLink) : null;
+      if (local.rutaPdf) {
+        // En GitHub Pages, si el JSON está en public/portal/leyes.json, 
+        // y los documentos en public/portal/documentos/, el link relativo es:
+        link = `documentos/${path.basename(local.rutaPdf)}`;
+      }
+
+      return {
+        id: local.id,
+        titulo: local.titulo,
+        gaceta: local.gaceta,
+        anio: local.anio,
+        expediente: local.expediente,
+        link_drive: link,
+        fecha_publicacion: local.fechaPublicacion,
+        updated_at: new Date().toISOString()
+      };
+    });
 
     await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
+    
+    // Sincronizar archivos físicos
+    for (const law of localLaws) {
+      if (law.rutaPdf && fs.existsSync(law.rutaPdf)) {
+        const fileName = path.basename(law.rutaPdf);
+        const remoteDocPath = `public/portal/documentos/${fileName}`;
+        const buffer = fs.readFileSync(law.rutaPdf);
+        
+        try {
+          const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteDocPath);
+          if (!remoteFile.exists) {
+            await client.updateFile(this.owner, this.repo, remoteDocPath, buffer, `Sync: Documento ${fileName}`);
+          }
+        } catch (e) {
+          logger.error(`Error syncing PDF file ${fileName}:`, e);
+        }
+      }
+    }
+
     return lawsJson.length;
   }
 

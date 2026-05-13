@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, UserPlus, ShieldCheck, CheckCircle2, 
   ChevronRight, ChevronLeft, Loader2, Image as ImageIcon,
-  ShieldAlert, AlertCircle
+  ShieldAlert, AlertCircle, RefreshCw
 } from 'lucide-react';
+import BackupRestoreStep from './BackupRestoreStep';
 
 const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // 1: Welcome, 2: Admin, 3: Institutional, 4: Success, 5: Restore
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState(null);
   
@@ -60,19 +61,9 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
     }
   };
 
-  const handleSkip = async () => {
-    setIsSubmitting(true);
-    try {
-      await window.legisAPI.db.upsert({ 
-        table: 'config', 
-        data: { key: 'onboarding_completed', value: 'true' } 
-      });
-      onComplete();
-    } catch (err) {
-      console.error('Skip failed:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleRestoreComplete = (userInfo) => {
+    // Al restaurar con éxito, saltamos directamente al final o completamos
+    onComplete();
   };
 
   const handleLogoSelect = async () => {
@@ -95,7 +86,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
               <Building2 className="w-12 h-12 text-indigo-500" />
             </div>
             <div>
-              <h2 className="text-3xl font-black mb-3">Bienvenido a Cerebro Legislativo</h2>
+              <h2 data-testid="onboarding-welcome-title" className="text-3xl font-black mb-3">Bienvenido a Cerebro Legislativo</h2>
               <p className={`text-lg leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Este asistente le permitirá preparar el sistema en menos de 3 minutos. 
                 Los datos configurados habilitarán la creación de sesiones, oficios y el portal público de leyes.
@@ -108,15 +99,16 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
             <div className="flex flex-col gap-3">
               <button 
                 onClick={() => setStep(2)}
+                data-testid="btn-start-setup"
                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/20"
               >
                 Comenzar configuración <ChevronRight className="w-5 h-5" />
               </button>
               <button 
-                onClick={handleSkip}
-                className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                onClick={() => setStep(5)}
+                className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                Configurar más tarde
+                <RefreshCw className="w-4 h-4" /> Restaurar desde backup
               </button>
             </div>
           </div>
@@ -136,6 +128,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                 <input 
                   type="text" 
                   value={formData.username}
+                  data-testid="admin-username-input"
                   onChange={e => setFormData({...formData, username: e.target.value})}
                   className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   placeholder="ej: admin.secretaria"
@@ -149,6 +142,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                   <input 
                     type="password" 
                     value={formData.password}
+                    data-testid="admin-password-input"
                     onChange={e => setFormData({...formData, password: e.target.value})}
                     className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   />
@@ -159,6 +153,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                   <input 
                     type="password" 
                     value={formData.confirmPassword}
+                    data-testid="admin-confirm-password-input"
                     onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
                     className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   />
@@ -180,6 +175,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                 <input 
                   type="text" 
                   value={formData.securityAnswer}
+                  data-testid="admin-security-answer-input"
                   onChange={e => setFormData({...formData, securityAnswer: e.target.value})}
                   placeholder="Su respuesta..."
                   className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
@@ -190,7 +186,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
 
             <div className="flex gap-4 pt-4">
               <button onClick={() => setStep(1)} className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>Atrás</button>
-              <button onClick={handleNext} className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20">Continuar</button>
+              <button onClick={handleNext} data-testid="btn-onboarding-next" className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20">Continuar</button>
             </div>
           </div>
         );
@@ -209,6 +205,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                 <input 
                   type="text" 
                   value={formData.chamberName}
+                  data-testid="chamber-name-input"
                   onChange={e => setFormData({...formData, chamberName: e.target.value})}
                   className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   placeholder="ej: Concejo Municipal de..."
@@ -262,6 +259,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
               <button 
                 onClick={handleFinish} 
                 disabled={isSubmitting}
+                data-testid="btn-onboarding-finish"
                 className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -277,7 +275,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
             <div className="mx-auto p-4 rounded-full bg-emerald-500/10 text-emerald-500 w-fit mb-4">
               <CheckCircle2 className="w-16 h-16" />
             </div>
-            <h2 className="text-3xl font-black">¡Configuración Exitosa!</h2>
+            <h2 data-testid="onboarding-success-title" className="text-3xl font-black">¡Configuración Exitosa!</h2>
             <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>El sistema ha sido inicializado correctamente.</p>
             
             <div className={`p-6 rounded-3xl border-2 border-dashed text-left ${darkMode ? 'bg-gray-900 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200'}`}>
@@ -298,11 +296,22 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
 
             <button 
               onClick={() => onComplete()}
+              data-testid="btn-onboarding-start-using"
               className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl shadow-emerald-500/20 transition-all uppercase tracking-widest"
             >
               Comenzar a usar el sistema
             </button>
           </div>
+        );
+
+      case 5:
+        return (
+          <BackupRestoreStep 
+            darkMode={darkMode} 
+            onComplete={handleRestoreComplete} 
+            onCancel={() => setStep(1)} 
+            addToast={addToast}
+          />
         );
 
       default:
@@ -324,7 +333,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
         
         {renderStep()}
 
-        {step < 4 && (
+        {(step < 4 && step !== 5) && (
           <div className="mt-10 flex justify-center">
              <div className="flex gap-2">
                 {[1, 2, 3].map(i => (

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Github, Save, RefreshCw, Trash2, CheckCircle2, AlertCircle, ExternalLink, Shield, CloudOff } from 'lucide-react';
+import { 
+  Github, Save, RefreshCw, Trash2, CheckCircle2, 
+  AlertCircle, ExternalLink, Shield, CloudOff,
+  Database, Download, Upload, Lock, FileJson
+} from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
 export default function SyncSettings({ darkMode, addToast }) {
@@ -12,6 +16,12 @@ export default function SyncSettings({ darkMode, addToast }) {
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  // Backup State
+  const [backupPassword, setBackupPassword] = useState('');
+  const [restorePassword, setRestorePassword] = useState('');
+  const [restoreFile, setRestoreFile] = useState(null);
+  const [isProcessingBackup, setIsProcessingBackup] = useState(false);
+
   useEffect(() => {
     checkToken();
     loadRepoConfig();
@@ -19,6 +29,64 @@ export default function SyncSettings({ darkMode, addToast }) {
     const interval = setInterval(loadQueueStats, 10000); // Actualizar cada 10s
     return () => clearInterval(interval);
   }, []);
+
+  const handleExportBackup = async (e) => {
+    e.preventDefault();
+    if (!backupPassword || backupPassword.length < 8) {
+      addToast('La contraseña debe tener al menos 8 caracteres', 'error');
+      return;
+    }
+
+    setIsProcessingBackup(true);
+    try {
+      const result = await window.legisAPI.db.exportBackup(backupPassword);
+      if (result.success) {
+        addToast(`Copia de seguridad exportada: ${result.path}`, 'success');
+        setBackupPassword('');
+      } else if (result.error !== 'CANCELED') {
+        addToast('Error al exportar backup', 'error');
+      }
+    } catch (err) {
+      addToast('Error crítico al exportar', 'error');
+    } finally {
+      setIsProcessingBackup(false);
+    }
+  };
+
+  const handleSelectRestoreFile = async () => {
+    const filePath = await window.legisAPI.dialog.openBackup();
+    if (filePath) setRestoreFile(filePath);
+  };
+
+  const handleRestoreBackup = async (e) => {
+    e.preventDefault();
+    if (!restoreFile || !restorePassword) return;
+
+    if (!window.confirm('¡ATENCIÓN! Al restaurar se reemplazará TODA la base de datos actual. Esta acción no se puede deshacer de forma sencilla. ¿Deseas continuar?')) {
+      return;
+    }
+
+    setIsProcessingBackup(true);
+    try {
+      const result = await window.legisAPI.db.restoreBackup(restoreFile, restorePassword);
+      if (result.success) {
+        addToast('Base de datos restaurada con éxito. La aplicación se reiniciará.', 'success');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        const errors = {
+          'INVALID_CREDENTIALS': 'Contraseña incorrecta o archivo dañado.',
+          'INVALID_FILE_TYPE': 'El archivo seleccionado no es un backup válido.',
+          'FILE_NOT_FOUND': 'No se pudo encontrar el archivo seleccionado.',
+          'CORRUPTED_FILE': 'El archivo de backup está dañado.'
+        };
+        addToast(errors[result.error] || 'Error al restaurar el backup', 'error');
+      }
+    } catch (err) {
+      addToast('Error crítico al restaurar', 'error');
+    } finally {
+      setIsProcessingBackup(false);
+    }
+  };
 
   const loadQueueStats = async () => {
     try {
@@ -326,6 +394,109 @@ export default function SyncSettings({ darkMode, addToast }) {
               <p className="text-xl font-bold">{queueStats.synced}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Backup & Restore Section */}
+      <div className="flex items-center gap-3 mt-12 mb-2">
+        <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
+          <Database className="w-6 h-6" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold">Respaldo y Restauración</h2>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Exporta tus datos a un archivo seguro o restaura una copia previa.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Exportar */}
+        <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm`}>
+          <div className="flex items-center gap-2 mb-6 text-emerald-500 font-bold">
+            <Download className="w-5 h-5" />
+            <h3>Exportar Datos</h3>
+          </div>
+          <p className={`text-xs mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Crea una copia de seguridad encriptada. Podrás elegir dónde guardarla (ej. un USB).
+          </p>
+          <form onSubmit={handleExportBackup} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-gray-500">Contraseña del Backup</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                <input
+                  type="password"
+                  value={backupPassword}
+                  onChange={(e) => setBackupPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  className={`w-full pl-10 pr-4 py-2 rounded-xl border transition-all outline-none text-sm ${
+                    darkMode ? 'bg-gray-800 border-gray-700 focus:border-emerald-500' : 'bg-gray-50 border-gray-200 focus:border-emerald-500'
+                  }`}
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isProcessingBackup}
+              className="flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50"
+            >
+              <Database className="w-4 h-4" />
+              {isProcessingBackup ? 'Procesando...' : 'Elegir Ubicación y Exportar'}
+            </button>
+          </form>
+        </div>
+
+        {/* Restaurar */}
+        <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm`}>
+          <div className="flex items-center gap-2 mb-6 text-amber-500 font-bold">
+            <Upload className="w-5 h-5" />
+            <h3>Restaurar Backup</h3>
+          </div>
+          <p className={`text-xs mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Selecciona un archivo <b>.clbak</b> o <b>.enc</b> para restaurar el sistema.
+          </p>
+          <form onSubmit={handleRestoreBackup} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-gray-500">Archivo de Backup</label>
+              <button
+                type="button"
+                onClick={handleSelectRestoreFile}
+                className={`w-full flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all ${
+                  restoreFile 
+                    ? (darkMode ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600')
+                    : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
+                }`}
+              >
+                <FileJson className="w-4 h-4" />
+                <span className="truncate">{restoreFile ? restoreFile.split(/[\\/]/).pop() : 'Seleccionar archivo...'}</span>
+              </button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-gray-500">Contraseña del Backup</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                <input
+                  type="password"
+                  value={restorePassword}
+                  onChange={(e) => setRestorePassword(e.target.value)}
+                  placeholder="Contraseña usada al exportar"
+                  className={`w-full pl-10 pr-4 py-2 rounded-xl border transition-all outline-none text-sm ${
+                    darkMode ? 'bg-gray-800 border-gray-700 focus:border-amber-500' : 'bg-gray-50 border-gray-200 focus:border-amber-500'
+                  }`}
+                  disabled={!restoreFile}
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isProcessingBackup || !restoreFile}
+              className="flex items-center justify-center gap-2 w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isProcessingBackup ? 'animate-spin' : ''}`} />
+              {isProcessingBackup ? 'Restaurando...' : 'Restaurar Ahora'}
+            </button>
+          </form>
         </div>
       </div>
 

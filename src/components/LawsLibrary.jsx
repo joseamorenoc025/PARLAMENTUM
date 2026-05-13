@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Plus, Search, Download, Trash2, QrCode, 
-  Loader2, Scale, ExternalLink
+  Loader2, Scale, ExternalLink, FileText
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
@@ -18,7 +18,9 @@ const LawsLibrary = ({ darkMode, addToast }) => {
     titulo: '',
     gaceta: 'Ordinaria',
     anio: new Date().getFullYear(),
-    driveLink: ''
+    driveLink: '',
+    localFilePath: null,
+    localFileName: ''
   });
 
   const loadLaws = React.useCallback(async () => {
@@ -37,9 +39,21 @@ const LawsLibrary = ({ darkMode, addToast }) => {
     loadLaws();
   }, [loadLaws]);
 
+  const handleSelectFile = async () => {
+    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    if (filePath) {
+      setForm({
+        ...form,
+        localFilePath: filePath,
+        localFileName: filePath.split(/[\\/]/).pop(),
+        driveLink: '' // Priorizar archivo local
+      });
+    }
+  };
+
   const handleSave = async () => {
-    if (!form.titulo || !form.driveLink || !form.anio) {
-      addToast('Título, Año y Enlace de Drive son requeridos', 'error');
+    if (!form.titulo || (!form.driveLink && !form.localFilePath) || !form.anio) {
+      addToast('Título, Año y un Documento (Enlace o Archivo) son requeridos', 'error');
       return;
     }
 
@@ -51,13 +65,14 @@ const LawsLibrary = ({ darkMode, addToast }) => {
           titulo: form.titulo,
           gaceta: form.gaceta,
           anio: parseInt(form.anio),
-          driveLink: form.driveLink
+          driveLink: form.driveLink,
+          localFilePath: form.localFilePath
         }
       });
 
       addToast('Ley registrada exitosamente', 'success');
       setShowForm(false);
-      setForm({ titulo: '', gaceta: 'Ordinaria', anio: new Date().getFullYear(), driveLink: '' });
+      setForm({ titulo: '', gaceta: 'Ordinaria', anio: new Date().getFullYear(), driveLink: '', localFilePath: null, localFileName: '' });
       loadLaws();
     } catch (err) {
       addToast(err.message || 'Error al guardar la ley', 'error');
@@ -112,11 +127,12 @@ const LawsLibrary = ({ darkMode, addToast }) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Biblioteca de Leyes</h1>
+          <h1 data-testid="laws-page-title" className="text-2xl font-bold mb-1">Biblioteca de Leyes</h1>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión ligera vinculada a Google Drive y códigos QR</p>
         </div>
         <button 
           onClick={() => setShowForm(true)} 
+          data-testid="btn-open-law-form"
           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all"
         >
           <Plus className="w-4 h-4" /> Registrar Ley
@@ -192,12 +208,16 @@ const LawsLibrary = ({ darkMode, addToast }) => {
               
               <div className={`p-3 rounded-xl mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">
-                  <span>Enlace de Respaldo:</span>
+                  <span>{law.rutaPdf ? 'Documento Local:' : 'Enlace de Respaldo:'}</span>
                 </div>
                 <div className="flex items-center gap-2 overflow-hidden">
-                  <ExternalLink className="w-3 h-3 flex-shrink-0 text-gray-400" />
+                  {law.rutaPdf ? (
+                    <FileText className="w-3 h-3 flex-shrink-0 text-emerald-500" />
+                  ) : (
+                    <ExternalLink className="w-3 h-3 flex-shrink-0 text-gray-400" />
+                  )}
                   <span className="text-xs truncate text-gray-500 italic">
-                    {law.contenido ? law.contenido.replace('Enlace de descarga: ', '') : 'Sin enlace'}
+                    {law.rutaPdf ? law.rutaPdf.split(/[\\/]/).pop() : (law.contenido ? law.contenido.replace('Enlace de descarga: ', '') : 'Sin enlace')}
                   </span>
                 </div>
               </div>
@@ -206,15 +226,16 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                   {law.fechaPublicacion ? new Date(law.fechaPublicacion).toLocaleDateString() : '---'}
                 </span>
-                {law.contenido && (
-                  <a 
-                    href={law.contenido.replace('Enlace de descarga: ', '')} 
-                    target="_blank" 
-                    rel="noreferrer"
+                {(law.driveLink || law.rutaPdf) && (
+                  <button 
+                    onClick={() => {
+                      if (law.driveLink) window.open(law.driveLink, '_blank');
+                      else addToast('Archivo guardado localmente para sincronización', 'info');
+                    }}
                     className="text-xs font-bold text-indigo-500 hover:underline flex items-center gap-1"
                   >
-                    <Download className="w-3 h-3" /> Descargar
-                  </a>
+                    <Download className="w-3 h-3" /> {law.rutaPdf ? 'PDF Local' : 'Descargar'}
+                  </button>
                 )}
               </div>
             </div>
@@ -231,6 +252,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Título de la Ley</label>
                 <input 
                   type="text" 
+                  data-testid="law-title-input"
                   placeholder="Ej: Reforma al Código de Comercio..."
                   value={form.titulo}
                   onChange={e => setForm({...form, titulo: e.target.value})}
@@ -265,12 +287,38 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Enlace de Google Drive</label>
                 <input 
                   type="url" 
+                  data-testid="law-drive-link-input"
                   placeholder="Pegue aquí el enlace compartido..."
                   value={form.driveLink}
-                  onChange={e => setForm({...form, driveLink: e.target.value})}
+                  onChange={e => setForm({...form, driveLink: e.target.value, localFilePath: null, localFileName: ''})}
                   className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                 />
-                <p className="text-[10px] mt-2 text-gray-500 italic">Este enlace se usará para generar el código QR público.</p>
+              </div>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className={`w-full border-t ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}></div>
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold">
+                  <span className={`px-2 ${darkMode ? 'bg-gray-900 text-gray-500' : 'bg-white text-gray-400'}`}>O subir archivo</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Archivo PDF Local</label>
+                <button
+                  type="button"
+                  onClick={handleSelectFile}
+                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${
+                    form.localFilePath 
+                      ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
+                      : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
+                  }`}
+                >
+                  <Download className="w-4 h-4 rotate-180" />
+                  <span className="truncate">{form.localFilePath ? form.localFileName : 'Seleccionar PDF desde mi PC...'}</span>
+                </button>
+                <p className="text-[10px] mt-2 text-gray-500 italic">El archivo se subirá automáticamente a GitHub Pages.</p>
               </div>
             </div>
             
@@ -285,6 +333,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
+                data-testid="btn-save-law"
                 className="flex-1 py-3.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Registrar'}

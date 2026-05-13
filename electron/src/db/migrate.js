@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as schema from './schema.js';
 import { logger } from '../lib/logger.js';
@@ -11,21 +12,31 @@ import { logger } from '../lib/logger.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const runMigrations = (dbPath) => {
+  console.log(`[MIGRATE] STARTING for path: ${dbPath}`);
+  const migrationsDir = path.join(__dirname, 'migrations');
+  console.log(`[MIGRATE] Migrations directory: ${migrationsDir}`);
+  
+  if (!fs.existsSync(migrationsDir)) {
+    console.error(`[MIGRATE] ERROR: Migrations directory not found at ${migrationsDir}`);
+  }
+
   const sqlite = new Database(dbPath);
+  console.log(`[MIGRATE] Database opened.`);
   
   try {
     // 1. Intentar migraciones oficiales de Drizzle primero
     const db = drizzle(sqlite);
-    logger.info('Intentando migraciones oficiales de Drizzle...');
+    console.log('[MIGRATE] Drizzle instance created.');
     try {
-      migrate(db, { migrationsFolder: path.join(__dirname, 'migrations') });
-      logger.info('✅ Migraciones completadas exitosamente.');
+      console.log('[MIGRATE] Running drizzle-orm migrations...');
+      migrate(db, { migrationsFolder: migrationsDir });
+      console.log('[MIGRATE] Drizzle migrations success.');
     } catch (err) {
-      logger.error('⚠️ Migración Drizzle interrumpida (posible conflicto), procediendo a auto-reparación:', err.message);
+      console.error(`[MIGRATE] Drizzle migration error: ${err.message}`);
     }
 
-    // 2. REPARACIÓN DE EMERGENCIA (Garantiza columnas críticas aunque falle la migración)
-    // Asegurar que la tabla users existe
+    // 2. REPARACIÓN DE EMERGENCIA
+    console.log('[MIGRATE] Starting emergency repairs...');
     sqlite.prepare(`
       CREATE TABLE IF NOT EXISTS \`users\` (
         \`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -33,6 +44,7 @@ export const runMigrations = (dbPath) => {
         \`password_hash\` text NOT NULL
       )
     `).run();
+    console.log('[MIGRATE] Users table ensured.');
 
     const emergencyFixes = [
       { t: 'users', c: 'created_at', d: 'TEXT DEFAULT CURRENT_TIMESTAMP' },
@@ -49,18 +61,24 @@ export const runMigrations = (dbPath) => {
         const info = sqlite.prepare(`PRAGMA table_info(${fix.t})`).all();
         if (!info.some(col => col.name === fix.c)) {
           sqlite.prepare(`ALTER TABLE ${fix.t} ADD COLUMN ${fix.c} ${fix.d}`).run();
-          logger.info(`[FIX] Columna forzada: ${fix.t}.${fix.c}`);
+          console.log(`[MIGRATE] Emergency fix: Added ${fix.t}.${fix.c}`);
         }
       } catch (e) {
-        logger.error(`Error reparando columna ${fix.t}.${fix.c}:`, e.message);
+        // Ignorar si la tabla no existe todavía (el Healer la creará)
       }
     }
 
-    // 3. Healer Dinámico (Cubre todo el schema.js automáticamente)
+    // 3. Healer Dinámico
+    console.log('[MIGRATE] Starting Dynamic Healer...');
     for (const [key, table] of Object.entries(schema)) {
       try {
         const config = getTableConfig(table);
         if (!config || !config.name) continue;
+        
+        console.log(`[MIGRATE] Healing table: ${config.name}`);
+        
+        // Crear tabla si no existe
+        sqlite.prepare(`CREATE TABLE IF NOT EXISTS \`${config.name}\` (id INTEGER PRIMARY KEY AUTOINCREMENT)`).run();
         
         const dbCols = sqlite.prepare(`PRAGMA table_info(${config.name})`).all();
         const existing = new Set(dbCols.map(c => c.name));
@@ -69,18 +87,19 @@ export const runMigrations = (dbPath) => {
           if (!existing.has(col.name)) {
             let type = col.getSQLType().includes('integer') ? 'INTEGER' : 'TEXT';
             sqlite.prepare(`ALTER TABLE ${config.name} ADD COLUMN ${col.name} ${type}`).run();
-            logger.info(`[HEAL] Columna detectada y añadida: ${config.name}.${col.name}`);
+            console.log(`[MIGRATE] Added column: ${config.name}.${col.name}`);
           }
         }
       } catch (err) {
-        // Ignorar exportaciones que no son tablas
+        console.error(`[MIGRATE] Healer error for ${key}: ${err.message}`);
       }
     }
 
-    logger.info('🚀 Base de datos verificada y lista para operar.');
+    console.log('[MIGRATE] Migration process finished successfully.');
   } catch (error) {
-    logger.error('❌ Error crítico irrecuperable en la base de datos:', error);
+    console.error(`[MIGRATE] FATAL ERROR: ${error.message}`);
   } finally {
     sqlite.close();
+    console.log('[MIGRATE] Database closed.');
   }
 };

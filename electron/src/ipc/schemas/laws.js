@@ -7,7 +7,8 @@ export const lawImportSchema = z.object({
       errorMap: () => ({ message: 'La gaceta debe ser Ordinaria o Extraordinaria' })
     }),
     anio: z.number().int().min(1900).max(new Date().getFullYear() + 1),
-    driveLink: z.string().url('Debe ser una URL válida de Google Drive').or(z.string().min(1, 'El enlace de Drive es requerido')),
+    driveLink: z.string().url('Debe ser una URL válida de Google Drive').or(z.string().length(0)).optional(),
+    localFilePath: z.string().optional(),
   }),
 });
 

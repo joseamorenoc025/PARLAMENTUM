@@ -65,6 +65,9 @@ export default function App() {
 
     const checkSetup = async () => {
       try {
+        // Esperar a que la DB esté lista
+        await window.legisAPI.invoke('db:isReady');
+        
         const status = await window.legisAPI.invoke('app:get-setup-status');
         setSetupStatus({ ...status, isLoading: false });
         
@@ -106,17 +109,13 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isElectron]);
 
-  // Atajos de teclado
+  // Señal de disponibilidad para tests E2E
   useEffect(() => {
-    const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowCommandPalette(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
+    if (!isLoading && !setupStatus.isLoading) {
+      console.log('E2E: Cerebro is Ready');
+      window.__CEREBO_READY = true;
+    }
+  }, [isLoading, setupStatus.isLoading]);
 
   const addToast = useCallback((message, type = 'info') => {
     const options = {
@@ -161,49 +160,46 @@ export default function App() {
     { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
 
-  if (!isElectron) {
-    return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md bg-white p-10 rounded-[2rem] shadow-2xl border border-red-100">
-          <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Gavel className="w-10 h-10" />
-          </div>
-          <h1 className="text-2xl font-black text-gray-900 mb-4">Entorno No Soportado</h1>
-          <p className="text-gray-600 mb-8 leading-relaxed">
-            Cerebro Legislativo requiere ser ejecutado a través de la aplicación de escritorio (**Electron**). 
-            No puede funcionar correctamente en un navegador web convencional.
-          </p>
-          <div className="bg-gray-50 p-4 rounded-xl text-left font-mono text-xs text-gray-500 mb-8">
-            Terminal: npm run dev
-          </div>
-          <p className="text-sm text-gray-400 font-bold uppercase tracking-widest">
-            Por favor, use la ventana de la aplicación.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));
 
-  if (isLoading || setupStatus.isLoading) {
+  const renderMainContent = () => {
+    if (!isElectron) {
+      return (
+        <div className="min-h-screen bg-red-50 flex items-center justify-center p-6 text-center">
+          <div className="max-w-md bg-white p-10 rounded-[2rem] shadow-2xl border border-red-100">
+            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Gavel className="w-10 h-10" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 mb-4">Entorno No Soportado</h1>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              Cerebro Legislativo requiere ser ejecutado a través de la aplicación de escritorio (**Electron**). 
+              No puede funcionar correctamente en un navegador web convencional.
+            </p>
+            <div className="bg-gray-50 p-4 rounded-xl text-left font-mono text-xs text-gray-500 mb-8">
+              Terminal: npm run dev
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isLoading || setupStatus.isLoading) {
+      return (
+        <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      );
+    }
+
+    if (setupStatus.needsOnboarding) {
+      return <OnboardingWizard darkMode={darkMode} addToast={addToast} onComplete={onOnboardingComplete} />;
+    }
+
+    if (!user) {
+      return <AuthScreen onLogin={setUser} darkMode={darkMode} addToast={addToast} />;
+    }
+
     return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
-  if (setupStatus.needsOnboarding) {
-    return <OnboardingWizard darkMode={darkMode} addToast={addToast} onComplete={onOnboardingComplete} />;
-  }
-
-  if (!user) {
-    return <AuthScreen onLogin={setUser} darkMode={darkMode} addToast={addToast} />;
-  }
-
-  return (
-    <div className={darkMode ? 'dark' : ''}>
       <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
         {/* Sidebar */}
         <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r ${sidebarOpen ? 'w-64' : 'w-16'}`}>
@@ -335,19 +331,24 @@ export default function App() {
           legislators={legislators}
           onNavigate={navigateToEntity}
         />
-
-        {/* Toaster */}
-        <Toaster position="bottom-right" theme={darkMode ? 'dark' : 'light'} richColors />
-
-        {/* Global Styles */}
-        <style>{`
-          @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-          ::-webkit-scrollbar { width: 6px; }
-          ::-webkit-scrollbar-track { background: transparent; }
-          ::-webkit-scrollbar-thumb { background: ${darkMode ? '#374151' : '#d1d5db'}; border-radius: 3px; }
-          ::-webkit-scrollbar-thumb:hover { background: ${darkMode ? '#4b5563' : '#9ca3af'}; }
-        `}</style>
       </div>
+    );
+  };
+
+  return (
+    <div data-testid="app-root" className={darkMode ? 'dark' : ''}>
+      <Toaster position="bottom-right" theme={darkMode ? 'dark' : 'light'} richColors />
+      
+      {/* Global Styles */}
+      <style>{`
+        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: ${darkMode ? '#374151' : '#d1d5db'}; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: ${darkMode ? '#4b5563' : '#9ca3af'}; }
+      `}</style>
+
+      {renderMainContent()}
     </div>
   );
 }
