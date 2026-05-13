@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "expediente": null,
+    "titulo": "hghgfh",
+    "extracto": null,
+    "fase_actual": "Estudio en Comisión",
+    "origen": null,
+    "urgencia": 0,
+    "estado": "en_comision",
+    "prioridad": "media",
+    "fecha_ingreso": "2026-05-09",
+    "ponente": "No asignado",
+    "comision": "No asignada",
+    "updated_at": "CURRENT_TIMESTAMP"
+  }
+]

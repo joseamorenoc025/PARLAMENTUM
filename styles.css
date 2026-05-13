@@ -49,13 +49,20 @@ body {
 }
 
 .logo-icon {
-    width: 45px;
-    height: 45px;
+    width: 64px;
+    height: 64px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden; /* Evita que el logo se salga */
+}
+
+#chamber-logo {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .logo-area h1 {
@@ -208,6 +215,67 @@ body {
 
 .download-btn:hover {
     background: var(--primary-dark);
+}
+
+.law-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.law-card-header .law-tag {
+    margin-bottom: 0;
+}
+
+.tags-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.new-badge {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.share-btn {
+    color: #25d366; /* WhatsApp Green */
+    padding: 0.5rem;
+    border-radius: 10px;
+    background: #f0fff4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.share-btn:hover {
+    background: #25d366;
+    color: white;
+    transform: scale(1.1);
+}
+
+.share-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+.law-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 0.5rem;
 }
 
 /* Loader */

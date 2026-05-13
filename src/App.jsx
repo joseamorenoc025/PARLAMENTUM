@@ -15,6 +15,7 @@ import AgendaModule from './components/AgendaModule';
 import LegislatorsModule from './components/LegislatorsModule';
 import VaultModule from './components/VaultModule';
 import LawsLibrary from './components/LawsLibrary';
+import AgreementsModule from './components/AgreementsModule';
 import AuditModule from './components/AuditModule';
 import SyncSettings from './components/SyncSettings';
 
@@ -43,6 +44,7 @@ export default function App() {
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
     laws,
+    agreements, saveAgreement, deleteAgreement,
     documents, saveDocument, deleteDocument,
     auditLogs,
     isLoading
@@ -156,6 +158,7 @@ export default function App() {
     { id: 'legisladores', label: 'Legisladores', icon: <Users className="w-5 h-5" /> },
     { id: 'boveda', label: 'Bóveda', icon: <FolderOpen className="w-5 h-5" /> },
     { id: 'leyes', label: 'Biblioteca', icon: <Scale className="w-5 h-5" /> },
+    { id: 'acuerdos', label: 'Acuerdos', icon: <Gavel className="w-5 h-5" /> },
     { id: 'auditoria', label: 'Auditoría', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin'] },
     { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
@@ -309,13 +312,14 @@ export default function App() {
 
           {/* Page Content */}
           <main className="p-6">
-            {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} onNavigate={navigateToEntity} />}
+            {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} config={config} onNavigate={navigateToEntity} />}
             {currentPage === 'sesiones' && <SessionsModule sessions={sessions} oficios={oficios} darkMode={darkMode} addToast={addToast} onSave={saveSession} onDelete={deleteSession} onNavigate={navigateToEntity} />}
             {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} />}
             {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} />}
             {currentPage === 'legisladores' && <LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />}
             {currentPage === 'boveda' && <VaultModule documents={documents} sessions={sessions} oficios={oficios} projects={projects} darkMode={darkMode} addToast={addToast} onSaveDocument={saveDocument} onDeleteDocument={deleteDocument} />}
             {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} />}
+            {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
             {currentPage === 'sincronizacion' && <SyncSettings darkMode={darkMode} addToast={addToast} />}
           </main>

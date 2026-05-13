@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Github, Save, RefreshCw, Trash2, CheckCircle2, 
   AlertCircle, ExternalLink, Shield, CloudOff,
-  Database, Download, Upload, Lock, FileJson
+  Database, Download, Upload, Lock, FileJson,
+  Activity, Cloud, CloudUpload, CloudDownload
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
@@ -15,6 +16,8 @@ export default function SyncSettings({ darkMode, addToast }) {
   const [queueStats, setQueueStats] = useState({ pending: 0, failed: 0, synced: 0 });
   const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [analyticsStatus, setAnalyticsStatus] = useState({ enabled: false, anonymousId: '' });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Backup State
   const [backupPassword, setBackupPassword] = useState('');
@@ -26,9 +29,19 @@ export default function SyncSettings({ darkMode, addToast }) {
     checkToken();
     loadRepoConfig();
     loadQueueStats();
+    loadAnalyticsStatus();
     const interval = setInterval(loadQueueStats, 10000); // Actualizar cada 10s
     return () => clearInterval(interval);
   }, []);
+
+  const loadAnalyticsStatus = async () => {
+    try {
+      const status = await window.legisAPI.analytics.status();
+      setAnalyticsStatus(status);
+    } catch (err) {
+      console.error('Error loading analytics status:', err);
+    }
+  };
 
   const handleExportBackup = async (e) => {
     e.preventDefault();
@@ -174,6 +187,59 @@ export default function SyncSettings({ darkMode, addToast }) {
     }
   };
 
+  const handleCloudUpload = async () => {
+    const password = document.getElementById('backup-password-input')?.value;
+    if (!password) {
+      addToast('Ingresa la contraseña del backup para cifrar la subida.', 'warning');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const result = await window.legisAPI.invoke('backup:cloud:upload', password);
+      if (result.success) {
+        addToast('Respaldo subido a la nube correctamente', 'success');
+      }
+    } catch (err) {
+      addToast('Error al subir a la nube', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCloudDownload = async () => {
+    const password = document.getElementById('backup-password-input')?.value;
+    if (!password) {
+      addToast('Ingresa la contraseña del backup para descifrar la descarga.', 'warning');
+      return;
+    }
+
+    if (!window.confirm('Esto reemplazará todos tus datos locales con la versión de la nube. ¿Continuar?')) return;
+
+    setIsSyncing(true);
+    try {
+      const result = await window.legisAPI.invoke('backup:cloud:download', password);
+      if (result.success) {
+        addToast(result.message, 'success');
+      }
+    } catch (err) {
+      addToast('Error al descargar de la nube', 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleAnalytics = async () => {
+    try {
+      const newEnabled = !analyticsStatus.enabled;
+      const result = await window.legisAPI.analytics.setOptIn(newEnabled);
+      setAnalyticsStatus(prev => ({ ...prev, enabled: result.enabled }));
+      addToast(result.enabled ? 'Analíticas activadas (Privacidad respetada)' : 'Analíticas desactivadas', 'info');
+    } catch (err) {
+      addToast('Error al cambiar configuración de privacidad', 'error');
+    }
+  };
+
   const handleForceSync = async () => {
     setIsValidating(true);
     try {
@@ -219,6 +285,7 @@ export default function SyncSettings({ darkMode, addToast }) {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* GitHub Sync Section */}
       <div className="flex items-center gap-3 mb-2">
         <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
           <Github className="w-6 h-6" />
@@ -397,13 +464,13 @@ export default function SyncSettings({ darkMode, addToast }) {
         </div>
       </div>
 
-      {/* Backup & Restore Section */}
+      {/* Local Backups Section */}
       <div className="flex items-center gap-3 mt-12 mb-2">
         <div className={`p-2 rounded-lg ${darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>
           <Database className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-xl font-bold">Respaldo y Restauración</h2>
+          <h2 className="text-xl font-bold">Respaldo y Restauración Local</h2>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Exporta tus datos a un archivo seguro o restaura una copia previa.</p>
         </div>
       </div>
@@ -425,6 +492,7 @@ export default function SyncSettings({ darkMode, addToast }) {
                 <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                 <input
                   type="password"
+                  id="backup-password-input"
                   value={backupPassword}
                   onChange={(e) => setBackupPassword(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
@@ -500,7 +568,90 @@ export default function SyncSettings({ darkMode, addToast }) {
         </div>
       </div>
 
-      <div className={`p-4 rounded-xl border ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+      {/* Cloud Sync Section */}
+      <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+            <Cloud className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">GitHub Cloud Sync (Oficina-Casa)</h2>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Sincroniza tu base de datos cifrada para trabajar desde diferentes lugares de forma segura.
+            </p>
+          </div>
+        </div>
+
+        <div className={`p-4 rounded-xl border mb-6 ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'}`}>
+          <p className="text-xs text-indigo-500 flex items-center gap-2">
+            <Shield className="w-3 h-3" />
+            Cifrado AES-256 activo: Tus datos están protegidos por tu contraseña de backup antes de salir de este equipo.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            onClick={handleCloudUpload}
+            disabled={isSyncing}
+            className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+              darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
+            }`}
+          >
+            <CloudUpload className={`w-8 h-8 mb-2 ${isSyncing ? 'animate-bounce text-indigo-500' : 'text-gray-400'}`} />
+            <span className="font-bold">Subir a la Nube</span>
+            <span className="text-[10px] text-gray-500">Enviar sesión actual</span>
+          </button>
+
+          <button
+            onClick={handleCloudDownload}
+            disabled={isSyncing}
+            className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+              darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
+            }`}
+          >
+            <CloudDownload className={`w-8 h-8 mb-2 ${isSyncing ? 'animate-bounce text-indigo-500' : 'text-gray-400'}`} />
+            <span className="font-bold">Descargar de la Nube</span>
+            <span className="text-[10px] text-gray-500">Recuperar última sesión</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+              <Activity className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Analíticas Anónimas</h2>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Ayúdanos a mejorar el sistema enviando métricas técnicas anónimas (uso de CPU, errores, frecuencia de uso).
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleAnalytics}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              analyticsStatus.enabled ? 'bg-indigo-600' : (darkMode ? 'bg-gray-700' : 'bg-gray-200')
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                analyticsStatus.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        {analyticsStatus.enabled && (
+          <div className={`mt-4 p-3 rounded-xl text-[10px] font-mono ${darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
+            ID Anónimo: {analyticsStatus.anonymousId}
+          </div>
+        )}
+      </div>
+
+      {/* Footer Info */}
+      <div className={`p-4 rounded-xl border ${darkMode ? 'bg-indigo-500/5 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'} mt-6`}>
         <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2">Resiliencia Offline</h4>
         <p className={`text-[11px] ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
           Si no hay conexión, los cambios se guardarán en la cola de <b>Pendientes</b> y se reintentarán automáticamente 

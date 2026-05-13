@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X, AlertTriangle, Info } from 'lucide-react';
+import { Check, X, TriangleAlert, Info } from 'lucide-react';
 
 const ToastContainer = ({ toasts, removeToast }) => (
   <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2">
@@ -15,7 +15,7 @@ const ToastContainer = ({ toasts, removeToast }) => (
       >
         {toast.type === 'success' && <Check className="w-4 h-4" />}
         {toast.type === 'error' && <X className="w-4 h-4" />}
-        {toast.type === 'warning' && <AlertTriangle className="w-4 h-4" />}
+        {toast.type === 'warning' && <TriangleAlert className="w-4 h-4" />}
         {toast.type === 'info' && <Info className="w-4 h-4" />}
         <span className="text-sm font-medium">{toast.message}</span>
         <button onClick={() => removeToast(toast.id)} className="ml-2 opacity-70 hover:opacity-100">

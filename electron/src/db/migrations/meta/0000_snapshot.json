@@ -1,82 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d538227b-567d-4e2d-aef5-9fc69228d939",
+  "id": "6be2e0bb-7b01-417d-9945-352e7da5e175",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "attendance": {
-      "name": "attendance",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "sesion_id": {
-          "name": "sesion_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "legislador_id": {
-          "name": "legislador_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "presente": {
-          "name": "presente",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "attendance_sesion_id_sessions_id_fk": {
-          "name": "attendance_sesion_id_sessions_id_fk",
-          "tableFrom": "attendance",
-          "tableTo": "sessions",
-          "columnsFrom": [
-            "sesion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "attendance_legislador_id_legislators_id_fk": {
-          "name": "attendance_legislador_id_legislators_id_fk",
-          "tableFrom": "attendance",
-          "tableTo": "legislators",
-          "columnsFrom": [
-            "legislador_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "audit_logs": {
       "name": "audit_logs",
       "columns": {
@@ -182,29 +109,29 @@
           "notNull": false,
           "autoincrement": false
         },
-        "miembro_1_id": {
-          "name": "miembro_1_id",
+        "miembro1_id": {
+          "name": "miembro1_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "miembro_2_id": {
-          "name": "miembro_2_id",
+        "miembro2_id": {
+          "name": "miembro2_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "miembro_3_id": {
-          "name": "miembro_3_id",
+        "miembro3_id": {
+          "name": "miembro3_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "miembro_3_nombre": {
-          "name": "miembro_3_nombre",
+        "miembro3_nombre": {
+          "name": "miembro3_nombre",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -247,12 +174,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "commissions_miembro_1_id_legislators_id_fk": {
-          "name": "commissions_miembro_1_id_legislators_id_fk",
+        "commissions_miembro1_id_legislators_id_fk": {
+          "name": "commissions_miembro1_id_legislators_id_fk",
           "tableFrom": "commissions",
           "tableTo": "legislators",
           "columnsFrom": [
-            "miembro_1_id"
+            "miembro1_id"
           ],
           "columnsTo": [
             "id"
@@ -260,12 +187,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "commissions_miembro_2_id_legislators_id_fk": {
-          "name": "commissions_miembro_2_id_legislators_id_fk",
+        "commissions_miembro2_id_legislators_id_fk": {
+          "name": "commissions_miembro2_id_legislators_id_fk",
           "tableFrom": "commissions",
           "tableTo": "legislators",
           "columnsFrom": [
-            "miembro_2_id"
+            "miembro2_id"
           ],
           "columnsTo": [
             "id"
@@ -273,12 +200,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "commissions_miembro_3_id_legislators_id_fk": {
-          "name": "commissions_miembro_3_id_legislators_id_fk",
+        "commissions_miembro3_id_legislators_id_fk": {
+          "name": "commissions_miembro3_id_legislators_id_fk",
           "tableFrom": "commissions",
           "tableTo": "legislators",
           "columnsFrom": [
-            "miembro_3_id"
+            "miembro3_id"
           ],
           "columnsTo": [
             "id"
@@ -427,6 +354,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expediente": {
+          "name": "expediente",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "gaceta": {
           "name": "gaceta",
           "type": "text",
@@ -441,6 +382,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "numero": {
+          "name": "numero",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "anio": {
           "name": "anio",
           "type": "integer",
@@ -450,6 +398,13 @@
         },
         "fecha_vigencia": {
           "name": "fecha_vigencia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "fecha_publicacion": {
+          "name": "fecha_publicacion",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -476,6 +431,27 @@
           "notNull": false,
           "autoincrement": false,
           "default": 0
+        },
+        "contenido": {
+          "name": "contenido",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "file_hash": {
+          "name": "file_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "drive_link": {
+          "name": "drive_link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "activo": {
           "name": "activo",
@@ -530,6 +506,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "biografia": {
+          "name": "biografia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "foto": {
+          "name": "foto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "activo": {
           "name": "activo",
           "type": "integer",
@@ -541,6 +531,67 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "minutes": {
+      "name": "minutes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contenido": {
+          "name": "contenido",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "firmada": {
+          "name": "firmada",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'CURRENT_TIMESTAMP'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "minutes_session_id_sessions_id_fk": {
+          "name": "minutes_session_id_sessions_id_fk",
+          "tableFrom": "minutes",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -578,6 +629,20 @@
         },
         "asunto": {
           "name": "asunto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contenido": {
+          "name": "contenido",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vinculado_a": {
+          "name": "vinculado_a",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -644,15 +709,15 @@
           "notNull": false,
           "autoincrement": false
         },
-        "version_label": {
-          "name": "version_label",
-          "type": "text",
+        "version": {
+          "name": "version",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "mensaje": {
-          "name": "mensaje",
+        "motivo": {
+          "name": "motivo",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -670,14 +735,8 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
-        },
-        "autor": {
-          "name": "autor",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'CURRENT_TIMESTAMP'"
         }
       },
       "indexes": {},
@@ -710,6 +769,13 @@
           "notNull": true,
           "autoincrement": true
         },
+        "expediente": {
+          "name": "expediente",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "titulo": {
           "name": "titulo",
           "type": "text",
@@ -717,16 +783,16 @@
           "notNull": true,
           "autoincrement": false
         },
-        "origen": {
-          "name": "origen",
+        "extracto": {
+          "name": "extracto",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "comision_id": {
-          "name": "comision_id",
-          "type": "integer",
+        "fecha_presentacion": {
+          "name": "fecha_presentacion",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -738,34 +804,43 @@
           "notNull": false,
           "autoincrement": false
         },
-        "fase_actual": {
-          "name": "fase_actual",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "urgencia_parlamentaria": {
-          "name": "urgencia_parlamentaria",
+        "comision_id": {
+          "name": "comision_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
+          "autoincrement": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false,
-          "default": 0
+          "default": "'en_comision'"
         },
-        "fecha_ingreso": {
-          "name": "fecha_ingreso",
+        "prioridad": {
+          "name": "prioridad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'media'"
+        },
+        "tags": {
+          "name": "tags",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "fecha_actualizacion": {
-          "name": "fecha_actualizacion",
+        "ultima_actualizacion": {
+          "name": "ultima_actualizacion",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'CURRENT_TIMESTAMP'"
         },
         "activo": {
           "name": "activo",
@@ -778,12 +853,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "projects_comision_id_commissions_id_fk": {
-          "name": "projects_comision_id_commissions_id_fk",
+        "projects_ponente_id_legislators_id_fk": {
+          "name": "projects_ponente_id_legislators_id_fk",
           "tableFrom": "projects",
-          "tableTo": "commissions",
+          "tableTo": "legislators",
           "columnsFrom": [
-            "comision_id"
+            "ponente_id"
           ],
           "columnsTo": [
             "id"
@@ -791,12 +866,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "projects_ponente_id_legislators_id_fk": {
-          "name": "projects_ponente_id_legislators_id_fk",
+        "projects_comision_id_commissions_id_fk": {
+          "name": "projects_comision_id_commissions_id_fk",
           "tableFrom": "projects",
-          "tableTo": "legislators",
+          "tableTo": "commissions",
           "columnsFrom": [
-            "ponente_id"
+            "comision_id"
           ],
           "columnsTo": [
             "id"
@@ -875,6 +950,20 @@
           "notNull": false,
           "autoincrement": false
         },
+        "orden_dia": {
+          "name": "orden_dia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "acta_pdf": {
+          "name": "acta_pdf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "activo": {
           "name": "activo",
           "type": "integer",
@@ -882,6 +971,90 @@
           "notNull": false,
           "autoincrement": false,
           "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "sync_queue": {
+      "name": "sync_queue",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'laws'"
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'pending'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_retry": {
+          "name": "next_retry",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'CURRENT_TIMESTAMP'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
@@ -920,7 +1093,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "'legislador'"
+          "default": "'user'"
         },
         "nombre_completo": {
           "name": "nombre_completo",
@@ -929,12 +1102,49 @@
           "notNull": false,
           "autoincrement": false
         },
+        "security_question": {
+          "name": "security_question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "security_answer_hash": {
+          "name": "security_answer_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recovery_code_hash": {
+          "name": "recovery_code_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "password_reset_required": {
+          "name": "password_reset_required",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
         "ultimo_login": {
           "name": "ultimo_login",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'CURRENT_TIMESTAMP'"
         },
         "activo": {
           "name": "activo",

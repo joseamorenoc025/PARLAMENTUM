@@ -98,6 +98,7 @@ export const runMigrations = (dbPath) => {
     console.log('[MIGRATE] Migration process finished successfully.');
   } catch (error) {
     console.error(`[MIGRATE] FATAL ERROR: ${error.message}`);
+    throw error;
   } finally {
     sqlite.close();
     console.log('[MIGRATE] Database closed.');

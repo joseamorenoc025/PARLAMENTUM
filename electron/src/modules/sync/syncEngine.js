@@ -40,7 +40,7 @@ export class SyncEngine {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
     const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
     
-    const lawsJson = localLaws.map(local => {
+<    const lawsJson = localLaws.map(local => {
       let link = local.driveLink ? this.transformDriveLink(local.driveLink) : null;
       if (local.rutaPdf) {
         // En GitHub Pages, si el JSON está en public/portal/leyes.json, 
@@ -51,10 +51,12 @@ export class SyncEngine {
       return {
         id: local.id,
         titulo: local.titulo,
+        tipo: local.tipo,
+        numero: local.numero,
         gaceta: local.gaceta,
         anio: local.anio,
         expediente: local.expediente,
-        link_drive: link,
+        link_drive: link || this.transformDriveLink(local.contenido?.replace('Enlace de descarga: ', '')),
         fecha_publicacion: local.fechaPublicacion,
         updated_at: new Date().toISOString()
       };
@@ -168,14 +170,17 @@ export class SyncEngine {
       if (!token) throw new Error('Token de GitHub no configurado.');
       const client = new GitHubClient(token);
       
-      if (type === 'all' || type === 'laws') await this.syncLaws(client);
-      if (type === 'all' || type === 'legislators') await this.syncLegislators(client);
-      if (type === 'all' || type === 'projects') await this.syncProjects(client);
       if (type === 'all' || type === 'config') await this.syncConfig(client);
       if (type === 'all' || type === 'logo') await this.syncLogo(client);
 
-      logger.info(`Sincronización [${type}] exitosa.`);
-      return { success: true };
+      const results = {
+        laws: (type === 'all' || type === 'laws') ? await this.syncLaws(client) : 0,
+        legislators: (type === 'all' || type === 'legislators') ? await this.syncLegislators(client) : 0,
+        projects: (type === 'all' || type === 'projects') ? await this.syncProjects(client) : 0
+      };
+
+      logger.info(`Sincronización [${type}] exitosa. Detalle:`, results);
+      return { success: true, count: results.laws };
     } catch (error) {
       logger.error(`Error en SyncEngine.run [${type}]:`, error);
       throw error;

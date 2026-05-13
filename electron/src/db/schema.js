@@ -25,12 +25,14 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
-  role: text('role').default('admin'),
+<  role: text('role').default('admin'),
   nombreCompleto: text('nombre_completo'),
   ultimoLogin: text('ultimo_login'),
   securityQuestion: text('security_question'),
   securityAnswerHash: text('security_answer_hash'),
   recoveryCodeHash: text('recovery_code_hash'),
+  passwordResetRequired: integer('password_reset_required').default(0),
+  activo: integer('activo').default(1),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -80,6 +82,7 @@ export const laws = sqliteTable('laws', {
   expediente: text('expediente'),
   gaceta: text('gaceta'),
   tipo: text('tipo'),
+  numero: text('numero'),
   anio: integer('anio'),
   fechaVigencia: text('fecha_vigencia'),
   fechaPublicacion: text('fecha_publicacion'),
@@ -125,6 +128,11 @@ export const projects = sqliteTable('projects', {
   extracto: text('extracto'),
   origen: text('origen'),
   faseActual: text('fase_actual').default('Estudio en Comisión'),
+  linkPrimeraDiscusion: text('link_1ra_discusion'),
+  linkConsultaPublica: text('link_consulta_publica'),
+  linkSegundaDiscusion: text('link_2da_discusion'),
+  linkTerceraDiscusion: text('link_3ra_discusion'),
+  fechaConsultaPublica: text('fecha_consulta_publica'),
   urgenciaParlamentaria: integer('urgencia_parlamentaria').default(0),
   fechaIngreso: text('fecha_ingreso'),
   ponenteId: integer('ponente_id').references(() => legislators.id),
@@ -159,6 +167,17 @@ export const documents = sqliteTable('documents', {
   hashIntegridad: text('hash_integridad'),
   fechaSubida: text('fecha_subida'),
   contenidoBase64: text('contenido_base64'),
+  activo: integer('activo').default(1),
+});
+
+// Acuerdos de Cámara
+export const agreements = sqliteTable('agreements', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  numeroCorrelativo: text('numero_correlativo').unique(),
+  fecha: text('fecha').notNull(),
+  objeto: text('objeto').notNull(),
+  sesionId: integer('sesion_id').references(() => sessions.id),
+  driveLink: text('drive_link'),
   activo: integer('activo').default(1),
 });
 

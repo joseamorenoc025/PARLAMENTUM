@@ -14,7 +14,7 @@ const DEFAULT_REPO = 'cerebro_legislativo';
 /**
  * Obtiene la configuración de repositorio de la DB o usa defaults.
  */
-async function getRepoConfig() {
+export async function getRepoConfig() {
   const config = db.select().from(schema.config).all();
   const owner = config.find(c => c.key === 'sync_github_owner')?.value || DEFAULT_OWNER;
   const repo = config.find(c => c.key === 'sync_github_repo')?.value || DEFAULT_REPO;

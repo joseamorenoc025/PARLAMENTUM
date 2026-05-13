@@ -1,4 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -63,6 +65,26 @@ app.whenReady().then(async () => {
     createWindow();
     setupIPCHandlers(mainWindow);
     setupBackupHandlers(mainWindow);
+
+    // 4. Configuración de Auto-Updates
+    if (process.env.NODE_ENV !== 'development') {
+      autoUpdater.checkForUpdatesAndNotify();
+    }
+
+    autoUpdater.on('update-available', () => {
+      logger.info('Update available');
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Actualización Lista',
+        message: 'Una nueva versión ha sido descargada. ¿Deseas reiniciar para aplicar los cambios?',
+        buttons: ['Reiniciar y Actualizar', 'Más tarde']
+      }).then((result) => {
+        if (result.response === 0) autoUpdater.quitAndInstall();
+      });
+    });
 
     console.log('[MAIN] Initialization complete.');
   } catch (error) {

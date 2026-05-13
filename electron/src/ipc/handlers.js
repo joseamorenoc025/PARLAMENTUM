@@ -14,9 +14,15 @@ import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { setupInitializeSchema } from './schemas/setup.js';
 import { logSchema, qrGenerateSchema, analyticsOptInSchema } from './schemas/misc.js';
+import { backupExportSchema, backupImportSchema } from './schemas/backup.js';
+import { analyticsSetOptInSchema } from './schemas/analytics.js';
 
 import { analytics } from '../services/analytics.js';
 import { enqueueTask } from '../modules/sync/index.js';
+import { createBackupBuffer, restoreFromBuffer } from '../modules/backup/localBackup.js';
+import { uploadBackupToGitHub, downloadBackupFromGitHub } from '../modules/backup/githubBackup.js';
+import { loadToken } from '../modules/sync/tokenStorage.js';
+import { getRepoConfig } from '../modules/sync/index.js';
 
 export const setupIPCHandlers = (mainWindow) => {
   // DB Ready Check
@@ -34,6 +40,8 @@ export const setupIPCHandlers = (mainWindow) => {
     const validation = validateIPCInput(lawImportSchema, rawData, 'laws:import');
     const { metadata } = validation.data;
     try {
+      const year = metadata.anio || (metadata.fechaPublicacion ? new Date(metadata.fechaPublicacion).getFullYear() : new Date().getFullYear());
+      
       let rutaPdf = null;
       if (metadata.localFilePath && fs.existsSync(metadata.localFilePath)) {
         const docsPath = path.join(app.getPath('userData'), 'documents');
@@ -44,30 +52,38 @@ export const setupIPCHandlers = (mainWindow) => {
         fs.copyFileSync(metadata.localFilePath, rutaPdf);
       }
 
-      const newLaw = {
+      const lawData = {
         titulo: metadata.titulo,
         nombre: metadata.titulo,
-        expediente: `${metadata.gaceta} - ${metadata.anio}`, // Usamos gaceta y año como identificador
+        expediente: metadata.expediente || `${metadata.gaceta} #${metadata.numero || ''} (${year})`,
         contenido: metadata.driveLink ? `Enlace de descarga: ${metadata.driveLink}` : null,
-        driveLink: metadata.driveLink || null,
-        rutaPdf: rutaPdf,
-        fechaPublicacion: new Date().toISOString(),
+        fechaPublicacion: metadata.fechaPublicacion || new Date().toISOString(),
         tipo: metadata.gaceta,
-        anio: metadata.anio,
-        gaceta: metadata.gaceta,
+        numero: metadata.numero,
+        anio: year,
+        driveLink: metadata.driveLink || null,
+        fileHash: metadata.fileHash || null,
+        rutaPdf: rutaPdf,
         activo: 1
       };
       
-      const result = db.insert(schema.laws).values(newLaw).run();
-      
-      // Encolar sincronización (Fase 3)
-      try {
-        await enqueueTask('laws', result.lastInsertRowid, 'add');
-      } catch (e) {
-        logger.error('Error auto-enqueuing law sync:', e);
+      if (metadata.id) {
+        db.update(schema.laws).set(lawData).where(eq(schema.laws.id, metadata.id)).run();
+        try {
+          await enqueueTask('laws', metadata.id, 'update');
+        } catch (e) {
+          logger.error('Error auto-enqueuing law update sync:', e);
+        }
+        return { success: true, id: metadata.id };
+      } else {
+        const result = db.insert(schema.laws).values(lawData).run();
+        try {
+          await enqueueTask('laws', result.lastInsertRowid, 'add');
+        } catch (e) {
+          logger.error('Error auto-enqueuing law add sync:', e);
+        }
+        return { success: true, id: result.lastInsertRowid };
       }
-
-      return { success: true, id: result.lastInsertRowid };
     } catch (err) {
       logger.error('Error importing law:', err);
       throw err;
@@ -113,7 +129,64 @@ export const setupIPCHandlers = (mainWindow) => {
     }
   });
 
-  // DB
+  // DB & Backups
+  ipcMain.handle('backup:export', async (_, rawData) => {
+    const validation = validateIPCInput(backupExportSchema, rawData, 'backup:export');
+    const password = validation.data;
+    try {
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+        title: 'Exportar Respaldo de Seguridad',
+        defaultPath: `respaldo_legislativo_${new Date().toISOString().split('T')[0]}.clbak`,
+        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }]
+      });
+
+      if (canceled || !filePath) return { success: false, message: 'Operación cancelada' };
+
+      const backupBuffer = await createBackupBuffer(dbPath, configPath, password);
+      fs.writeFileSync(filePath, backupBuffer);
+
+      return { success: true, path: filePath };
+    } catch (err) {
+      logger.error('Error al exportar backup:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:import', async (_, rawData) => {
+    const validation = validateIPCInput(backupImportSchema, rawData, 'backup:import');
+    const password = validation.data;
+    try {
+      const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Seleccionar Archivo de Respaldo',
+        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }],
+        properties: ['openFile']
+      });
+
+      if (canceled || filePaths.length === 0) return { success: false, message: 'Operación cancelada' };
+
+      const backupBuffer = fs.readFileSync(filePaths[0]);
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      sqlite.close();
+
+      try {
+        await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
+        return { success: true, message: 'Sistema restaurado correctamente. La aplicación debe reiniciarse.' };
+      } catch (restoreErr) {
+        throw restoreErr;
+      }
+    } catch (err) {
+      logger.error('Error al importar backup:', err);
+      throw err;
+    }
+  });
+
   ipcMain.handle('db:backup:local', async () => {
     try {
       const BACKUP_PATH = path.join(app.getPath('userData'), 'backups');
@@ -126,6 +199,53 @@ export const setupIPCHandlers = (mainWindow) => {
       return { success: true, path: backupFile };
     } catch (err) {
       logger.error('Backup error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:cloud:upload', async (_, password) => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      const backupBuffer = await createBackupBuffer(dbPath, configPath, password);
+      const tempPath = path.join(app.getPath('temp'), 'cloud_sync.clbak');
+      fs.writeFileSync(tempPath, backupBuffer);
+
+      const token = await loadToken();
+      const { owner, repo } = await getRepoConfig();
+      if (!token) throw new Error('No hay token de GitHub configurado');
+      
+      await uploadBackupToGitHub(token, owner, repo, tempPath);
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+      return { success: true };
+    } catch (err) {
+      logger.error('Error in backup:cloud:upload:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('backup:cloud:download', async (_, password) => {
+    try {
+      const token = await loadToken();
+      const { owner, repo } = await getRepoConfig();
+      if (!token) throw new Error('No hay token de GitHub configurado');
+      
+      const tempPath = path.join(app.getPath('temp'), 'cloud_restore.clbak');
+      await downloadBackupFromGitHub(token, owner, repo, tempPath);
+      
+      const backupBuffer = fs.readFileSync(tempPath);
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.join(userDataPath, 'legis.db');
+      const configPath = path.join(app.getAppPath(), 'config.json');
+
+      sqlite.close();
+      await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+      return { success: true, message: 'Sistema sincronizado desde la nube. Reinicie la aplicación.' };
+    } catch (err) {
+      logger.error('Error in backup:cloud:download:', err);
       throw err;
     }
   });
@@ -148,7 +268,7 @@ export const setupIPCHandlers = (mainWindow) => {
 
   ipcMain.handle('db:select', async (_, rawData) => {
     const validation = validateIPCInput(dbSelectSchema, rawData, 'db:select');
-    const { table, where } = validation.data;
+    const { table } = validation.data;
     try {
       const tableSchema = schema[table];
       if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
@@ -170,7 +290,6 @@ export const setupIPCHandlers = (mainWindow) => {
     const validation = validateIPCInput(dbUpsertSchema, rawData, 'db:upsert');
     const { table, data: rawDataObj } = validation.data;
 
-    // Normalizar datos para SQLite (Drizzle/Better-SQLite3)
     const data = Object.entries(rawDataObj).reduce((acc, [key, value]) => {
       if (value === undefined) return acc;
       if (typeof value === 'boolean') {
@@ -187,33 +306,22 @@ export const setupIPCHandlers = (mainWindow) => {
       const tableSchema = schema[table];
       if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
 
-      // Manejo especial para tabla config (PK es 'key')
       if (table === 'config') {
         const { key, ...updateData } = data;
         if (!key) throw new Error('Config key is required for upsert');
         
-        // Intentar actualizar, si falla (no existe), insertar
         const existing = db.select().from(tableSchema).where(eq(tableSchema.key, key)).all();
         if (existing.length > 0) {
-          return db.update(tableSchema)
-            .set(updateData)
-            .where(eq(tableSchema.key, key))
-            .run();
+          return db.update(tableSchema).set(updateData).where(eq(tableSchema.key, key)).run();
         } else {
-          return db.insert(tableSchema)
-            .values(data)
-            .run();
+          return db.insert(tableSchema).values(data).run();
         }
       }
 
       if (data.id) {
         const { id, ...updateData } = data;
-        const result = db.update(tableSchema)
-          .set(updateData)
-          .where(eq(tableSchema.id, id))
-          .run();
+        const result = db.update(tableSchema).set(updateData).where(eq(tableSchema.id, id)).run();
         
-        // Sincronización automática
         if (table === 'laws') {
           try { await enqueueTask('laws', id, 'update'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
@@ -225,11 +333,8 @@ export const setupIPCHandlers = (mainWindow) => {
         }
         return result;
       } else {
-        const result = db.insert(tableSchema)
-          .values(data)
-          .run();
+        const result = db.insert(tableSchema).values(data).run();
         
-        // Sincronización automática
         if (table === 'laws') {
           try { await enqueueTask('laws', result.lastInsertRowid, 'add'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
@@ -290,12 +395,25 @@ export const setupIPCHandlers = (mainWindow) => {
 
   ipcMain.handle('app:analytics:set-opt-in', async (_, rawData) => {
     try {
-      const validation = validateIPCInput(analyticsOptInSchema, rawData, 'app:analytics:set-opt-in');
+      const validation = validateIPCInput(analyticsSetOptInSchema, rawData, 'app:analytics:set-opt-in');
       const enabled = validation.data;
       await analytics.setOptIn(enabled);
       return { success: true, enabled: analytics.enabled };
     } catch (err) {
       logger.error('Error setting analytics opt-in:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('app:file-hash', async (_, filePath) => {
+    try {
+      if (!fs.existsSync(filePath)) throw new Error('Archivo no encontrado');
+      const fileBuffer = fs.readFileSync(filePath);
+      const hashSum = crypto.createHash('sha256');
+      hashSum.update(fileBuffer);
+      return hashSum.digest('hex');
+    } catch (err) {
+      logger.error('Error calculating file hash:', err);
       throw err;
     }
   });
@@ -315,7 +433,6 @@ export const setupIPCHandlers = (mainWindow) => {
     }
   });
 
-  // Misc
   ipcMain.handle('log', (_, rawData) => {
     const validation = validateIPCInput(logSchema, rawData, 'log');
     const { level, message } = validation.data;
@@ -339,7 +456,6 @@ export const setupIPCHandlers = (mainWindow) => {
       properties: ['openFile'],
       filters: [{ name: 'Documentos PDF', extensions: ['pdf'] }]
     });
-    
     if (result.canceled) return null;
     return result.filePaths[0];
   });
@@ -349,7 +465,6 @@ export const setupIPCHandlers = (mainWindow) => {
       properties: ['openFile'],
       filters: [{ name: 'Imágenes', extensions: ['jpg', 'png', 'jpeg'] }]
     });
-    
     if (result.canceled) return null;
     const filePath = result.filePaths[0];
     const buffer = fs.readFileSync(filePath);
@@ -364,17 +479,14 @@ export const setupIPCHandlers = (mainWindow) => {
         { name: 'Todos los archivos', extensions: ['*'] }
       ]
     });
-    
     if (result.canceled) return null;
     return result.filePaths[0];
   });
 
-  // Setup / Onboarding
   ipcMain.handle('app:get-setup-status', async () => {
     try {
       const userCount = db.select({ count: drizzleSql`count(*)` }).from(schema.users).all();
       const onboardingCompleted = db.select().from(schema.config).where(eq(schema.config.key, 'onboarding_completed')).all();
-      
       return {
         needsOnboarding: (userCount[0]?.count === 0) || (onboardingCompleted[0]?.value !== 'true'),
         onboardingCompleted: onboardingCompleted[0]?.value === 'true',
@@ -394,28 +506,20 @@ export const setupIPCHandlers = (mainWindow) => {
     } = validation.data;
 
     try {
-      // 1. Hashear credenciales
       const passwordHash = await bcrypt.hash(password, 10);
       const securityAnswerHash = crypto.createHash('sha256').update(securityAnswer + 'salt-legislativo').digest('hex');
-      
-      // Generar código de recuperación
       const rawRecoveryCode = crypto.randomBytes(4).toString('hex').toUpperCase().match(/.{1,4}/g).join('-');
       const recoveryCodeHash = crypto.createHash('sha256').update(rawRecoveryCode).digest('hex');
 
-      // 2. Procesar Logo si existe
       let logoPath = null;
       if (logoBuffer) {
         const assetsPath = path.join(app.getPath('userData'), 'assets');
         if (!fs.existsSync(assetsPath)) fs.mkdirSync(assetsPath, { recursive: true });
-        
         logoPath = path.join(assetsPath, 'logo.png');
-        // El logoBuffer viene como Uint8Array desde el frontend
         fs.writeFileSync(logoPath, Buffer.from(logoBuffer));
       }
 
-      // 3. Transacción atómica
       db.transaction((tx) => {
-        // Crear Admin
         tx.insert(schema.users).values({
           username,
           passwordHash,
@@ -428,7 +532,6 @@ export const setupIPCHandlers = (mainWindow) => {
           activo: 1
         }).run();
 
-        // Guardar config institucional
         const configs = [
           { key: 'chamber_name', value: chamberName },
           { key: 'timezone', value: timezone },
@@ -443,7 +546,6 @@ export const setupIPCHandlers = (mainWindow) => {
         }
       });
 
-      // Encolar sincronización de Logo y Configuración tras éxito
       try {
         if (logoPath) await enqueueTask('logo', 0, 'sync');
         await enqueueTask('config', 0, 'sync');

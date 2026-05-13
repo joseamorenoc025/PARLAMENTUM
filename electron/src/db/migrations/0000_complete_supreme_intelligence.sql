@@ -1,14 +1,4 @@
-CREATE TABLE IF NOT EXISTS `attendance` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`sesion_id` integer,
-	`legislador_id` integer,
-	`presente` integer DEFAULT 0,
-	`timestamp` text,
-	FOREIGN KEY (`sesion_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`legislador_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `audit_logs` (
+CREATE TABLE `audit_logs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`timestamp` text DEFAULT 'CURRENT_TIMESTAMP',
 	`level` text,
@@ -20,29 +10,29 @@ CREATE TABLE IF NOT EXISTS `audit_logs` (
 	`signature` text
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `commissions` (
+CREATE TABLE `commissions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`nombre` text NOT NULL,
 	`presidente_id` integer,
 	`vicepresidente_id` integer,
-	`miembro_1_id` integer,
-	`miembro_2_id` integer,
-	`miembro_3_id` integer,
-	`miembro_3_nombre` text,
+	`miembro1_id` integer,
+	`miembro2_id` integer,
+	`miembro3_id` integer,
+	`miembro3_nombre` text,
 	`activo` integer DEFAULT 1,
 	FOREIGN KEY (`presidente_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`vicepresidente_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`miembro_1_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`miembro_2_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`miembro_3_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`miembro1_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`miembro2_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`miembro3_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `config` (
+CREATE TABLE `config` (
 	`key` text PRIMARY KEY NOT NULL,
 	`value` text
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `documents` (
+CREATE TABLE `documents` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`entidad_tipo` text,
 	`entidad_id` integer,
@@ -57,67 +47,88 @@ CREATE TABLE IF NOT EXISTS `documents` (
 	`activo` integer DEFAULT 1
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `laws` (
+CREATE TABLE `laws` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`nombre` text,
+	`titulo` text,
+	`expediente` text,
 	`gaceta` text,
 	`tipo` text,
+	`numero` text,
 	`anio` integer,
 	`fecha_vigencia` text,
+	`fecha_publicacion` text,
 	`ruta_pdf` text,
 	`qr_data` text,
 	`descargas` integer DEFAULT 0,
+	`contenido` text,
+	`file_hash` text,
+	`drive_link` text,
 	`activo` integer DEFAULT 1
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `legislators` (
+CREATE TABLE `legislators` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`nombre` text NOT NULL,
 	`partido_politico` text,
 	`contacto` text,
 	`notas` text,
+	`biografia` text,
+	`foto` text,
 	`activo` integer DEFAULT 1
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `oficios` (
+CREATE TABLE `minutes` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`session_id` integer,
+	`contenido` text,
+	`firmada` integer DEFAULT 0,
+	`created_at` text DEFAULT 'CURRENT_TIMESTAMP',
+	FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `oficios` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`numero_oficio` text,
 	`fecha` text NOT NULL,
 	`organo_receptor` text,
 	`asunto` text,
+	`contenido` text,
+	`vinculado_a` text,
 	`sesion_id` integer,
 	`activo` integer DEFAULT 1,
 	FOREIGN KEY (`sesion_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `oficios_numero_oficio_unique` ON `oficios` (`numero_oficio`);--> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `project_versions` (
+CREATE UNIQUE INDEX `oficios_numero_oficio_unique` ON `oficios` (`numero_oficio`);--> statement-breakpoint
+CREATE TABLE `project_versions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`project_id` integer,
-	`version_label` text,
-	`mensaje` text,
+	`version` integer NOT NULL,
+	`motivo` text,
 	`snapshot` text,
-	`fecha_creacion` text,
-	`autor` text,
+	`fecha_creacion` text DEFAULT 'CURRENT_TIMESTAMP',
 	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `projects` (
+CREATE TABLE `projects` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`expediente` text,
 	`titulo` text NOT NULL,
-	`origen` text,
-	`comision_id` integer,
+	`extracto` text,
+	`fecha_presentacion` text,
 	`ponente_id` integer,
-	`fase_actual` text,
-	`urgencia_parlamentaria` integer DEFAULT 0,
-	`fecha_ingreso` text,
-	`fecha_actualizacion` text,
+	`comision_id` integer,
+	`estado` text DEFAULT 'en_comision',
+	`prioridad` text DEFAULT 'media',
+	`tags` text,
+	`ultima_actualizacion` text DEFAULT 'CURRENT_TIMESTAMP',
 	`activo` integer DEFAULT 1,
-	FOREIGN KEY (`comision_id`) REFERENCES `commissions`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`ponente_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`ponente_id`) REFERENCES `legislators`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`comision_id`) REFERENCES `commissions`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `sessions` (
+CREATE TABLE `sessions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`tipo` text NOT NULL,
 	`numero_correlativo` text,
@@ -127,17 +138,37 @@ CREATE TABLE IF NOT EXISTS `sessions` (
 	`hora_cierre` text,
 	`periodo` text,
 	`observaciones` text,
+	`orden_dia` text,
+	`acta_pdf` text,
 	`activo` integer DEFAULT 1
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `users` (
+CREATE TABLE `sync_queue` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`entity_type` text DEFAULT 'laws',
+	`entity_id` integer,
+	`action` text,
+	`status` text DEFAULT 'pending',
+	`attempts` integer DEFAULT 0,
+	`last_error` text,
+	`next_retry` text,
+	`created_at` text DEFAULT 'CURRENT_TIMESTAMP',
+	`updated_at` text
+);
+--> statement-breakpoint
+CREATE TABLE `users` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`username` text NOT NULL,
 	`password_hash` text NOT NULL,
-	`role` text DEFAULT 'legislador',
+	`role` text DEFAULT 'user',
 	`nombre_completo` text,
+	`security_question` text,
+	`security_answer_hash` text,
+	`recovery_code_hash` text,
+	`password_reset_required` integer DEFAULT 0,
 	`ultimo_login` text,
+	`created_at` text DEFAULT 'CURRENT_TIMESTAMP',
 	`activo` integer DEFAULT 1
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS `users_username_unique` ON `users` (`username`);
+CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);

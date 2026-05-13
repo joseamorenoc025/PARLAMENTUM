@@ -9,6 +9,7 @@ export const useLegisData = (defaultConfig) => {
   const [oficios, setOficios] = useState([]);
   const [projects, setProjects] = useState([]);
   const [laws, setLaws] = useState([]);
+  const [agreements, setAgreements] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +34,7 @@ export const useLegisData = (defaultConfig) => {
         dbOficios,
         dbProjects,
         dbLaws,
+        dbAgreements,
         dbDocuments,
         dbAuditLogs
       ] = await Promise.all([
@@ -43,6 +45,7 @@ export const useLegisData = (defaultConfig) => {
         dbService.getOficios(),
         dbService.getProjects(),
         dbService.getLaws(),
+        dbService.getAgreements(),
         dbService.getDocuments(),
         dbService.getAuditLogs()
       ]);
@@ -54,6 +57,7 @@ export const useLegisData = (defaultConfig) => {
       setOficios(dbOficios);
       setProjects(dbProjects);
       setLaws(dbLaws);
+      setAgreements(dbAgreements);
       setDocuments(dbDocuments);
       setAuditLogs(dbAuditLogs);
     } catch (err) {
@@ -147,6 +151,18 @@ export const useLegisData = (defaultConfig) => {
     await logAction('DELETE_PROJECT', 'projects', id);
   };
 
+  const saveAgreement = async (agreement) => {
+    const id = await dbService.saveAgreement(agreement);
+    await loadAllData();
+    await logAction(agreement.id ? 'UPDATE_AGREEMENT' : 'CREATE_AGREEMENT', 'agreements', id || agreement.id, agreement);
+  };
+
+  const deleteAgreement = async (id) => {
+    await dbService.deleteAgreement(id);
+    await loadAllData();
+    await logAction('DELETE_AGREEMENT', 'agreements', id);
+  };
+
   const saveDocument = async (document) => {
     const id = await dbService.saveDocument(document);
     await loadAllData();
@@ -171,6 +187,7 @@ export const useLegisData = (defaultConfig) => {
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
     laws,
+    agreements, saveAgreement, deleteAgreement,
     documents, saveDocument, deleteDocument,
     auditLogs,
     getProjectVersions,

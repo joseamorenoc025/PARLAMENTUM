@@ -15,5 +15,8 @@ export default defineConfig({
         main: 'app.html'
       }
     }
+  },
+  test: {
+    exclude: ['node_modules', 'dist', 'test/e2e/**/*']
   }
 });

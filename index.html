@@ -17,10 +17,11 @@
             <div class="container">
                 <div class="logo-area">
                     <div class="logo-icon">
-                        <i data-lucide="gavel"></i>
+                        <img id="chamber-logo" src="logo.png" alt="Logo" onerror="this.style.display='none'; document.getElementById('fallback-icon').style.display='block';">
+                        <i id="fallback-icon" data-lucide="gavel" style="display:none;"></i>
                     </div>
                     <div>
-                        <h1>Cerebro Legislativo</h1>
+                        <h1 id="chamber-name">Cerebro Legislativo</h1>
                         <p>Transparencia y Acceso a la Información</p>
                     </div>
                 </div>
@@ -44,10 +45,6 @@
                         </select>
                         <select id="filter-type">
                             <option value="">Todos los tipos</option>
-                            <option value="General">General</option>
-                            <option value="Ordenanza">Ordenanza</option>
-                            <option value="Resolución">Resolución</option>
-                            <option value="Decreto">Decreto</option>
                         </select>
                     </div>
                 </div>
@@ -69,8 +66,8 @@
         <!-- Footer -->
         <footer class="footer">
             <div class="container">
-                <p>&copy; 2026 Concejo Municipal. Todos los derechos reservados.</p>
-                <p class="footer-note">Desarrollado con Cerebro Legislativo</p>
+                <p>&copy; 2026 <span id="footer-chamber-name">Concejo Municipal</span>. Todos los derechos reservados.</p>
+                <p class="footer-note">Desarrollado por <strong>José Moreno</strong> (joseamorenoc025@gmail.com)</p>
             </div>
         </footer>
     </div>

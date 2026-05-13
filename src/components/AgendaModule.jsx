@@ -16,7 +16,12 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     ponenteId: '', 
     faseActual: 'Estudio en Comisión', 
     urgenciaParlamentaria: 0, 
-    fechaIngreso: new Date().toISOString().split('T')[0] 
+    fechaIngreso: new Date().toISOString().split('T')[0],
+    linkPrimeraDiscusion: '',
+    linkConsultaPublica: '',
+    linkSegundaDiscusion: '',
+    linkTerceraDiscusion: '',
+    fechaConsultaPublica: ''
   });
   const [detailProject, setDetailProject] = useState(null);
 
@@ -28,7 +33,12 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
       ponenteId: '', 
       faseActual: 'Estudio en Comisión', 
       urgenciaParlamentaria: 0, 
-      fechaIngreso: new Date().toISOString().split('T')[0] 
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      linkPrimeraDiscusion: '',
+      linkConsultaPublica: '',
+      linkSegundaDiscusion: '',
+      linkTerceraDiscusion: '',
+      fechaConsultaPublica: ''
     }); 
     setEditingId(null); 
     setView('kanban'); 
@@ -144,6 +154,53 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             </div>
           </div>
 
+          <div className="space-y-4 mb-8">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Documentación por Fases</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: '1ra Discusión', key: 'linkPrimeraDiscusion' },
+                { label: 'Consulta Pública', key: 'linkConsultaPublica' },
+                { label: '2da Discusión', key: 'linkSegundaDiscusion' },
+                { label: '3ra Discusión/Aprobada', key: 'linkTerceraDiscusion' }
+              ].map((fase) => (
+                <div key={fase.key} className={`p-4 rounded-2xl border flex flex-col gap-3 ${darkMode ? 'bg-gray-800/30 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[9px] font-black uppercase opacity-40">{fase.label}</p>
+                      <p className="text-xs font-bold truncate max-w-[150px]">
+                        {detailProject[fase.key] ? 'Documento Vinculado' : 'Sin enlace'}
+                      </p>
+                    </div>
+                    {detailProject[fase.key] && (
+                      <a 
+                        href={detailProject[fase.key]} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                      >
+                        <History className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                  
+                  <div className="relative">
+                    <input 
+                      type="url"
+                      placeholder="Pegar enlace de Drive..."
+                      value={detailProject[fase.key] || ''}
+                      onChange={(e) => {
+                        const newLink = e.target.value;
+                        onSave({ ...detailProject, [fase.key]: newLink });
+                        setDetailProject(prev => ({ ...prev, [fase.key]: newLink }));
+                      }}
+                      className={`w-full p-2.5 rounded-xl text-[10px] border outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-4">
             {currentIdx < phases.length - 1 && (
               <button onClick={() => handleAdvancePhase(detailProject)} className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs">
@@ -157,7 +214,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
         </div>
       </div>
     );
-  }
+    }
 
   if (view === 'form') {
     return (
@@ -167,8 +224,8 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             <Scale className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-3xl font-black">Nuevo Proyecto</h2>
-            <p className="text-sm opacity-40 font-bold uppercase tracking-widest">Iniciativa Legislativa</p>
+            <h2 className="text-3xl font-black">{editingId ? 'Editar Proyecto' : 'Nuevo Proyecto'}</h2>
+            <p className="text-sm opacity-40 font-bold uppercase tracking-widest">{editingId ? 'Actualizar Información' : 'Iniciativa Legislativa'}</p>
           </div>
         </div>
 
@@ -213,6 +270,49 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             </select>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Enlace 1ra Discusión (Opcional)</label>
+              <input 
+                type="url" 
+                placeholder="Google Drive Link..." 
+                value={form.linkPrimeraDiscusion} 
+                onChange={e => setForm({...form, linkPrimeraDiscusion: e.target.value})} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Enlace Consulta Pública (Opcional)</label>
+              <input 
+                type="url" 
+                placeholder="Google Drive Link..." 
+                value={form.linkConsultaPublica} 
+                onChange={e => setForm({...form, linkConsultaPublica: e.target.value})} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Enlace 2da Discusión (Opcional)</label>
+              <input 
+                type="url" 
+                placeholder="Google Drive Link..." 
+                value={form.linkSegundaDiscusion} 
+                onChange={e => setForm({...form, linkSegundaDiscusion: e.target.value})} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Enlace 3ra Discusión (Opcional)</label>
+              <input 
+                type="url" 
+                placeholder="Google Drive Link..." 
+                value={form.linkTerceraDiscusion} 
+                onChange={e => setForm({...form, linkTerceraDiscusion: e.target.value})} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+              />
+            </div>
+          </div>
+
           <div className="flex items-center gap-3 p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
              <input 
                type="checkbox" 
@@ -231,7 +331,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               data-testid="btn-save-project"
               className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-2xl shadow-indigo-500/30 uppercase tracking-[0.2em] text-xs"
             >
-              Registrar Proyecto
+              {editingId ? 'Guardar Cambios' : 'Registrar Proyecto'}
             </button>
           </div>
         </div>
@@ -281,9 +381,23 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                       >
                         <p className="text-[13px] font-black leading-snug mb-4 line-clamp-3">{p.titulo}</p>
                         <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50 dark:border-gray-800">
-                          <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest opacity-30">
-                             <Clock className="w-3.5 h-3.5" />
-                             <span>{p.fechaActualizacion || p.fechaIngreso}</span>
+                          <div className="flex items-center gap-3">
+                             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest opacity-30">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{p.fechaActualizacion || p.fechaIngreso}</span>
+                             </div>
+                             <button 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 setForm(p);
+                                 setEditingId(p.id);
+                                 setView('form');
+                               }}
+                               className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-indigo-500 transition-colors"
+                               title="Editar proyecto"
+                             >
+                                <Plus className="w-3.5 h-3.5 rotate-45" />
+                             </button>
                           </div>
                           {p.urgenciaParlamentaria ? (
                             <div className="flex items-center gap-1 text-red-500">
@@ -327,7 +441,20 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                   </div>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 opacity-10 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setForm(p);
+                    setEditingId(p.id);
+                    setView('form');
+                  }}
+                  className={`p-3 rounded-2xl border transition-all ${darkMode ? 'border-gray-800 hover:bg-gray-800 text-indigo-400' : 'border-gray-100 hover:bg-gray-50 text-indigo-600'}`}
+                >
+                   <Plus className="w-5 h-5 rotate-45" />
+                </button>
+                <ArrowRight className="w-5 h-5 opacity-10 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              </div>
             </div>
           ))}
         </div>
