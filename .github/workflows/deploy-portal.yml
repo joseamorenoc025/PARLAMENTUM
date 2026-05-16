@@ -1,0 +1,31 @@
+name: Deploy Portal to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    # Se activa cuando hay cambios en el portal o cuando se sincronizan datos
+    paths:
+      - 'public/portal/**'
+      - '.github/workflows/deploy-portal.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public/portal
+          publish_branch: gh-pages
+          force_orphan: true # Mantiene la rama gh-pages limpia y pequeña
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Despliegue automático del Portal Ciudadano 🚀'
