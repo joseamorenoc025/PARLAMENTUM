@@ -1,12 +1,26 @@
 [
   {
     "id": 2,
-    "titulo": "Constitucion Estadal Delta Amacuro",
+    "titulo": "constitucion",
+    "tipo": "Ordinaria",
+    "numero": "025",
     "gaceta": null,
-    "anio": 2015,
-    "expediente": "Extraordinaria #36 (2015)",
-    "link_drive": "https://drive.google.com/uc?export=download&id=10avjRb5kQtz67Dw8Kw-9Si6_yaEBmBwl",
-    "fecha_publicacion": "2015-12-16",
-    "updated_at": "2026-05-12T01:36:55.418Z"
+    "anio": 2026,
+    "expediente": "Ordinaria #025 (2026)",
+    "link_drive": "documentos/ley_1778941420763_GACETA_N°_36_EXTRAORDINARIO.pdf",
+    "fecha_publicacion": "2026-05-16",
+    "updated_at": "2026-05-16T16:25:26.953Z"
+  },
+  {
+    "id": 4,
+    "titulo": "codigo d comercio",
+    "tipo": "Ordinaria",
+    "numero": "0452",
+    "gaceta": null,
+    "anio": 2026,
+    "expediente": "Ordinaria #0452 (2026)",
+    "link_drive": "documentos/ley_1778948681800_GACETA_N°_36_EXTRAORDINARIO.pdf",
+    "fecha_publicacion": "2026-05-04",
+    "updated_at": "2026-05-16T16:25:26.953Z"
   }
 ]

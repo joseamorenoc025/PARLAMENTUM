@@ -257,9 +257,14 @@ export class SyncEngine {
    * Transforma un link de Google Drive a un link de descarga directa
    */
   transformDriveLink(url) {
-    if (!url || !url.includes('drive.google.com')) return url;
+    if (!url) return url;
     try {
-      const match = url.match(/\/d\/(.+?)(\/|$|\?)/);
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+
+      if (host !== 'drive.google.com') return url;
+
+      const match = parsed.pathname.match(/\/d\/([^/]+)/);
       if (match && match[1]) {
         return `https://drive.google.com/uc?export=download&id=${match[1]}`;
       }
