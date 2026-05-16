@@ -40,7 +40,7 @@ export class SyncEngine {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
     const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
     
-<    const lawsJson = localLaws.map(local => {
+    const lawsJson = localLaws.map(local => {
       let link = local.driveLink ? this.transformDriveLink(local.driveLink) : null;
       if (local.rutaPdf) {
         // En GitHub Pages, si el JSON está en public/portal/leyes.json, 

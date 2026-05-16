@@ -1,53 +1,43 @@
-import { test, expect, _electron as electron } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 /**
  * Suite de Pruebas de Flujo Legislativo Completo
  * Incluye validación de Temas (Dark/Light) en cada módulo.
  */
 test.describe('Flujo Legislativo y UX Transversal', () => {
-  let electronApp;
+  let testContext;
   let window;
 
   test.beforeAll(async () => {
-    // Lanzar la aplicación
-    electronApp = await electron.launch({ args: ['.'] });
-    window = await electronApp.firstWindow();
+    // 1. Lanzar app en un entorno aislado y limpio
+    testContext = await launchTestApp();
+    window = testContext.window;
+
+    // 2. Completar el Onboarding Wizard para crear el admin
+    await window.getByTestId('btn-start-setup').click({ force: true });
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
+    await window.getByTestId('chamber-name-input').fill('Cámara Workflow');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
+
+    // 3. Iniciar sesión y validar Dashboard
+    await window.locator('input[type="password"]').fill('Password123!');
+    await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
+    await expect(window.getByRole('banner').getByText('Dashboard').first()).toBeVisible({ timeout: 10000 });
   });
 
   test.afterAll(async () => {
-    await electronApp.close();
+    await cleanupTestApp(testContext);
   });
 
-  test('Configuración Inicial, Login y Dashboard (Modo Oscuro/Claro)', async () => {
-    // 1. Manejar Onboarding si aparece
-    const isWelcomeVisible = await window.locator('h2:has-text("Bienvenido a Cerebro Legislativo")').isVisible({ timeout: 2000 }).catch(() => false);
-    if (isWelcomeVisible) {
-      await window.click('button:has-text("Configurar más tarde")');
-    }
-
-    // 2. Manejar AuthScreen si aparece
-    const isAuthVisible = await window.locator('h1:has-text("Segundo Cerebro")').isVisible({ timeout: 2000 }).catch(() => false);
-    const isSignupVisible = await window.locator('h1:has-text("Crear Administrador")').isVisible({ timeout: 1000 }).catch(() => false);
+  test('Configuración Inicial y Dashboard (Modo Oscuro/Claro)', async () => {
+    // Verificar Dashboard (ahora debería estar visible por defecto gracias al beforeAll)
+    await expect(window.getByRole('banner').getByText('Dashboard').first()).toBeVisible({ timeout: 10000 });
     
-    if (isSignupVisible) {
-      // Registrar usuario de prueba
-      await window.fill('input[placeholder*="Ej: Dr."]', 'Admin Prueba');
-      await window.fill('input[placeholder="admin"]', 'admin');
-      await window.fill('input[placeholder="••••••••"]', 'Admin123!@#');
-      await window.click('button:has-text("Registrar")');
-      // Esperar a que pase a login
-      await window.waitForSelector('text=Bienvenido,', { state: 'visible', timeout: 5000 }).catch(() => {});
-    } else if (isAuthVisible) {
-      // Iniciar sesión
-      await window.fill('input[placeholder="admin"]', 'admin');
-      await window.fill('input[placeholder="••••••••"]', 'Admin123!@#');
-      await window.click('button:has-text("Acceder")');
-    }
-
-    // 3. Verificar Dashboard (ahora debería estar visible)
-    await expect(window.locator('header span')).toContainText('Dashboard', { timeout: 10000 });
-    
-    // 4. Test de Tema Transversal
+    // Test de Tema Transversal
     const body = window.locator('body');
     const themeBtn = window.locator('header button:has(svg.lucide-sun), header button:has(svg.lucide-moon)').last();
     
@@ -64,34 +54,31 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
 
   test('Ciclo de Vida de Proyectos en Agenda', async () => {
     // 1. Navegar a Agenda
-    await window.click('nav button:has-text("Agenda Legislativa")');
-    await expect(window.locator('h1')).toContainText('Gestión de Proyectos');
-
+    await window.getByTestId('nav-agenda').click();
+    await expect(window.locator('h1')).toContainText('Agenda Legislativa');
     // 2. Crear Nuevo Proyecto
-    await window.click('button:has-text("Nuevo Proyecto")');
-    await window.fill('input[placeholder*="Ej: Reforma"]', 'Proyecto de Prueba E2E');
-    await window.fill('textarea[placeholder*="Descripción"]', 'Descripción automatizada para pruebas de integridad.');
-    await window.fill('input[placeholder*="https://drive.google.com"]', 'https://drive.google.com/test-e2e');
+    await window.getByTestId('btn-new-project').click({ force: true });
+    await window.getByTestId('project-title-input').fill('Proyecto de Prueba E2E');
+    await window.fill('input[placeholder*="Google Drive Link"]', 'https://drive.google.com/test-e2e');
     
-    await window.click('button:has-text("Registrar")');
+    await window.getByTestId('btn-save-project').click({ force: true });
     
     // 3. Verificar creación en vista Kanban o Lista
     await expect(window.locator('text=Proyecto de Prueba E2E')).toBeVisible();
 
     // 4. Probar Edición (Sincronización de Drive)
     // Buscamos el botón de editar en la tarjeta
-    await window.click('button[title="Editar Proyecto"]');
+    await window.click('button[title="Editar proyecto"]');
     await window.fill('input[placeholder*="https://drive.google.com"]', 'https://drive.google.com/updated-link');
-    await window.click('button:has-text("Actualizar")');
+    await window.getByTestId('btn-save-project').click({ force: true });
     
-    await expect(window.locator('text=Actualizado correctamente')).toBeVisible();
+    await expect(window.locator('text=Proyecto guardado exitosamente')).toBeVisible();
   });
 
   test('Módulo de Acuerdos y Acceso QR', async () => {
     // 1. Navegar a Acuerdos
-    await window.click('nav button:has-text("Acuerdos")');
-    await expect(window.locator('h1')).toContainText('Acuerdos de Cámara');
-
+    await window.getByTestId('nav-acuerdos').click();
+    await expect(window.locator('h1').first()).toContainText('Acuerdos de Cámara');
     // 2. Crear Acuerdo
     await window.click('button:has-text("Nuevo Acuerdo")');
     await window.fill('input[placeholder="Ej: 001-2024"]', 'ACU-2026-001');
@@ -110,7 +97,7 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
 
   test('Integridad Visual y Logout', async () => {
     // Volver a dashboard
-    await window.click('nav button:has-text("Dashboard")');
+    await window.getByTestId('nav-dashboard').click({ force: true });
     
     // Logout
     await window.click('button:has-text("Cerrar Sesión")');

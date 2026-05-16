@@ -29,6 +29,7 @@ const BackupRestoreStep = ({ darkMode, onComplete, onCancel, addToast }) => {
     setIsSubmitting(true);
     setError(null);
     
+    console.log('E2E Debug - Restoring from:', { filePath, password: password ? '***' : 'missing' });
     try {
       const result = await window.legisAPI.invoke('backup:validateAndRestore', {
         filePath,

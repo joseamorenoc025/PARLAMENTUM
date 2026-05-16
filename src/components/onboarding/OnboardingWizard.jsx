@@ -11,13 +11,9 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState(null);
   
-  // Data State
   const [formData, setFormData] = useState({
-    username: '',
     password: '',
     confirmPassword: '',
-    securityQuestion: '¿Cuál fue el nombre de su primera mascota?',
-    securityAnswer: '',
     chamberName: '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     logoBuffer: null
@@ -28,10 +24,8 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
   const validateStep = () => {
     const newErrors = {};
     if (step === 2) {
-      if (formData.username.length < 3) newErrors.username = 'Mínimo 3 caracteres';
       if (formData.password.length < 8) newErrors.password = 'Mínimo 8 caracteres';
       if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Las contraseñas no coinciden';
-      if (formData.securityAnswer.length < 3) newErrors.securityAnswer = 'Mínimo 3 caracteres';
     }
     if (step === 3) {
       if (formData.chamberName.length < 3) newErrors.chamberName = 'Mínimo 3 caracteres';
@@ -123,19 +117,6 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
             </div>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">Nombre de Usuario</label>
-                <input 
-                  type="text" 
-                  value={formData.username}
-                  data-testid="admin-username-input"
-                  onChange={e => setFormData({...formData, username: e.target.value})}
-                  className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                  placeholder="ej: admin.secretaria"
-                />
-                {errors.username && <p className="text-xs text-red-500 mt-1 ml-1">{errors.username}</p>}
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">Contraseña</label>
@@ -149,7 +130,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                   {errors.password && <p className="text-xs text-red-500 mt-1 ml-1">{errors.password}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">Confirmar</label>
+                  <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">Confirmar Contraseña</label>
                   <input 
                     type="password" 
                     value={formData.confirmPassword}
@@ -159,28 +140,6 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                   />
                   {errors.confirmPassword && <p className="text-xs text-red-500 mt-1 ml-1">{errors.confirmPassword}</p>}
                 </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-                <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">Pregunta de Seguridad (Recuperación)</label>
-                <select 
-                  value={formData.securityQuestion}
-                  onChange={e => setFormData({...formData, securityQuestion: e.target.value})}
-                  className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all mb-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                >
-                  <option>¿Cuál fue el nombre de su primera mascota?</option>
-                  <option>¿En qué ciudad nació su madre?</option>
-                  <option>¿Cuál era el nombre de su escuela primaria?</option>
-                </select>
-                <input 
-                  type="text" 
-                  value={formData.securityAnswer}
-                  data-testid="admin-security-answer-input"
-                  onChange={e => setFormData({...formData, securityAnswer: e.target.value})}
-                  placeholder="Su respuesta..."
-                  className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                />
-                {errors.securityAnswer && <p className="text-xs text-red-500 mt-1 ml-1">{errors.securityAnswer}</p>}
               </div>
             </div>
 
@@ -281,17 +240,53 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
             <div className={`p-6 rounded-3xl border-2 border-dashed text-left ${darkMode ? 'bg-gray-900 border-indigo-500/30' : 'bg-indigo-50 border-indigo-200'}`}>
               <div className="flex items-center gap-2 mb-3 text-indigo-500">
                 <ShieldAlert className="w-5 h-5" />
-                <span className="text-sm font-black uppercase tracking-widest">Código de Recuperación</span>
+                <span className="text-sm font-black uppercase tracking-widest">Frase de Recuperación (12 Palabras)</span>
               </div>
-              <p className="text-xs opacity-60 mb-4 leading-relaxed">Guarde este código en un lugar seguro. Le permitirá recuperar el acceso si olvida su contraseña o pierde el acceso a la cuenta administradora.</p>
-              <div className={`p-4 rounded-xl text-center font-mono text-2xl font-black tracking-widest ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'}`}>
-                {recoveryCode}
+              <p className="text-xs opacity-60 mb-4 leading-relaxed">Guarde esta frase en un lugar seguro (se recomienda imprimirla). Le permitirá restablecer su contraseña si pierde el acceso.</p>
+              
+              <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base`}>
+                {recoveryCode && recoveryCode.split(' ').map((word, i) => (
+                  <div key={i} className="flex gap-2 justify-center">
+                    <span className="opacity-40 text-[10px] self-center">{i + 1}.</span>
+                    <span className="tracking-widest uppercase">{word}</span>
+                  </div>
+                ))}
               </div>
+
+              <button 
+                onClick={() => {
+                  import('jspdf').then(({ jsPDF }) => {
+                    const doc = new jsPDF();
+                    doc.setFontSize(22);
+                    doc.text("Cerebro Legislativo", 20, 30);
+                    doc.setFontSize(16);
+                    doc.text("Frase de Recuperación", 20, 45);
+                    doc.setFontSize(12);
+                    doc.text("Guarde este documento en un lugar seguro (ej. caja fuerte).", 20, 60);
+                    doc.text("Estas 12 palabras son la ÚNICA forma de recuperar el acceso", 20, 70);
+                    doc.text("si olvida su contraseña.", 20, 80);
+                    
+                    doc.setFontSize(14);
+                    doc.setFont("courier", "bold");
+                    const words = recoveryCode.split(' ');
+                    let y = 100;
+                    for (let i = 0; i < words.length; i += 3) {
+                      const line = words.slice(i, i + 3).map((w, idx) => `${i + idx + 1}. ${w.toUpperCase()}`).join('    ');
+                      doc.text(line, 20, y);
+                      y += 15;
+                    }
+                    doc.save("Frase_de_Recuperacion_Cerebro_Legislativo.pdf");
+                  });
+                }}
+                className="w-full py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors"
+              >
+                Exportar como PDF
+              </button>
             </div>
 
             <div className="flex items-center gap-3 p-4 bg-amber-500/5 text-amber-500 rounded-2xl border border-amber-500/10 text-left">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-[10px] font-bold leading-tight">ATENCIÓN: Por seguridad, este código no volverá a mostrarse. Por favor, anótelo o tome una captura antes de continuar.</p>
+              <p className="text-[10px] font-bold leading-tight">ATENCIÓN: Por seguridad, esta frase no volverá a mostrarse. Asegúrese de haberla guardado antes de continuar.</p>
             </div>
 
             <button 

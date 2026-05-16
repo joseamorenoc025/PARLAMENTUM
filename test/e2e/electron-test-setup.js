@@ -43,6 +43,7 @@ export async function launchTestApp() {
   electronApp.process().stderr.on('data', data => console.error(`[MAIN-STDERR] ${data.toString()}`));
 
   const window = await electronApp.firstWindow({ timeout: 15000 });
+  await window.setViewportSize({ width: 1280, height: 800 });
   
   // Capturar logs de la consola para depuración
   window.on('console', msg => console.log(`[BROWSER] ${msg.text()}`));
@@ -69,7 +70,9 @@ export async function launchTestApp() {
 /**
  * Limpia el ambiente de pruebas.
  */
-export async function cleanupTestApp({ electronApp, testUserDataDir }) {
+export async function cleanupTestApp(context) {
+  if (!context) return;
+  const { electronApp, testUserDataDir } = context;
   if (electronApp) {
     await electronApp.close();
   }

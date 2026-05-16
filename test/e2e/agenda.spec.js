@@ -1,77 +1,48 @@
-import { test, _electron as electron, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 test.describe('Agenda Legislativa', () => {
-  let electronApp;
+  let testContext;
   let window;
-  let userDataDir;
 
   test.beforeAll(async () => {
-    userDataDir = path.join(os.tmpdir(), `cerebro-test-agenda-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    testContext = await launchTestApp();
+    window = testContext.window;
+
+    // Resetear DB a estado cero
+    await window.evaluate(() => window.legisAPI.invoke('db:reset-for-tests', { onboardingCompleted: false }));
     
-    electronApp = await electron.launch({ 
-      args: ['.', `--user-data-dir=${userDataDir}`] 
-    });
-    
-    window = await electronApp.firstWindow();
-    await window.waitForLoadState('networkidle');
-
-    // Verificar salud
-    await expect(async () => {
-      const health = await window.evaluate(() => window.legisAPI.invoke('app:health'));
-      expect(health.status).toBe('ok');
-    }).toPass({ timeout: 15000 });
-
-    // Esperar a que el spinner de carga desaparezca
-    await expect(window.locator('.animate-spin')).not.toBeVisible({ timeout: 30000 });
-
-    // Manejar Onboarding si aparece
-    const skipButton = window.locator('button:has-text("Configurar más tarde")');
-    if (await skipButton.isVisible()) {
-      await skipButton.click({ force: true });
-      await window.waitForTimeout(500);
-    }
-
-    // Registrar un admin para el test
-    await window.getByRole('button', { name: 'Registrar nuevo Administrador' }).click({ force: true });
-    await window.getByPlaceholder('Ej: Dr. Juan Pérez').fill('Agenda Admin');
-    await window.getByPlaceholder('admin').fill('admin_agenda');
-    await window.locator('input[type="password"]').fill('Password123!@#');
-    await window.getByRole('button', { name: 'Registrar y Configurar' }).click({ force: true });
+    // Registrar un admin para el test usando el wizard
+    await window.getByTestId('btn-start-setup').click({ force: true });
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
+    await window.getByTestId('chamber-name-input').fill('Cámara Agenda');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
     
     // Login
-    await window.getByPlaceholder('admin').fill('admin_agenda');
-    await window.locator('input[type="password"]').fill('Password123!@#');
+    await window.locator('input[type="password"]').fill('Password123!');
     await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
     
-    await expect(window.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 20000 });
+    await expect(window.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible({ timeout: 20000 });
   });
 
   test.afterAll(async () => {
-    await electronApp.close();
-    if (fs.existsSync(userDataDir)) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        fs.rmSync(userDataDir, { recursive: true, force: true });
-      } catch (e) {
-        console.warn('Could not clean up userDataDir:', userDataDir);
-      }
-    }
+    await cleanupTestApp(testContext);
   });
 
   test('Debe permitir crear y avanzar un proyecto de ley', async () => {
     // 1. Navegar a Agenda
-    await window.getByRole('button', { name: 'Agenda Legislativa' }).click({ force: true });
-    await expect(window.getByRole('heading', { name: 'Agenda Legislativa' })).toBeVisible();
+    await window.getByTestId('nav-agenda').click();
+    await expect(window.getByTestId('agenda-page-title')).toBeVisible();
 
     // 2. Abrir formulario
-    await window.getByRole('button', { name: 'Nuevo Proyecto' }).click({ force: true });
+    await window.getByTestId('btn-new-project').click({ force: true });
     
     // 3. Llenar formulario
     const proyectoTitulo = `Proyecto E2E Test ${Date.now()}`;
-    await window.getByPlaceholder('Escribe el título institucional completo...').fill(proyectoTitulo);
+    await window.getByTestId('project-title-input').fill(proyectoTitulo);
     
     // Seleccionar comisión. Esperar a que haya opciones.
     const comisionSelect = window.locator('select').nth(1);
@@ -85,8 +56,8 @@ test.describe('Agenda Legislativa', () => {
     }
 
     // 4. Guardar
-    await window.getByRole('button', { name: 'Registrar Proyecto' }).click({ force: true });
-
+    await window.getByTestId('btn-save-project').click({ force: true });
+    
     // 5. Verificar en Kanban (columna Estudio en Comisión)
     const card = window.getByText(proyectoTitulo).first();
     await expect(card).toBeVisible({ timeout: 20000 });
@@ -109,6 +80,6 @@ test.describe('Agenda Legislativa', () => {
     await expect(window.locator('p.text-indigo-500').first()).toContainText('Consulta Pública');
 
     // Volver al tablero
-    await window.getByRole('button', { name: 'Volver al Tablero' }).click();
+    await window.getByText('Volver al Tablero').click();
   });
 });

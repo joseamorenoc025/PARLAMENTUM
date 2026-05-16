@@ -228,6 +228,7 @@ export default function App() {
             {filteredNavItems.map(item => (
               <button
                 key={item.id}
+                data-testid={`nav-${item.id}`}
                 onClick={() => setCurrentPage(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                   ${currentPage === item.id 
@@ -266,7 +267,7 @@ export default function App() {
         {/* Main Content */}
         <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
           {/* Top Bar */}
-          <header className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
+          <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">{navItems.find(i => i.id === currentPage)?.label}</span>
             </div>

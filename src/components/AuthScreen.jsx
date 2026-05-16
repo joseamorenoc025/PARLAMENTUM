@@ -7,13 +7,46 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
+  const [showRecoverPassword, setShowRecoverPassword] = useState(false);
   const [restorePassword, setRestorePassword] = useState('');
+  const [recoveryPhrase, setRecoveryPhrase] = useState('');
   const [form, setForm] = useState({
-    username: '',
     password: '',
     nombreCompleto: '',
     role: 'admin'
   });
+
+  const handleRecover = async () => {
+    if (recoveryPhrase.trim().split(/\s+/).length !== 12) {
+      addToast('Debe ingresar las 12 palabras exactas', 'warning');
+      return;
+    }
+    if (passwordStrength.score < 100) {
+      addToast('La nueva contraseña debe ser fuerte', 'warning');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await window.legisAPI.invoke('auth:recover', {
+        phrase: recoveryPhrase.trim().toLowerCase(),
+        newPassword: form.password
+      });
+
+      if (result.success) {
+        addToast('Contraseña restablecida con éxito. Ya puede iniciar sesión.', 'success');
+        setShowRecoverPassword(false);
+        setRecoveryPhrase('');
+        setForm({ ...form, password: '' });
+      } else {
+        addToast(result.message || 'Frase incorrecta', 'error');
+      }
+    } catch (e) {
+      addToast('Error al restablecer contraseña', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const passwordCriteria = useMemo(() => [
     { label: 'Mínimo 12 caracteres', met: form.password.length >= 12 },
@@ -33,8 +66,8 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.username || !form.password) {
-      addToast('Usuario y contraseña requeridos', 'error');
+    if (!form.password) {
+      addToast('La contraseña es requerida', 'error');
       return;
     }
 
@@ -46,16 +79,9 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     setLoading(true);
     try {
       if (isSignUp) {
-        const existing = await dbService.getUserByUsername(form.username);
-        if (existing) {
-          addToast('El usuario ya existe', 'error');
-          setLoading(false);
-          return;
-        }
-
         const hash = await window.legisAPI.auth.hash(form.password);
         await dbService.saveUser({
-          username: form.username,
+          username: 'admin',
           passwordHash: hash,
           nombreCompleto: form.nombreCompleto,
           role: form.role
@@ -63,9 +89,9 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         addToast('Usuario registrado exitosamente', 'success');
         setIsSignUp(false);
       } else {
-        const user = await dbService.getUserByUsername(form.username);
+        const user = await window.legisAPI.invoke('auth:get-user');
         if (!user) {
-          addToast('Usuario no encontrado', 'error');
+          addToast('El sistema no está configurado', 'error');
           setLoading(false);
           return;
         }
@@ -74,7 +100,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         if (isValid) {
           await dbService.updateLastLogin(user.id);
           onLogin(user);
-          addToast(`Bienvenido, ${user.nombreCompleto || user.username}`, 'success');
+          addToast(`Bienvenido`, 'success');
         } else {
           addToast('Contraseña incorrecta', 'error');
         }
@@ -120,20 +146,6 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold opacity-50 mb-1 uppercase tracking-wider ml-1">Usuario</label>
-            <div className="relative">
-              <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="admin"
-                className={`w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                value={form.username}
-                onChange={e => setForm({ ...form, username: e.target.value })}
-                required
-              />
-            </div>
-          </div>
 
           <div>
             <label className="block text-xs font-semibold opacity-50 mb-1 uppercase tracking-wider ml-1">Contraseña</label>
@@ -239,20 +251,80 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                 </button>
               </div>
             </div>
+          ) : showRecoverPassword ? (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 text-left">
+              <p className="text-xs font-bold text-amber-500 uppercase text-center">Recuperación de Contraseña</p>
+              
+              <div>
+                <label className="block text-xs font-semibold opacity-50 mb-1 ml-1">Frase de 12 Palabras</label>
+                <textarea
+                  placeholder="Ingrese las 12 palabras separadas por espacios..."
+                  className={`w-full p-3 rounded-xl border outline-none text-sm resize-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                  rows={3}
+                  value={recoveryPhrase}
+                  onChange={e => setRecoveryPhrase(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold opacity-50 mb-1 ml-1">Nueva Contraseña</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Nueva contraseña fuerte"
+                    className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
+                  </button>
+                </div>
+                {form.password.length > 0 && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
+                      <span className="opacity-60">Seguridad: {passwordStrength.label}</span>
+                      <span className={passwordStrength.score === 100 ? 'text-emerald-500' : ''}>{passwordStrength.score}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ${passwordStrength.color}`} 
+                        style={{ width: `${passwordStrength.score}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setShowRecoverPassword(false)}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold ${darkMode ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleRecover}
+                  disabled={loading}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center justify-center"
+                >
+                  {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Restablecer'}
+                </button>
+              </div>
+            </div>
           ) : (
             <>
               <button
-                onClick={() => { setIsSignUp(!isSignUp); setForm({...form, password: ''}); }}
-                className={`text-sm font-medium transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'} flex items-center justify-center gap-2 mx-auto`}
+                type="button"
+                onClick={() => setShowRecoverPassword(true)}
+                className={`text-xs font-medium transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-indigo-600'} flex items-center justify-center gap-2 mx-auto`}
               >
-                {isSignUp ? (
-                  <>¿Ya tienes cuenta? Iniciar Sesión</>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    Registrar nuevo Administrador
-                  </>
-                )}
+                ¿Olvidaste tu contraseña? Restablecer acceso
               </button>
 
               <button

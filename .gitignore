@@ -3,6 +3,10 @@ node_modules
 /logs
 /test-results
 /playwright-report
+dist/
 *.log
 .env
 .env.local
+*.db
+*.clbak
+test_output.txt

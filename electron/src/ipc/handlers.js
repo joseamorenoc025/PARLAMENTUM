@@ -23,6 +23,7 @@ import { createBackupBuffer, restoreFromBuffer } from '../modules/backup/localBa
 import { uploadBackupToGitHub, downloadBackupFromGitHub } from '../modules/backup/githubBackup.js';
 import { loadToken } from '../modules/sync/tokenStorage.js';
 import { getRepoConfig } from '../modules/sync/index.js';
+import { generateRecoveryPhrase } from '../lib/wordlist.js';
 
 export const setupIPCHandlers = (mainWindow) => {
   // DB Ready Check
@@ -103,14 +104,34 @@ export const setupIPCHandlers = (mainWindow) => {
     return await bcrypt.compare(password, hash);
   });
 
-  ipcMain.handle('auth:get-user', async (_, rawData) => {
-    const validation = validateIPCInput(authGetUserSchema, rawData, 'auth:get-user');
-    const username = validation.data;
+  ipcMain.handle('auth:get-user', async () => {
     try {
-      const results = db.select().from(schema.users).where(eq(schema.users.username, username)).all();
+      const results = db.select().from(schema.users).limit(1).all();
       return results[0] || null;
     } catch (err) {
       logger.error('Auth get user error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('auth:recover', async (_, rawData) => {
+    const { authRecoverSchema } = await import('./schemas/auth.js');
+    const validation = validateIPCInput(authRecoverSchema, rawData, 'auth:recover');
+    const { phrase, newPassword } = validation.data;
+    try {
+      const user = db.select().from(schema.users).limit(1).all()[0];
+      if (!user) throw new Error('No admin user found');
+      
+      const phraseHash = crypto.createHash('sha256').update(phrase).digest('hex');
+      if (phraseHash !== user.recoveryCodeHash) {
+        return { success: false, message: 'Frase de recuperación incorrecta' };
+      }
+      
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, user.id)).run();
+      return { success: true };
+    } catch (err) {
+      logger.error('Auth recover error:', err);
       throw err;
     }
   });
@@ -501,15 +522,13 @@ export const setupIPCHandlers = (mainWindow) => {
   ipcMain.handle('setup:initialize', async (_, rawData) => {
     const validation = validateIPCInput(setupInitializeSchema, rawData, 'setup:initialize');
     const { 
-      username, password, securityQuestion, securityAnswer, 
-      chamberName, timezone, logoBuffer 
+      password, chamberName, timezone, logoBuffer 
     } = validation.data;
 
     try {
       const passwordHash = await bcrypt.hash(password, 10);
-      const securityAnswerHash = crypto.createHash('sha256').update(securityAnswer + 'salt-legislativo').digest('hex');
-      const rawRecoveryCode = crypto.randomBytes(4).toString('hex').toUpperCase().match(/.{1,4}/g).join('-');
-      const recoveryCodeHash = crypto.createHash('sha256').update(rawRecoveryCode).digest('hex');
+      const recoveryPhrase = generateRecoveryPhrase(12);
+      const recoveryCodeHash = crypto.createHash('sha256').update(recoveryPhrase).digest('hex');
 
       let logoPath = null;
       if (logoBuffer) {
@@ -520,13 +539,12 @@ export const setupIPCHandlers = (mainWindow) => {
       }
 
       db.transaction((tx) => {
+        // Al ser monousuario, usamos 'admin' por defecto
         tx.insert(schema.users).values({
-          username,
+          username: 'admin',
           passwordHash,
           role: 'admin',
           nombreCompleto: 'Administrador General',
-          securityQuestion,
-          securityAnswerHash,
           recoveryCodeHash,
           passwordResetRequired: 0,
           activo: 1
@@ -553,7 +571,7 @@ export const setupIPCHandlers = (mainWindow) => {
         logger.error('Error enqueuing initial sync tasks:', e);
       }
 
-      return { success: true, recoveryCode: rawRecoveryCode };
+      return { success: true, recoveryCode: recoveryPhrase };
     } catch (err) {
       logger.error('Error during setup initialization:', err);
       throw err;

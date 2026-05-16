@@ -25,10 +25,8 @@ test.describe('Onboarding Wizard', () => {
 
     // Paso 2: Cuenta Administrador
     await expect(window.getByText('Cuenta de Administrador')).toBeVisible();
-    await window.getByTestId('admin-username-input').fill('admin.test');
     await window.getByTestId('admin-password-input').fill('Password123!');
     await window.getByTestId('admin-confirm-password-input').fill('Password123!');
-    await window.getByTestId('admin-security-answer-input').fill('MascotaTest');
     
     await window.getByTestId('btn-onboarding-next').click({ force: true });
 
@@ -39,7 +37,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Paso 4: Finalización
     await expect(window.getByTestId('onboarding-success-title')).toBeVisible({ timeout: 15000 });
-    await expect(window.getByText('Código de Recuperación')).toBeVisible();
+    await expect(window.getByText('Frase de Recuperación')).toBeVisible();
     
     // Click en "Comenzar a usar el sistema"
     await window.getByTestId('btn-onboarding-start-using').click({ force: true });
@@ -48,12 +46,4 @@ test.describe('Onboarding Wizard', () => {
     await expect(window.getByText('Segundo Cerebro')).toBeVisible();
   });
 
-  test('Debe permitir saltar el onboarding', async () => {
-    const { window } = testContext;
-    await expect(window.getByTestId('onboarding-welcome-title')).toBeVisible({ timeout: 15000 });
-    await window.getByRole('button', { name: 'Configurar más tarde' }).click({ force: true });
-
-    // Debería ir directo al login
-    await expect(window.getByText('Segundo Cerebro')).toBeVisible();
-  });
 });

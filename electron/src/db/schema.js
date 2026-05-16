@@ -25,7 +25,7 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
-<  role: text('role').default('admin'),
+  role: text('role').default('admin'),
   nombreCompleto: text('nombre_completo'),
   ultimoLogin: text('ultimo_login'),
   securityQuestion: text('security_question'),

@@ -4,38 +4,41 @@ import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 test.describe('Biblioteca de Leyes', () => {
   let electronApp;
   let window;
-  let userDataDir;
+  let testUserDataDir;
 
-  test.beforeEach(async ({}, testInfo) => {
-    const setup = await launchTestApp(testInfo);
+  test.beforeAll(async () => {
+    const setup = await launchTestApp();
     electronApp = setup.electronApp;
     window = setup.window;
-    userDataDir = setup.userDataDir;
+    testUserDataDir = setup.testUserDataDir;
 
-    // Resetear DB y saltar onboarding para ir directo al login/dashboard
-    await window.evaluate(() => window.legisAPI.invoke('db:reset-for-tests', { onboardingCompleted: true }));
+    // Resetear DB a estado cero
+    await window.evaluate(() => window.legisAPI.invoke('db:reset-for-tests', { onboardingCompleted: false }));
     
-    // Registrar un admin rápido para poder entrar (ya que reseteamos la DB)
-    await window.click('text=Registrar nuevo Administrador');
-    await window.getByPlaceholder('Ej: Dr. Juan Pérez').fill('Leyes Admin');
-    await window.getByPlaceholder('admin').fill('admin_leyes');
-    await window.locator('input[type="password"]').fill('Password123!@#');
-    await window.getByRole('button', { name: 'Registrar y Configurar' }).click({ force: true });
+    // Pasar por el onboarding para crear el admin
+    await window.getByTestId('btn-start-setup').click({ force: true });
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
+    await window.getByTestId('chamber-name-input').fill('Cámara Leyes');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
     
-    await window.getByPlaceholder('admin').fill('admin_leyes');
-    await window.locator('input[type="password"]').fill('Password123!@#');
+    // Login
+    await window.locator('input[type="password"]').fill('Password123!');
     await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
     
-    await expect(window.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 20000 });
+    await expect(window.getByTestId('dashboard-title')).toBeVisible({ timeout: 20000 });
   });
 
-  test.afterEach(async () => {
-    await cleanupTestApp(electronApp, userDataDir);
+  test.afterAll(async () => {
+    await cleanupTestApp({ electronApp, testUserDataDir });
   });
 
   test('Debe permitir registrar una nueva ley', async () => {
     // Navegar a Biblioteca
-    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await window.getByTestId('nav-leyes').waitFor({ state: 'visible' });
+    await window.getByTestId('nav-leyes').click();
     await expect(window.getByTestId('laws-page-title')).toBeVisible();
 
     // Abrir formulario
@@ -52,8 +55,15 @@ test.describe('Biblioteca de Leyes', () => {
   });
 
   test('Debe filtrar leyes', async () => {
-    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await window.getByTestId('nav-leyes').waitFor({ state: 'visible' });
+    await window.getByTestId('nav-leyes').click();
     await expect(window.getByTestId('laws-page-title')).toBeVisible();
+    // Registrar una ley primero para que no esté vacía la lista
+    await window.getByTestId('btn-open-law-form').click({ force: true });
+    await window.getByTestId('law-title-input').fill('Ley para Filtrar');
+    await window.getByTestId('law-drive-link-input').fill('https://drive.google.com/test-filter');
+    await window.getByTestId('btn-save-law').click({ force: true });
+    await expect(window.getByText('Ley para Filtrar').first()).toBeVisible({ timeout: 15000 });
 
     const searchInput = window.getByPlaceholder('Buscar por título o gaceta...');
     await searchInput.fill('Inexistente');
@@ -64,7 +74,8 @@ test.describe('Biblioteca de Leyes', () => {
   });
 
   test('Debe mostrar QR (simulado)', async () => {
-    await window.getByRole('button', { name: 'Biblioteca' }).click({ force: true });
+    await window.getByTestId('nav-leyes').waitFor({ state: 'visible' });
+    await window.getByTestId('nav-leyes').click();
     await expect(window.getByTestId('laws-page-title')).toBeVisible();
 
     // Registrar una ley primero

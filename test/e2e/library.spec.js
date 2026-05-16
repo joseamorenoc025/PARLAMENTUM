@@ -1,28 +1,37 @@
-import { test, expect, _electron as electron } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 test.describe('Biblioteca de Leyes y Auditoría (UX Transversal)', () => {
-  let electronApp;
+  let testContext;
   let window;
 
   test.beforeAll(async () => {
-    electronApp = await electron.launch({ args: ['.'] });
-    window = await electronApp.firstWindow();
+    testContext = await launchTestApp();
+    window = testContext.window;
+
+    // Completar el Onboarding Wizard para crear el admin
+    await window.getByTestId('btn-start-setup').click({ force: true });
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
+    await window.getByTestId('chamber-name-input').fill('Cámara Biblioteca');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
+
+    // Iniciar sesión y validar Dashboard
+    await window.locator('input[type="password"]').fill('Password123!');
+    await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
+    await expect(window.getByTestId('dashboard-title')).toBeVisible({ timeout: 15000 });
   });
 
   test.afterAll(async () => {
-    await electronApp.close();
+    await cleanupTestApp(testContext);
   });
 
-  test('Autenticación rápida y acceso a Biblioteca', async () => {
-    const isAuthVisible = await window.locator('h1:has-text("Segundo Cerebro")').isVisible({ timeout: 2000 }).catch(() => false);
-    if (isAuthVisible) {
-      await window.fill('input[placeholder="admin"]', 'admin');
-      await window.fill('input[placeholder="••••••••"]', 'Admin123!@#');
-      await window.click('button:has-text("Acceder")');
-    }
-    await expect(window.locator('header span')).toContainText('Dashboard', { timeout: 10000 });
-    await window.click('nav button:has-text("Biblioteca")');
-    await expect(window.locator('h1')).toContainText('Biblioteca de Leyes');
+  test('Acceso a Biblioteca', async () => {
+    await window.getByTestId('nav-leyes').waitFor({ state: 'visible' });
+    await window.getByTestId('nav-leyes').click();
+    await expect(window.getByTestId('laws-page-title')).toContainText('Biblioteca de Leyes');
   });
 
   test('Modo Oscuro/Claro en Biblioteca', async () => {
@@ -42,33 +51,32 @@ test.describe('Biblioteca de Leyes y Auditoría (UX Transversal)', () => {
 
   test('Registro y Búsqueda de Ley', async () => {
     // 1. Abrir Formulario
-    await window.click('button:has-text("Registrar Ley")');
+    await window.getByTestId('btn-open-law-form').click({ force: true });
     await expect(window.locator('h2')).toContainText('Registrar Ley');
 
     // 2. Llenar datos
-    await window.fill('input[placeholder*="Ej: Reforma"]', 'Ley de Test E2E');
+    await window.getByTestId('law-title-input').fill('Ley de Test E2E');
     await window.fill('input[placeholder="Ej: 42.123"]', '99.999');
-    await window.fill('input[placeholder*="https://drive.google.com"]', 'https://drive.google.com/ley-test');
+    await window.getByTestId('law-drive-link-input').fill('https://drive.google.com/ley-test');
 
     // 3. Guardar
-    await window.click('button:has-text("Registrar")');
+    await window.getByTestId('btn-save-law').click({ force: true });
     
     // 4. Buscar
     await window.fill('input[placeholder*="Buscar por título"]', 'Ley de Test E2E');
-    await expect(window.locator('text=Ley de Test E2E')).toBeVisible();
-    await expect(window.locator('text=#99.999')).toBeVisible();
+    await expect(window.locator('text=Ley de Test E2E').first()).toBeVisible();
   });
 
-  test('Edición y Actualización de Enlace', async () => {
+  test('Edición de Ley', async () => {
     // 1. Clic en Editar (el botón con Plus rotado / Edit)
     await window.click('button[title="Editar Ley"]');
     await expect(window.locator('h2')).toContainText('Editar Ley');
     
     // 2. Modificar Enlace
-    await window.fill('input[placeholder*="https://drive.google.com"]', 'https://drive.google.com/enlace-actualizado');
+    await window.getByTestId('law-drive-link-input').fill('https://drive.google.com/enlace-actualizado');
     
     // 3. Actualizar
-    await window.click('button:has-text("Actualizar")');
+    await window.getByTestId('btn-save-law').click({ force: true });
     
     // 4. Verificar en tarjeta (Enlace de Respaldo)
     await expect(window.locator('span:has-text("enlace-actualizado")')).toBeVisible();

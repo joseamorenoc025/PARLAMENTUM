@@ -1,30 +1,37 @@
-import { test, expect, _electron as electron } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { launchTestApp, cleanupTestApp } from './electron-test-setup';
 
 test.describe('Sesiones, Oficios y UX Transversal', () => {
-  let electronApp;
+  let testContext;
   let window;
 
   test.beforeAll(async () => {
-    electronApp = await electron.launch({ args: ['.'] });
-    window = await electronApp.firstWindow();
+    testContext = await launchTestApp();
+    window = testContext.window;
+
+    // Completar el Onboarding Wizard para crear el admin
+    await window.getByTestId('btn-start-setup').click({ force: true });
+    await window.getByTestId('admin-password-input').fill('Password123!');
+    await window.getByTestId('admin-confirm-password-input').fill('Password123!');
+    await window.getByTestId('btn-onboarding-next').click({ force: true });
+    await window.getByTestId('chamber-name-input').fill('Cámara Sesiones');
+    await window.getByTestId('btn-onboarding-finish').click({ force: true });
+    await window.getByTestId('btn-onboarding-start-using').click({ force: true });
+
+    // Iniciar sesión y validar Dashboard
+    await window.locator('input[type="password"]').fill('Password123!');
+    await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
+    await expect(window.getByRole('banner').getByText('Dashboard').first()).toBeVisible({ timeout: 10000 });
   });
 
   test.afterAll(async () => {
-    await electronApp.close();
+    await cleanupTestApp(testContext);
   });
 
-  test('Manejo de Login y Acceso a Sesiones', async () => {
-    const isAuthVisible = await window.locator('h1:has-text("Segundo Cerebro")').isVisible({ timeout: 2000 }).catch(() => false);
-    if (isAuthVisible) {
-      await window.fill('input[placeholder="admin"]', 'admin');
-      await window.fill('input[placeholder="••••••••"]', 'Admin123!@#');
-      await window.click('button:has-text("Acceder")');
-    }
-    await expect(window.locator('header span')).toContainText('Dashboard', { timeout: 10000 });
-    
+  test('Acceso a Sesiones', async () => {
     // Navegar a Sesiones
-    await window.click('nav button:has-text("Sesiones")');
-    await expect(window.locator('h1')).toContainText('Control de Sesiones');
+    await window.getByTestId('nav-sesiones').click();
+    await expect(window.locator('h1')).toContainText('Sesiones');
   });
 
   test('Modo Oscuro/Claro en Sesiones', async () => {
@@ -44,7 +51,7 @@ test.describe('Sesiones, Oficios y UX Transversal', () => {
 
   test('Creación de Sesión', async () => {
     await window.click('button:has-text("Nueva Sesión")');
-    await expect(window.locator('h2')).toContainText('Programar Sesión');
+    await expect(window.locator('h2')).toContainText('Nueva Sesión');
 
     await window.fill('input[placeholder="Ej: 001-2024"]', 'SES-TEST-01');
     await window.click('button:has-text("Guardar")');
@@ -53,8 +60,8 @@ test.describe('Sesiones, Oficios y UX Transversal', () => {
   });
 
   test('Navegación y Modo Oscuro en Oficios', async () => {
-    await window.click('nav button:has-text("Oficios")');
-    await expect(window.locator('h1')).toContainText('Gestión de Oficios');
+    await window.getByTestId('nav-oficios').click();
+    await expect(window.locator('h1')).toContainText('Oficios Salientes');
 
     const body = window.locator('body');
     const themeBtn = window.locator('header button:has(svg.lucide-sun), header button:has(svg.lucide-moon)').last();
@@ -73,7 +80,7 @@ test.describe('Sesiones, Oficios y UX Transversal', () => {
     await window.fill('input[placeholder="Nombre del destinatario"]', 'Destinatario Prueba');
     
     // Seleccionar sesión vinculada (debe estar la que creamos)
-    await window.locator('select').first().selectOption({ label: 'Ordinaria SES-TEST-01' }).catch(() => {});
+    await window.locator('select').first().selectOption({ label: /SES-TEST-01/ }).catch(() => {});
     
     await window.click('button:has-text("Registrar")');
     await expect(window.locator('text=OFI-TEST-01')).toBeVisible();
