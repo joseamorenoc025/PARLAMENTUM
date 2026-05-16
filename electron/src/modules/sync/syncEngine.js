@@ -62,6 +62,10 @@ export class SyncEngine {
       };
     });
 
+    // Guardar localmente para el Portal Ciudadano local
+    const localPortalPath = path.join(process.cwd(), this.lawsPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(lawsJson, null, 2));
+
     await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
     
     // Sincronizar archivos físicos
@@ -107,6 +111,9 @@ export class SyncEngine {
     }));
 
     const remote = await client.getRemoteFile(this.owner, this.repo, this.projectsPath);
+    const localPortalPath = path.join(process.cwd(), this.projectsPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(projectsJson, null, 2));
+
     await client.updateFile(this.owner, this.repo, this.projectsPath, JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
   }
 
@@ -139,6 +146,9 @@ export class SyncEngine {
     });
 
     const remote = await client.getRemoteFile(this.owner, this.repo, this.legislatorsPath);
+    const localPortalPath = path.join(process.cwd(), this.legislatorsPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(legislatorsJson, null, 2));
+
     await client.updateFile(this.owner, this.repo, this.legislatorsPath, JSON.stringify(legislatorsJson, null, 2), `Sync: Legisladores ${new Date().toISOString()}`, remote.sha);
   }
 
@@ -152,6 +162,9 @@ export class SyncEngine {
     }, { last_sync: new Date().toISOString() });
 
     const remote = await client.getRemoteFile(this.owner, this.repo, this.configPath);
+    const localPortalPath = path.join(process.cwd(), this.configPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(configObj, null, 2));
+
     await client.updateFile(this.owner, this.repo, this.configPath, JSON.stringify(configObj, null, 2), `Sync: Config ${new Date().toISOString()}`, remote.sha);
   }
 
@@ -170,16 +183,44 @@ export class SyncEngine {
       if (!token) throw new Error('Token de GitHub no configurado.');
       const client = new GitHubClient(token);
       
-      if (type === 'all' || type === 'config') await this.syncConfig(client);
-      if (type === 'all' || type === 'logo') await this.syncLogo(client);
+      const results = { laws: 0, legislators: 0, projects: 0 };
 
-      const results = {
-        laws: (type === 'all' || type === 'laws') ? await this.syncLaws(client) : 0,
-        legislators: (type === 'all' || type === 'legislators') ? await this.syncLegislators(client) : 0,
-        projects: (type === 'all' || type === 'projects') ? await this.syncProjects(client) : 0
-      };
+      // Configuración
+      try {
+        if (type === 'all' || type === 'config') await this.syncConfig(client);
+      } catch (e) {
+        logger.error('Error sincronizando configuración:', e);
+      }
 
-      logger.info(`Sincronización [${type}] exitosa. Detalle:`, results);
+      // Logo
+      try {
+        if (type === 'all' || type === 'logo') await this.syncLogo(client);
+      } catch (e) {
+        logger.error('Error sincronizando logo:', e);
+      }
+
+      // Leyes
+      try {
+        if (type === 'all' || type === 'laws') results.laws = await this.syncLaws(client);
+      } catch (e) {
+        logger.error('Error sincronizando leyes:', e);
+      }
+
+      // Legisladores
+      try {
+        if (type === 'all' || type === 'legislators') await this.syncLegislators(client);
+      } catch (e) {
+        logger.error('Error sincronizando legisladores:', e);
+      }
+
+      // Proyectos
+      try {
+        if (type === 'all' || type === 'projects') await this.syncProjects(client);
+      } catch (e) {
+        logger.error('Error sincronizando proyectos:', e);
+      }
+
+      logger.info(`Sincronización [${type}] finalizada.`);
       return { success: true, count: results.laws };
     } catch (error) {
       logger.error(`Error en SyncEngine.run [${type}]:`, error);
