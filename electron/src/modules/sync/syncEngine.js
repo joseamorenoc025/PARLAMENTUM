@@ -177,6 +177,24 @@ export class SyncEngine {
     }
   }
 
+  async syncPortalUI(client) {
+    const uiFiles = [
+      { local: 'public/portal/index.html', remote: 'public/portal/index.html' },
+      { local: 'public/portal/styles.css', remote: 'public/portal/styles.css' },
+      { local: 'public/portal/app.js', remote: 'public/portal/app.js' }
+    ];
+
+    for (const file of uiFiles) {
+      const localPath = path.join(process.cwd(), file.local);
+      if (fs.existsSync(localPath)) {
+        const content = fs.readFileSync(localPath, 'utf8');
+        const remoteFile = await client.getRemoteFile(this.owner, this.repo, file.remote);
+        // Solo actualizar si el contenido es diferente (opcional, por ahora siempre actualizamos)
+        await client.updateFile(this.owner, this.repo, file.remote, content, `Sync: UI ${path.basename(file.local)}`, remoteFile.sha);
+      }
+    }
+  }
+
   async run(type = 'all') {
     try {
       const token = await loadToken();
@@ -197,6 +215,13 @@ export class SyncEngine {
         if (type === 'all' || type === 'logo') await this.syncLogo(client);
       } catch (e) {
         logger.error('Error sincronizando logo:', e);
+      }
+
+      // UI del Portal (HTML, CSS, JS)
+      try {
+        if (type === 'all' || type === 'ui') await this.syncPortalUI(client);
+      } catch (e) {
+        logger.error('Error sincronizando UI del portal:', e);
       }
 
       // Leyes

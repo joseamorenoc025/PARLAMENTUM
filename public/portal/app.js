@@ -110,7 +110,7 @@ async function switchView(view, id = null) {
  */
 async function fetchConfig() {
     try {
-        const response = await fetch('./config.json');
+        const response = await fetch(`./config.json?t=${Date.now()}`);
         if (response.ok) {
             appConfig = await response.json();
             applyConfig();
@@ -120,7 +120,7 @@ async function fetchConfig() {
 
 async function fetchLaws() {
     try {
-        const response = await fetch('./leyes.json');
+        const response = await fetch(`./leyes.json?t=${Date.now()}`);
         allLaws = response.ok ? await response.json() : [];
         allLaws.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     } catch (e) { console.error('Error laws', e); }
@@ -128,14 +128,14 @@ async function fetchLaws() {
 
 async function fetchProjects() {
     try {
-        const response = await fetch('./proyectos.json');
+        const response = await fetch(`./proyectos.json?t=${Date.now()}`);
         allProjects = response.ok ? await response.json() : [];
     } catch (e) { console.error('Error agenda', e); }
 }
 
 async function fetchLegislators() {
     try {
-        const response = await fetch('./legisladores.json');
+        const response = await fetch(`./legisladores.json?t=${Date.now()}`);
         allLegislators = response.ok ? await response.json() : [];
     } catch (e) { console.error('Error legislators', e); }
 }
