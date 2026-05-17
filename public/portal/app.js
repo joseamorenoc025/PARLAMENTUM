@@ -13,6 +13,8 @@ let appConfig = {
 
 let currentView = 'laws'; // 'laws', 'agenda', 'legislators', 'profile'
 
+const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23cbd5e1"><circle cx="12" cy="12" r="12"/><path d="M12 12c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="%2364748b"/></svg>`;
+
 // DOM Elements
 const mainGrid = document.getElementById('main-grid');
 const legislatorProfile = document.getElementById('legislator-profile');
@@ -193,7 +195,8 @@ function renderLaws(term) {
     const filtered = allLaws.filter(l => {
         const matchTerm = l.titulo.toLowerCase().includes(term) || (l.expediente && l.expediente.toLowerCase().includes(term));
         const matchYear = !year || String(l.anio) === year;
-        const matchType = !type || l.gaceta === type;
+        const lawType = l.gaceta || l.tipo || 'Ordinaria';
+        const matchType = !type || lawType === type;
         return matchTerm && matchYear && matchType;
     });
 
@@ -203,7 +206,7 @@ function renderLaws(term) {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <span class="law-tag">${l.gaceta || 'Ordinaria'}</span>
+            <span class="law-tag">${l.gaceta || l.tipo || 'Ordinaria'}</span>
             <h3 class="law-title">${l.titulo}</h3>
             <div class="law-meta">
                 <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente}</div>
@@ -253,7 +256,7 @@ function renderLegislators(term) {
         const card = document.createElement('div');
         card.className = 'card legislator-card';
         card.innerHTML = `
-            <img src="${l.foto || 'https://via.placeholder.com/150'}" class="legislator-img">
+            <img src="${l.foto || defaultAvatar}" class="legislator-img">
             <h3 class="legislator-name">${l.nombre}</h3>
             <span class="legislator-party">${l.partido || 'Independiente'}</span>
             <button class="btn-primary" onclick="switchView('profile', ${l.id})">
@@ -276,7 +279,7 @@ function renderLegislatorProfile(id) {
             <i data-lucide="arrow-left"></i> Volver al listado
         </button>
         <div class="profile-header">
-            <img src="${legislator.foto || 'https://via.placeholder.com/150'}" class="profile-img-lg">
+            <img src="${legislator.foto || defaultAvatar}" class="profile-img-lg">
             <div class="profile-info">
                 <span class="legislator-party">${legislator.partido || 'Independiente'}</span>
                 <h2>${legislator.nombre}</h2>
