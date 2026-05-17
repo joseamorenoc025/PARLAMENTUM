@@ -365,6 +365,9 @@ export const setupIPCHandlers = (mainWindow) => {
         if (table === 'projects') {
           try { await enqueueTask('projects', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
+        if (table === 'juntaDirectiva') {
+          try { await enqueueTask('legislators', 0, 'sync'); } catch (e) { logger.error('Auto-sync junta error:', e); }
+        }
         return result;
       }
     } catch (err) {
@@ -577,4 +580,63 @@ export const setupIPCHandlers = (mainWindow) => {
       throw err;
     }
   });
-};
+
+  // ── Junta Directiva ─────────────────────────────────────────────────────
+  ipcMain.handle('junta:getAll', async () => {
+    try {
+      return db.select().from(schema.juntaDirectiva).where(eq(schema.juntaDirectiva.activo, 1)).all();
+    } catch (err) {
+      logger.error('junta:getAll error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('junta:save', async (_, data) => {
+    try {
+      // Regla: solo 1 registro activo por rol
+      if (!data.id) {
+        db.update(schema.juntaDirectiva)
+          .set({ activo: 0, updatedAt: new Date().toISOString() })
+          .where(eq(schema.juntaDirectiva.rol, data.rol))
+          .run();
+      }
+      const payload = {
+        rol: data.rol,
+        nombre: data.nombre,
+        foto: data.foto || null,
+        partidoPolitico: data.partidoPolitico || null,
+        biografia: data.biografia || null,
+        fechaInicio: data.fechaInicio,
+        fechaFin: data.fechaFin || null,
+        activo: 1,
+        updatedAt: new Date().toISOString()
+      };
+      if (data.id) {
+        db.update(schema.juntaDirectiva).set(payload).where(eq(schema.juntaDirectiva.id, data.id)).run();
+        try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+        return { success: true, id: data.id };
+      } else {
+        const result = db.insert(schema.juntaDirectiva).values(payload).run();
+        try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+        return { success: true, id: result.lastInsertRowid };
+      }
+    } catch (err) {
+      logger.error('junta:save error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('junta:delete', async (_, id) => {
+    try {
+      db.update(schema.juntaDirectiva)
+        .set({ activo: 0, updatedAt: new Date().toISOString() })
+        .where(eq(schema.juntaDirectiva.id, id))
+        .run();
+      try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+      return { success: true };
+    } catch (err) {
+      logger.error('junta:delete error:', err);
+      throw err;
+    }
+  });
+};

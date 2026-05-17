@@ -7,10 +7,18 @@ import EmptyState from './ui/EmptyState';
 const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '' });
+  const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });
+
+  const handleSelectFile = async () => {
+    if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
+    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    if (filePath) {
+      setForm(prev => ({ ...prev, localFilePath: filePath, localFileName: filePath.split(/[\\/]/).pop() }));
+    }
+  };
 
   const resetForm = () => {
-    setForm({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '' });
+    setForm({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });
     setEditingId(null);
     setView('list');
   };
@@ -63,6 +71,21 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Asunto</label>
               <textarea value={form.asunto} onChange={e => setForm(prev => ({ ...prev, asunto: e.target.value }))} rows={3} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200'}`} />
+            </div>
+            <div>
+              <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Archivo PDF Adjunto <span className="text-xs opacity-60">(opcional)</span></label>
+              <button
+                type="button"
+                onClick={handleSelectFile}
+                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                  form.localFilePath
+                    ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
+                    : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{form.localFilePath ? form.localFileName : 'Seleccionar PDF desde mi PC...'}</span>
+              </button>
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vincular a Sesión (opcional)</label>

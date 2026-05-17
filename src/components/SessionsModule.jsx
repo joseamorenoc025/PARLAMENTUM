@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   ChevronLeft, Plus, Edit3, Trash2, CalendarDays, RefreshCw, Link,
-  CalendarClock
+  CalendarClock, FileText
 } from 'lucide-react';
 import { getSessionTypeByDate, generateSessionNumber } from '../utils/helpers';
 import EmptyState from './ui/EmptyState';
@@ -9,10 +9,18 @@ import EmptyState from './ui/EmptyState';
 const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToast, onNavigate }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' });
+  const [form, setForm] = useState({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '', localFilePath: null, localFileName: '' });
+
+  const handleSelectFile = async () => {
+    if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
+    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    if (filePath) {
+      setForm(prev => ({ ...prev, localFilePath: filePath, localFileName: filePath.split(/[\\/]/).pop() }));
+    }
+  };
 
   const resetForm = () => {
-    setForm({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '' });
+    setForm({ tipo: 'Ordinaria', numeroCorrelativo: '', motivo: '', fecha: new Date().toISOString().split('T')[0], horaInicio: '09:00', horaCierre: '12:00', periodo: '2026-2027', observaciones: '', localFilePath: null, localFileName: '' });
     setEditingId(null);
     setView('list');
   };
@@ -142,6 +150,21 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
                 <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Hora Cierre</label>
                 <input type="time" value={form.horaCierre} onChange={e => setForm(prev => ({ ...prev, horaCierre: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} />
               </div>
+            </div>
+            <div>
+              <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acta / Documento PDF <span className="text-xs opacity-60">(opcional)</span></label>
+              <button
+                type="button"
+                onClick={handleSelectFile}
+                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                  form.localFilePath
+                    ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
+                    : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
+                }`}
+              >
+                <FileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{form.localFilePath ? form.localFileName : 'Seleccionar acta o PDF desde mi PC...'}</span>
+              </button>
             </div>
             <div>
               <label className={`block text-sm mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Observaciones</label>

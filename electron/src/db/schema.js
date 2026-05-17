@@ -195,3 +195,20 @@ export const syncQueue = sqliteTable('sync_queue', {
   updatedAt: text('updated_at'),
 });
 
+// Junta Directiva de Cámara
+export const juntaDirectiva = sqliteTable('junta_directiva', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  rol: text('rol').notNull(), // 'presidente' | 'vicepresidente' | 'secretario' | 'subsecretario'
+  nombre: text('nombre').notNull(),
+  foto: text('foto'),           // Base64 o ruta
+  // Campos extendidos solo para presidente/vicepresidente:
+  partidoPolitico: text('partido_politico'),
+  biografia: text('biografia'),
+  // Campos comunes a todos:
+  fechaInicio: text('fecha_inicio').notNull(),
+  fechaFin: text('fecha_fin'),
+  activo: integer('activo').default(1),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+

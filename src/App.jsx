@@ -47,7 +47,7 @@ export default function App() {
     agreements, saveAgreement, deleteAgreement,
     documents, saveDocument, deleteDocument,
     auditLogs,
-    isLoading
+    isLoading, reload: loadAllData
   } = useLegisData(defaultConfig);
 
   const [user, setUser] = useState(null);
@@ -265,7 +265,7 @@ export default function App() {
         </aside>
 
         {/* Main Content */}
-        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
+        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'} ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
           {/* Top Bar */}
           <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
             <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export default function App() {
             {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} />}
             {currentPage === 'legisladores' && <LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />}
             {currentPage === 'boveda' && <VaultModule documents={documents} sessions={sessions} oficios={oficios} projects={projects} darkMode={darkMode} addToast={addToast} onSaveDocument={saveDocument} onDeleteDocument={deleteDocument} />}
-            {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} />}
+            {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />}
             {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
             {currentPage === 'sincronizacion' && <SyncSettings darkMode={darkMode} addToast={addToast} />}

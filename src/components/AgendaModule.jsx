@@ -1,14 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, ArrowRight, ChevronLeft, History, Trash2, Layout, Clock, CheckCircle2, Gavel, Scale, AlertCircle
+  Plus, ArrowRight, ChevronLeft, ChevronRight, History, Trash2, Layout, Clock, CheckCircle2, Gavel, Scale, AlertCircle
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
 import { getStagnationColor, getStagnationLabel } from '../utils/helpers';
 
 const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config }) => {
-  const [view, setView] = useState('kanban'); // 'kanban', 'list', 'form', 'history'
+  const [view, setView] = useState('kanban');
   const [editingId, setEditingId] = useState(null);
+  const [currentColIndex, setCurrentColIndex] = useState(0);
+  const kanbanRef = useRef(null);
   const [form, setForm] = useState({ 
     titulo: '', 
     origen: 'Comisión', 
@@ -362,17 +364,108 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
       </div>
 
       {view === 'kanban' ? (
-        <div className="flex-1 overflow-x-auto pb-8 scrollbar-hide">
-          <div className="flex gap-6 h-full min-w-max px-1">
-            {phases.map(column => {
-              const columnProjects = filteredProjects.filter(p => p.faseActual === column);
-              return (
-                <div key={column} className={`w-[22rem] flex flex-col rounded-[2rem] border transition-all ${darkMode ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/50 border-gray-100'}`}>
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Navigation Controls */}
+          <div className={`flex items-center justify-between px-1 mb-3`}>
+            <button
+              onClick={() => {
+                const newIdx = Math.max(0, currentColIndex - 1);
+                setCurrentColIndex(newIdx);
+                if (kanbanRef.current) {
+                  const colWidth = kanbanRef.current.scrollWidth / phases.length;
+                  kanbanRef.current.scrollTo({ left: newIdx * colWidth, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentColIndex === 0}
+              className={`p-2 rounded-xl transition-all ${
+                currentColIndex === 0
+                  ? 'opacity-20 cursor-not-allowed'
+                  : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-600')
+              }`}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-1.5">
+              {phases.map((ph, i) => (
+                <button
+                  key={ph}
+                  onClick={() => {
+                    setCurrentColIndex(i);
+                    if (kanbanRef.current) {
+                      const colWidth = kanbanRef.current.scrollWidth / phases.length;
+                      kanbanRef.current.scrollTo({ left: i * colWidth, behavior: 'smooth' });
+                    }
+                  }}
+                  title={ph}
+                  className={`transition-all rounded-full ${
+                    i === currentColIndex
+                      ? 'w-6 h-2 bg-indigo-500'
+                      : (darkMode ? 'w-2 h-2 bg-gray-700 hover:bg-gray-500' : 'w-2 h-2 bg-gray-300 hover:bg-gray-400')
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                const newIdx = Math.min(phases.length - 1, currentColIndex + 1);
+                setCurrentColIndex(newIdx);
+                if (kanbanRef.current) {
+                  const colWidth = kanbanRef.current.scrollWidth / phases.length;
+                  kanbanRef.current.scrollTo({ left: newIdx * colWidth, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentColIndex === phases.length - 1}
+              className={`p-2 rounded-xl transition-all ${
+                currentColIndex === phases.length - 1
+                  ? 'opacity-20 cursor-not-allowed'
+                  : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-600')
+              }`}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Kanban Board — scrollbar hidden, scroll-snap active */}
+          <div
+            ref={kanbanRef}
+            className={`flex-1 overflow-x-auto pb-4 ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}
+            style={{
+              scrollSnapType: 'x mandatory',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+            onScroll={(e) => {
+              if (!kanbanRef.current) return;
+              const colWidth = kanbanRef.current.scrollWidth / phases.length;
+              const idx = Math.round(e.currentTarget.scrollLeft / colWidth);
+              setCurrentColIndex(Math.min(idx, phases.length - 1));
+            }}
+          >
+            <style>{`.kanban-scroll::-webkit-scrollbar { display: none; }`}</style>
+            <div className="flex gap-6 h-full min-w-max px-1 kanban-scroll">
+              {phases.map((column, colIdx) => {
+                const columnProjects = filteredProjects.filter(p => p.faseActual === column);
+                const isEmpty = columnProjects.length === 0;
+                return (
+                  <div
+                    key={column}
+                    style={{ scrollSnapAlign: 'start' }}
+                    className={`flex flex-col rounded-[2rem] border transition-all ${
+                      isEmpty ? 'w-[8rem]' : 'w-[22rem]'
+                    } ${
+                      darkMode ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/50 border-gray-100'
+                    }`}
+                  >
                   <div className="p-6 border-b dark:border-gray-800 flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">{column}</h3>
-                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black shadow-inner">{columnProjects.length}</span>
+                    <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-30 ${isEmpty ? 'truncate' : ''}`}>
+                      {isEmpty ? column.split(' ')[0] : column}
+                    </h3>
+                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black shadow-inner flex-shrink-0">{columnProjects.length}</span>
                   </div>
-                  <div className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
+                  {!isEmpty && (
+                    <div className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-360px)] custom-scrollbar">
                     {columnProjects.map(p => (
                       <div 
                         key={p.id} 
@@ -408,16 +501,12 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                         </div>
                       </div>
                     ))}
-                    {columnProjects.length === 0 && (
-                      <div className="h-32 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-[2rem] opacity-10">
-                         <Scale className="w-8 h-8 mb-2" />
-                         <span className="text-[9px] font-black uppercase tracking-widest">Sin Proyectos</span>
-                      </div>
-                    )}
+                    </div>
+                  )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : (

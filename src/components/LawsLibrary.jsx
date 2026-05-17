@@ -5,8 +5,9 @@ import {
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
+import HashDisplay from './ui/HashDisplay';
 
-const LawsLibrary = ({ darkMode, addToast }) => {
+const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   const [laws, setLaws] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -14,6 +15,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const [applyIntegritySeal, setApplyIntegritySeal] = useState(true); // Toggle SHA activado por defecto
   
   const [form, setForm] = useState({
     titulo: '',
@@ -46,12 +48,24 @@ const LawsLibrary = ({ darkMode, addToast }) => {
   const handleSelectFile = async () => {
     const filePath = await window.legisAPI.invoke('dialog:open-pdf');
     if (filePath) {
-      setForm({
-        ...form,
+      const fileName = filePath.split(/[\\/]/).pop();
+      setForm(prev => ({
+        ...prev,
         localFilePath: filePath,
-        localFileName: filePath.split(/[\\/]/).pop(),
-        driveLink: '' // Priorizar archivo local
-      });
+        localFileName: fileName,
+        driveLink: '',
+        fileHash: '' // Se recalculará automáticamente
+      }));
+
+      // Auto-calcular SHA si el toggle está activo
+      if (applyIntegritySeal) {
+        try {
+          const hash = await window.legisAPI.invoke('app:file-hash', filePath);
+          setForm(prev => ({ ...prev, fileHash: hash }));
+        } catch (err) {
+          console.warn('Hash calculation failed:', err);
+        }
+      }
     }
   };
 
@@ -106,6 +120,7 @@ const LawsLibrary = ({ darkMode, addToast }) => {
       await dbService.deleteLaw(id);
       addToast('Ley eliminada', 'warning');
       loadLaws();
+      onDataChange?.(); // Notificar al Dashboard para actualizar contadores
     } catch (err) {
       addToast('Error al eliminar', 'error');
     }
@@ -303,13 +318,9 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 )}
               </div>
 
+              {/* Sello de integridad — hash completo */}
               {law.fileHash && (
-                <div className={`mt-3 pt-3 border-t flex items-center gap-2 ${darkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-[10px] font-mono text-gray-500 truncate" title={law.fileHash}>
-                    Sello: {law.fileHash.substring(0, 16)}...
-                  </span>
-                </div>
+                <HashDisplay hash={law.fileHash} darkMode={darkMode} />
               )}
             </div>
           ))}
@@ -406,47 +417,50 @@ const LawsLibrary = ({ darkMode, addToast }) => {
                 <p className="text-[10px] mt-2 text-gray-500 italic">El archivo se subirá automáticamente a GitHub Pages.</p>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Sello de Integridad (Opcional)</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => {
-                      const result = await window.legisAPI.invoke('dialog:open-pdf');
-                      if (result) {
-                        setForm(prev => ({ ...prev, localFilePath: result }));
-                        // Solicitar cálculo de hash al backend
-                        try {
-                          const hash = await window.legisAPI.invoke('app:file-hash', result);
-                          setForm(prev => ({ ...prev, fileHash: hash }));
-                        } catch (err) {
-                          addToast('Error al calcular sello de integridad', 'error');
-                        }
-                      }
-                    }}
-                    className={`flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                      form.fileHash 
-                        ? (darkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-600')
-                        : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-indigo-500')
-                    }`}
-                  >
-                    {form.fileHash ? <FileCheck className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                    {form.fileHash ? 'Documento Vinculado' : 'Generar Sello SHA-256'}
-                  </button>
-                  {form.fileHash && (
-                    <button 
-                      onClick={() => setForm(prev => ({ ...prev, fileHash: '', localFilePath: '' }))}
-                      className="p-3 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+              {/* Toggle Sello de Integridad */}
+              <div className={`flex items-center justify-between p-4 rounded-2xl border ${
+                applyIntegritySeal
+                  ? (darkMode ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200')
+                  : (darkMode ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200')
+              }`}>
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className={`w-4 h-4 ${applyIntegritySeal ? 'text-emerald-500' : 'opacity-30'}`} />
+                  <div>
+                    <p className="text-xs font-black">Colocar Sello de Integridad</p>
+                    <p className={`text-[10px] opacity-50 mt-0.5`}>SHA-256 se calcula automáticamente al subir el archivo</p>
+                  </div>
                 </div>
-                {form.fileHash && (
-                  <p className="text-[9px] mt-1.5 font-mono text-emerald-500 truncate px-1">
-                    SHA-256: {form.fileHash}
-                  </p>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !applyIntegritySeal;
+                    setApplyIntegritySeal(next);
+                    if (!next) setForm(prev => ({ ...prev, fileHash: '' }));
+                  }}
+                  className={`relative inline-flex w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    applyIntegritySeal ? 'bg-emerald-500' : (darkMode ? 'bg-gray-700' : 'bg-gray-300')
+                  }`}
+                >
+                  <span className={`inline-block w-5 h-5 bg-white rounded-full shadow-md transform transition-transform mt-0.5 ${
+                    applyIntegritySeal ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </button>
               </div>
+
+              {/* Vista previa del hash calculado */}
+              {form.fileHash && applyIntegritySeal && (
+                <div className={`p-3 rounded-xl border flex items-center gap-2 ${
+                  darkMode ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+                }`}>
+                  <FileCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[9px] uppercase font-black tracking-wider text-emerald-500 mb-0.5">Hash calculado</p>
+                    <code className={`text-[10px] font-mono truncate block ${darkMode ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                      {form.fileHash.substring(0, 32)}...
+                    </code>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="flex gap-3 mt-10">

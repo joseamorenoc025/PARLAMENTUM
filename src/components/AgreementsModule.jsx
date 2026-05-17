@@ -19,7 +19,9 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
     fecha: new Date().toISOString().split('T')[0],
     objeto: '',
     sesionId: '',
-    driveLink: ''
+    driveLink: '',
+    localFilePath: null,
+    localFileName: ''
   });
 
   const loadAgreements = useCallback(async () => {
@@ -33,6 +35,19 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
       setIsLoading(false);
     }
   }, [addToast]);
+
+  const handleSelectFile = async () => {
+    if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
+    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    if (filePath) {
+      setForm(prev => ({
+        ...prev,
+        localFilePath: filePath,
+        localFileName: filePath.split(/[\\/]/).pop(),
+        driveLink: ''
+      }));
+    }
+  };
 
   useEffect(() => {
     loadAgreements();
@@ -63,7 +78,9 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
         fecha: new Date().toISOString().split('T')[0],
         objeto: '',
         sesionId: '',
-        driveLink: ''
+        driveLink: '',
+        localFilePath: null,
+        localFileName: ''
       });
       loadAgreements();
     } catch (err) {
@@ -91,7 +108,9 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
       fecha: agreement.fecha,
       objeto: agreement.objeto,
       sesionId: agreement.sesionId || '',
-      driveLink: agreement.driveLink || ''
+      driveLink: agreement.driveLink || '',
+      localFilePath: null,
+      localFileName: ''
     });
     setShowForm(true);
   };
@@ -286,7 +305,23 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-black opacity-40 uppercase tracking-widest ml-1">Enlace de Google Drive</label>
+                <label className="block text-[10px] font-black opacity-40 uppercase tracking-widest ml-1">Archivo PDF Local <span className="normal-case opacity-60">(opcional)</span></label>
+                <button
+                  type="button"
+                  onClick={handleSelectFile}
+                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${
+                    form.localFilePath
+                      ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
+                      : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
+                  }`}
+                >
+                  <FileText className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">{form.localFilePath ? form.localFileName : 'Seleccionar PDF desde mi PC...'}</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black opacity-40 uppercase tracking-widest ml-1">Enlace de Google Drive <span className="normal-case opacity-60">(o pegar URL)</span></label>
                 <input 
                   type="url" 
                   placeholder="https://drive.google.com/..."

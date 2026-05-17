@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus, FileText, Camera, QrCode } from 'lucide-react';
+import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus, FileText, Camera, QrCode, Crown } from 'lucide-react';
 import Modal from './ui/Modal';
 import EmptyState from './ui/EmptyState';
+import JuntaDirectivaTab from './JuntaDirectivaTab';
 
 const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveCommission, onDeleteLegislator, onDeleteCommission, darkMode, addToast }) => {
   const [tab, setTab] = useState('legislators');
@@ -154,12 +155,13 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           </button>
           <button 
             onClick={() => { 
+              if (tab === 'junta') return; // Junta usa su propio formulario interno
               setFormType(tab === 'legislators' ? 'legislator' : 'commission');
               setShowForm(true); 
             }} 
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
           >
-            <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : 'Comisión'}
+            <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : tab === 'commissions' ? 'Comisión' : ''}
           </button>
         </div>
       </div>
@@ -176,6 +178,13 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'commissions' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
         >
           Comisiones
+        </button>
+        <button 
+          onClick={() => setTab('junta')} 
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${tab === 'junta' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-500' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+        >
+          <Crown className="w-3.5 h-3.5" />
+          Junta Directiva
         </button>
       </div>
 
@@ -297,6 +306,10 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             ))}
           </div>
         )
+      )}
+
+      {tab === 'junta' && (
+        <JuntaDirectivaTab darkMode={darkMode} addToast={addToast} />
       )}
 
       <Modal isOpen={showForm} onClose={() => { setShowForm(false); resetForm(); resetCommissionForm(); }} title={formType === 'legislator' ? 'Registrar Legislador' : 'Configurar Comisión'} darkMode={darkMode}>
