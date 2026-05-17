@@ -44,11 +44,11 @@ jobs:
       - name: Build Electron App
         run: |
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            npm run build:win
+            npm run build:win -- --publish never
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            npm run build:mac
+            npm run build:mac -- --publish never
           else
-            npm run build
+            npm run build -- --publish never
           fi
         shell: bash
       - name: Upload artifacts
