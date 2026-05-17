@@ -83,16 +83,47 @@ export const dbService = {
   // Versiones de Proyectos
   getProjectVersions: async (projectId) => {
       if (!window.legisAPI) return [];
-      // TODO: Migrar a handler específico si se requieren filtros complejos
-      return await window.legisAPI.invoke('db:query', { 
+      const rows = await window.legisAPI.invoke('db:query', { 
           sql: 'SELECT * FROM project_versions WHERE project_id = ? ORDER BY fecha_creacion DESC', 
           params: [projectId] 
       });
+      return rows.map(r => {
+          let snapshotData = {};
+          try {
+              snapshotData = JSON.parse(r.snapshot || '{}');
+          } catch (e) {
+              console.error('Error parsing version snapshot:', e);
+          }
+          return {
+              id: r.id,
+              projectId: r.project_id,
+              version: r.version,
+              versionLabel: r.motivo || `Fase ${r.version}`,
+              mensaje: snapshotData.mensaje || r.motivo || '',
+              fechaCreacion: r.fecha_creacion,
+              autor: snapshotData.autor || 'Sistema'
+          };
+      });
   },
   saveProjectVersion: async (v) => {
+    // Calcular el número de versión secuencial
+    let nextVersionNumber = 1;
+    try {
+      const existing = await dbService.getProjectVersions(v.projectId);
+      nextVersionNumber = existing.length + 1;
+    } catch (e) {
+      console.error('Error fetching existing versions, defaulting to 1:', e);
+    }
+
     return await upsert('projectVersions', {
-        ...v,
-        snapshot: JSON.stringify(v.snapshot),
+        projectId: v.projectId,
+        version: nextVersionNumber,
+        motivo: v.versionLabel || `Fase ${nextVersionNumber}`,
+        snapshot: JSON.stringify({
+            mensaje: v.mensaje,
+            autor: v.autor,
+            project: v.snapshot
+        }),
         fechaCreacion: new Date().toISOString()
     });
   },
