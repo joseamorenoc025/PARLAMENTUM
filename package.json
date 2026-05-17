@@ -2,6 +2,10 @@
   "name": "segundo-cerebro-legislativo",
   "version": "1.0.0",
   "description": "Sistema de gestión legislativa profesional",
+  "author": {
+    "name": "Jose Moreno",
+    "email": "joseamorenoc025@gmail.com"
+  },
   "main": "electron/main.js",
   "type": "module",
   "scripts": {
