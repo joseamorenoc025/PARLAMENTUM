@@ -23,7 +23,7 @@ import SyncSettings from './components/SyncSettings';
 import { 
   LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
   Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel, ShieldCheck,
-  LogOut, Database, Github
+  LogOut, Database, Github, Activity
 } from 'lucide-react';
 
 const defaultConfig = {
@@ -159,7 +159,7 @@ export default function App() {
     { id: 'boveda', label: 'Bóveda', icon: <FolderOpen className="w-5 h-5" /> },
     { id: 'leyes', label: 'Biblioteca', icon: <Scale className="w-5 h-5" /> },
     { id: 'acuerdos', label: 'Acuerdos', icon: <Gavel className="w-5 h-5" /> },
-    { id: 'auditoria', label: 'Auditoría', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'auditoria', label: 'Actividad', icon: <Activity className="w-5 h-5" />, roles: ['admin'] },
     { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
 
