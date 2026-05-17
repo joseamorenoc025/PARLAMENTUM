@@ -13,7 +13,6 @@ import SessionsModule from './components/SessionsModule';
 import OficiosModule from './components/OficiosModule';
 import AgendaModule from './components/AgendaModule';
 import LegislatorsModule from './components/LegislatorsModule';
-import VaultModule from './components/VaultModule';
 import LawsLibrary from './components/LawsLibrary';
 import AgreementsModule from './components/AgreementsModule';
 import AuditModule from './components/AuditModule';
@@ -156,11 +155,10 @@ export default function App() {
     { id: 'oficios', label: 'Oficios', icon: <FileText className="w-5 h-5" /> },
     { id: 'agenda', label: 'Agenda Legislativa', icon: <Scale className="w-5 h-5" /> },
     { id: 'legisladores', label: 'Legisladores', icon: <Users className="w-5 h-5" /> },
-    { id: 'boveda', label: 'Bóveda', icon: <FolderOpen className="w-5 h-5" /> },
     { id: 'leyes', label: 'Biblioteca', icon: <Scale className="w-5 h-5" /> },
     { id: 'acuerdos', label: 'Acuerdos', icon: <Gavel className="w-5 h-5" /> },
     { id: 'auditoria', label: 'Actividad', icon: <Activity className="w-5 h-5" />, roles: ['admin'] },
-    { id: 'sincronizacion', label: 'Sincronización', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'sincronizacion', label: 'Configuración', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
 
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));
@@ -318,11 +316,20 @@ export default function App() {
             {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} />}
             {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} />}
             {currentPage === 'legisladores' && <LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />}
-            {currentPage === 'boveda' && <VaultModule documents={documents} sessions={sessions} oficios={oficios} projects={projects} darkMode={darkMode} addToast={addToast} onSaveDocument={saveDocument} onDeleteDocument={deleteDocument} />}
             {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />}
             {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
-            {currentPage === 'sincronizacion' && <SyncSettings darkMode={darkMode} addToast={addToast} />}
+            {currentPage === 'sincronizacion' && (
+              <SyncSettings 
+                darkMode={darkMode} 
+                addToast={addToast} 
+                documents={documents} 
+                sessions={sessions} 
+                oficios={oficios} 
+                projects={projects} 
+                onDeleteDocument={deleteDocument} 
+              />
+            )}
           </main>
         </div>
 
