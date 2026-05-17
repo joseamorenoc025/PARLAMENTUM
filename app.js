@@ -156,24 +156,23 @@ function updateLastUpdate() {
 /**
  * Transforma un link de Google Drive a un link de descarga directa
  */
-function transformDriveLink(url) {
-    if (!url) return '#';
-    if (!url.includes('drive.google.com')) return url;
+function transformDriveLink(urlStr) {
+    if (!urlStr) return '#';
     
     try {
-        // Extraer el ID del archivo
-        const match = url.match(/\/d\/(.+?)(\/|$|\?)/);
-        if (match && match[1]) {
-            const fileId = match[1];
-            // Retornar link de previsualización que suele ser más estable para el usuario común
-            // o de descarga directa: https://drive.google.com/uc?export=download&id=...
-            return `https://drive.google.com/uc?export=download&id=${fileId}`;
+        const parsedUrl = new URL(urlStr);
+        if (parsedUrl.hostname === 'drive.google.com' || parsedUrl.hostname.endsWith('.drive.google.com')) {
+            const match = parsedUrl.pathname.match(/\/d\/(.+?)(\/|$|\?)/);
+            if (match && match[1]) {
+                const fileId = match[1];
+                return `https://drive.google.com/uc?export=download&id=${fileId}`;
+            }
         }
     } catch (e) {
         console.error('Error transformando link de Drive:', e);
     }
     
-    return url;
+    return urlStr;
 }
 
 /**

@@ -42,12 +42,8 @@ export const SPANISH_WORDLIST = [
  */
 export function generateRecoveryPhrase(wordCount = 12) {
   const phrase = [];
-  const buffer = crypto.randomBytes(wordCount * 2); // 2 bytes por palabra
-  
   for (let i = 0; i < wordCount; i++) {
-    // Leemos 2 bytes como un uint16
-    const randomValue = buffer.readUInt16LE(i * 2);
-    const randomIndex = randomValue % SPANISH_WORDLIST.length;
+    const randomIndex = crypto.randomInt(0, SPANISH_WORDLIST.length);
     phrase.push(SPANISH_WORDLIST[randomIndex]);
   }
   
