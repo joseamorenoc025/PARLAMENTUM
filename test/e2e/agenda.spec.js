@@ -23,6 +23,22 @@ test.describe('Agenda Legislativa', () => {
     await window.getByTestId('chamber-name-input').fill('Cámara Agenda');
     await window.getByTestId('btn-onboarding-finish').click({ force: true });
     await window.getByTestId('btn-onboarding-start-using').click({ force: true });
+
+    // Seed database with a commission and legislator BEFORE reloading and logging in
+    await window.evaluate(async () => {
+      await window.legisAPI.invoke('db:upsert', { 
+        table: 'commissions', 
+        data: { nombre: 'Comisión de Educación, Cultura y Deportes', activo: 1 } 
+      });
+      await window.legisAPI.invoke('db:upsert', { 
+        table: 'legislators', 
+        data: { nombre: 'Dip. E2E Test Ponente', activo: 1 } 
+      });
+    });
+
+    // Reload window so React loads the seeded data on initial render
+    await window.reload();
+    await window.waitForSelector('[data-testid="app-root"]', { state: 'attached', timeout: 30000 });
     
     // Login
     await window.locator('input[type="password"]').fill('Password123!');
@@ -51,11 +67,11 @@ test.describe('Agenda Legislativa', () => {
     const comisionSelect = window.locator('select').nth(1);
     await expect(async () => {
       const count = await comisionSelect.locator('option').count();
-      expect(count).toBeGreaterThan(0);
+      expect(count).toBeGreaterThan(1);
     }).toPass({ timeout: 15000 });
 
     if (await comisionSelect.isVisible()) {
-      await comisionSelect.selectOption({ index: 0 });
+      await comisionSelect.selectOption({ index: 1 });
     }
 
     // 4. Guardar
@@ -99,6 +115,15 @@ test.describe('Agenda Legislativa', () => {
     await window.getByTestId('btn-new-project').click({ force: true });
     const proyectoDoc = `Proyecto Docs E2E ${Date.now()}`;
     await window.getByTestId('project-title-input').fill(proyectoDoc);
+    
+    // Seleccionar comisión
+    const comisionSelect = window.locator('select').nth(1);
+    await expect(async () => {
+      const count = await comisionSelect.locator('option').count();
+      expect(count).toBeGreaterThan(1);
+    }).toPass({ timeout: 15000 });
+    await comisionSelect.selectOption({ index: 1 });
+
     await window.getByTestId('btn-save-project').click({ force: true });
     
     const card = window.getByText(proyectoDoc).first();
@@ -106,16 +131,8 @@ test.describe('Agenda Legislativa', () => {
     await card.click({ force: true });
     await expect(window.locator('h2').getByText(proyectoDoc).first()).toBeVisible();
 
-    // 3. Inyectar el mock en la ventana para dialog:open-pdf
-    await window.evaluate((pdfPath) => {
-      const originalInvoke = window.legisAPI.invoke;
-      window.legisAPI.invoke = async (channel, ...args) => {
-        if (channel === 'dialog:open-pdf') {
-          return pdfPath;
-        }
-        return originalInvoke(channel, ...args);
-      };
-    }, tempPdfPath);
+    // 3. Inyectar el mock escribiendo en mock_open_pdf_path.txt en testUserDataDir
+    fs.writeFileSync(path.join(testContext.testUserDataDir, 'mock_open_pdf_path.txt'), tempPdfPath);
 
     // 4. Hacer clic en "Adjuntar PDF Local" en la fase actual
     const attachBtn = window.getByRole('button', { name: /Adjuntar PDF Local/i }).first();

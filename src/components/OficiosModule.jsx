@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
-const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], saveDocument, deleteDocument }) => {
+const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], saveDocument, deleteDocument, reload }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });
@@ -64,6 +64,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
         }
       }
 
+      if (reload) await reload();
       addToast(editingId ? 'Oficio actualizado' : 'Oficio creado', 'success');
       resetForm();
     } catch (e) {

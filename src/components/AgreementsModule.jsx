@@ -6,7 +6,7 @@ import {
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
 
-const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], saveDocument, deleteDocument }) => {
+const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], saveDocument, deleteDocument, reload }) => {
   const [agreements, setAgreements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -90,6 +90,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
         }
       }
 
+      if (reload) await reload();
       addToast(editingId ? 'Acuerdo actualizado' : 'Acuerdo registrado exitosamente', 'success');
       
       setShowForm(false);

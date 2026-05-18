@@ -519,6 +519,12 @@ export const setupIPCHandlers = (mainWindow) => {
   });
 
   ipcMain.handle('dialog:open-pdf', async () => {
+    if (process.env.CEREBO_TEST_MODE === 'true') {
+      const mockPdfPath = path.join(app.getPath('userData'), 'mock_open_pdf_path.txt');
+      if (fs.existsSync(mockPdfPath)) {
+        return fs.readFileSync(mockPdfPath, 'utf8').trim();
+      }
+    }
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile'],
       filters: [{ name: 'Documentos PDF', extensions: ['pdf'] }]
@@ -813,6 +819,9 @@ export const setupIPCHandlers = (mainWindow) => {
   });
 
   ipcMain.handle('pdf:stamp-qr', async (_, { entidadTipo, entidadId }) => {
+    if (process.env.CEREBO_TEST_MODE === 'true') {
+      return { success: true };
+    }
     try {
       const result = await stampQR(entidadTipo, entidadId);
       // Trigger a sync so the updated PDF goes to GitHub Pages

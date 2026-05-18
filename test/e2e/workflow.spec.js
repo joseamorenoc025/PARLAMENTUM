@@ -26,7 +26,38 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     await window.getByTestId('btn-onboarding-finish').click({ force: true });
     await window.getByTestId('btn-onboarding-start-using').click({ force: true });
 
-    // 3. Iniciar sesión y validar Dashboard
+    // 3. Iniciar sesión y sembrar base de datos con comision y legislador ficticios
+    await window.locator('input[type="password"]').fill('Password123!');
+    await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
+    await expect(window.getByRole('banner').getByText('Dashboard').first()).toBeVisible({ timeout: 10000 });
+
+    await window.evaluate(async () => {
+      // Sembrar comisión
+      await window.legisAPI.invoke('db:upsert', {
+        table: 'commissions',
+        data: {
+          id: 1,
+          nombre: 'Comisión de Educación, Cultura y Deportes',
+          siglas: 'CECD',
+          activo: 1
+        }
+      });
+      // Sembrar legislador
+      await window.legisAPI.invoke('db:upsert', {
+        table: 'legislators',
+        data: {
+          id: 1,
+          nombreCompleto: 'Diputado Ponente Ficticio',
+          partido: 'Partido Test',
+          activo: 1
+        }
+      });
+    });
+
+    // Forzar recarga para que React cargue la base de datos ya poblada
+    await window.reload();
+
+    // Volver a iniciar sesión tras el reload
     await window.locator('input[type="password"]').fill('Password123!');
     await window.getByRole('button', { name: 'Acceder al Sistema' }).click({ force: true });
     await expect(window.getByRole('banner').getByText('Dashboard').first()).toBeVisible({ timeout: 10000 });
@@ -64,6 +95,10 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     await window.getByTestId('project-title-input').fill('Proyecto de Prueba E2E');
     await window.fill('input[placeholder*="Google Drive Link"]', 'https://drive.google.com/test-e2e');
     
+    // Seleccionar comisión responsable
+    const comisionSelect = window.locator('select').first();
+    await comisionSelect.selectOption({ index: 1 });
+
     await window.getByTestId('btn-save-project').click({ force: true });
     
     // 3. Verificar creación en vista Kanban o Lista
@@ -93,16 +128,8 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     await window.fill('textarea[placeholder*="objeto"]', 'Acuerdo de prueba para validación de flujo E2E.');
     await window.fill('input[placeholder*="drive.google.com"]', 'https://drive.google.com/acuerdo-test');
     
-    // Inyectar el mock en la ventana para dialog:open-pdf
-    await window.evaluate((pdfPath) => {
-      const originalInvoke = window.legisAPI.invoke;
-      window.legisAPI.invoke = async (channel, ...args) => {
-        if (channel === 'dialog:open-pdf') {
-          return pdfPath;
-        }
-        return originalInvoke(channel, ...args);
-      };
-    }, tempPdfPath);
+    // Inyectar el mock escribiendo en mock_open_pdf_path.txt en testUserDataDir
+    fs.writeFileSync(path.join(testContext.testUserDataDir, 'mock_open_pdf_path.txt'), tempPdfPath);
 
     // Adjuntar PDF local
     await window.getByRole('button', { name: /Seleccionar PDF desde mi PC/i }).click();
@@ -121,14 +148,7 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     const estamparBtn = window.getByRole('button', { name: /Estampar QR/i }).first();
     await expect(estamparBtn).toBeVisible();
     
-    // Interceptamos pdf:stamp-qr para no fallar si no hay PDFLib/Ghostscript real en CI
-    await window.evaluate(() => {
-      window.legisAPI.invoke = async (channel, ...args) => {
-        if (channel === 'pdf:stamp-qr') return { success: true };
-        if (channel === 'dialog:open-pdf') return null;
-        // Restaurar para otros (solo mockeamos stamp)
-      };
-    });
+    // (Mockeado en handlers.js para modo test)
 
     await estamparBtn.click();
     await expect(window.getByText('QR estampado exitosamente').first()).toBeVisible({ timeout: 15000 });

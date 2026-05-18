@@ -6,7 +6,7 @@ import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
 import { getStagnationColor, getStagnationLabel } from '../utils/helpers';
 
-const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], saveDocument, deleteDocument }) => {
+const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], saveDocument, deleteDocument, reload }) => {
   const [view, setView] = useState('kanban');
   const [editingId, setEditingId] = useState(null);
   const [currentColIndex, setCurrentColIndex] = useState(0);
@@ -291,6 +291,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                                   entidadId: detailProject.id,
                                   faseEtiqueta: fase.label
                                 });
+                                if (reload) await reload();
                                 addToast('PDF cargado exitosamente en Bóveda', 'success');
                               } catch (err) {
                                 addToast('Error al archivar el PDF', 'error');

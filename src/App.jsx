@@ -313,11 +313,11 @@ export default function App() {
           <main className="p-6">
             {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} config={config} onNavigate={navigateToEntity} />}
             {currentPage === 'sesiones' && <SessionsModule sessions={sessions} oficios={oficios} darkMode={darkMode} addToast={addToast} onSave={saveSession} onDelete={deleteSession} onNavigate={navigateToEntity} />}
-            {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} />}
-            {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} />}
+            {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
+            {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
             {currentPage === 'legisladores' && <LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />}
             {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />}
-            {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} />}
+            {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
             {currentPage === 'sincronizacion' && (
               <SyncSettings 
