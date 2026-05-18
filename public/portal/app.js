@@ -16,6 +16,36 @@ let currentView = 'junta'; // 'laws', 'agenda', 'legislators', 'profile', 'junta
 
 const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiLz48cGF0aCBkPSJNMTIgMTJjLTIuNjcgMC04IDEuMzQtOCA0djJoMTZ2LTJjMC0yLjY2LTUuMzMtNC04LTR6bTAtMmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6IiBmaWxsPSIjNjQ3NDhiIi8+PC9zdmc+';
 
+/**
+ * Download Counter - localStorage based tracking
+ */
+function getDownloadCount(entityType, entityId) {
+    const key = `dl_${entityType}_${entityId}`;
+    return parseInt(localStorage.getItem(key) || '0');
+}
+
+function incrementDownload(entityType, entityId) {
+    const key = `dl_${entityType}_${entityId}`;
+    const count = getDownloadCount(entityType, entityId) + 1;
+    localStorage.setItem(key, String(count));
+    // Update badge in DOM
+    const badge = document.getElementById(`dl-badge-${entityType}-${entityId}`);
+    if (badge) {
+        badge.textContent = `${count}`;
+        badge.closest('.download-counter').classList.add('has-downloads');
+    }
+    return count;
+}
+
+function buildCounterBadge(entityType, entityId) {
+    const count = getDownloadCount(entityType, entityId);
+    const hasClass = count > 0 ? ' has-downloads' : '';
+    return `<div class="download-counter${hasClass}"><i data-lucide="arrow-down-to-line" style="width: 11px; height: 11px;"></i> <span id="dl-badge-${entityType}-${entityId}">${count}</span></div>`;
+}
+
+// Expose for inline onclick
+window.incrementDownload = incrementDownload;
+
 // DOM Elements
 const mainGrid = document.getElementById('main-grid');
 const legislatorProfile = document.getElementById('legislator-profile');
@@ -291,24 +321,27 @@ function renderLaws(term) {
         let downloadBtnHtml = '';
         if (l.link_drive) {
             downloadBtnHtml = `
-                <a href="${l.link_drive}" target="_blank" class="btn-primary" style="margin-bottom: 0.5rem;">
+                <a href="${l.link_drive}" target="_blank" class="btn-primary" style="margin-bottom: 0.5rem;" onclick="incrementDownload('ley', ${l.id})">
                     <i data-lucide="download"></i> Descargar Ley
                 </a>
+                ${buildCounterBadge('ley', l.id)}
             `;
         }
 
         let adjuntosHtml = '';
         if (l.adjuntos && l.adjuntos.length > 0) {
             adjuntosHtml = `
-                <div style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 0.75rem;">
-                    <h4 style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.4rem;">Documentos Adjuntos:</h4>
-                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                        ${l.adjuntos.map(adj => `
-                            <a href="${adj.relative_path}" target="_blank" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border-radius: 8px; font-weight: 600; justify-content: center; background: #f3f4f6; color: #374151;">
-                                <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> ${adj.nombre}
+                <div class="law-adjuntos">
+                    <div class="law-adjuntos-title"><i data-lucide="paperclip" style="width: 12px; height: 12px;"></i> Documentos Adjuntos</div>
+                    ${l.adjuntos.map(adj => `
+                        <div class="law-adjunto-item">
+                            <div class="law-adjunto-icon"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i></div>
+                            <span class="law-adjunto-name" title="${adj.nombre}">${adj.nombre}</span>
+                            <a href="${adj.relative_path}" target="_blank" class="law-adjunto-download" onclick="incrementDownload('ley', ${l.id})">
+                                <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
                             </a>
-                        `).join('')}
-                    </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         }
@@ -339,6 +372,68 @@ function renderLaws(term) {
     });
 }
 
+/**
+ * Builds a visual phase timeline for a legislative project
+ */
+const LEGISLATIVE_PHASES = [
+    'Recepción',
+    'Estudio en Comisión',
+    '1ra Discusión',
+    '2da Discusión',
+    'Sanción'
+];
+
+function buildPhaseTimeline(project) {
+    const adjuntos = project.adjuntos || [];
+    const currentPhase = project.fase_actual || '';
+    
+    // Build a map of phase -> adjunto for quick lookup
+    const phaseDocMap = {};
+    adjuntos.forEach(adj => {
+        phaseDocMap[adj.fase] = adj;
+    });
+
+    // Check if there are adjuntos with phases not in the standard list
+    const extraAdjuntos = adjuntos.filter(adj => !LEGISLATIVE_PHASES.includes(adj.fase));
+
+    const nodesHtml = LEGISLATIVE_PHASES.map(phase => {
+        const doc = phaseDocMap[phase];
+        const isCurrent = phase === currentPhase;
+        const hasDoc = !!doc;
+        
+        let classes = 'phase-node';
+        if (isCurrent) classes += ' phase-current';
+        if (hasDoc) classes += ' phase-has-doc';
+
+        const docBtn = hasDoc 
+            ? `<a href="${doc.relative_path}" target="_blank" class="phase-doc-btn" onclick="incrementDownload('proyecto', ${project.id})"><i data-lucide="download" style="width: 10px; height: 10px;"></i> PDF</a>`
+            : '';
+
+        return `<div class="${classes}"><span class="phase-node-label">${phase}</span>${docBtn}</div>`;
+    }).join('');
+
+    // Render extra (non-standard) adjuntos if any
+    let extraHtml = '';
+    if (extraAdjuntos.length > 0) {
+        extraHtml = extraAdjuntos.map(adj => `
+            <div class="phase-node phase-has-doc">
+                <span class="phase-node-label">${adj.fase}</span>
+                <a href="${adj.relative_path}" target="_blank" class="phase-doc-btn" onclick="incrementDownload('proyecto', ${project.id})"><i data-lucide="download" style="width: 10px; height: 10px;"></i> PDF</a>
+            </div>
+        `).join('');
+    }
+
+    return `
+        <div class="phase-timeline">
+            <div class="phase-timeline-title"><i data-lucide="git-branch" style="width: 12px; height: 12px;"></i> Trámite Legislativo</div>
+            <div class="phase-timeline-list">
+                ${nodesHtml}
+                ${extraHtml}
+            </div>
+        </div>
+    `;
+}
+
 function renderAgenda(term) {
     const state = document.getElementById('filter-state')?.value;
     const selectedTag = document.getElementById('filter-tag')?.value;
@@ -358,24 +453,7 @@ function renderAgenda(term) {
         const card = document.createElement('div');
         card.className = 'card';
 
-        let adjuntosHtml = '';
-        if (p.adjuntos && p.adjuntos.length > 0) {
-            adjuntosHtml = `
-                <div style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 0.75rem;">
-                    <h4 style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.4rem;">Documentos por Fase:</h4>
-                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                        ${p.adjuntos.map(adj => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; background: #f9fafb; padding: 6px 10px; border-radius: 8px; border: 1px solid #f3f4f6;">
-                                <span style="font-weight: 600; color: #4b5563;">• ${adj.fase}</span>
-                                <a href="${adj.relative_path}" target="_blank" style="color: #4f46e5; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-                                    <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
-                                </a>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
+        const timelineHtml = buildPhaseTimeline(p);
 
         let tagsHtml = '';
         if (p.tags) {
@@ -388,8 +466,13 @@ function renderAgenda(term) {
             `;
         }
 
+        const counterBadge = buildCounterBadge('proyecto', p.id);
+
         card.innerHTML = `
-            <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
+                ${counterBadge}
+            </div>
             <h3 class="law-title">${p.titulo}</h3>
             <p class="law-meta" style="margin-bottom:1rem">${p.extracto || ''}</p>
             <div class="law-meta" style="margin-bottom: 1rem;">
@@ -397,7 +480,7 @@ function renderAgenda(term) {
                 <div class="meta-item"><i data-lucide="users" style="width:12px"></i> ${p.comision}</div>
             </div>
             ${tagsHtml}
-            ${adjuntosHtml}
+            ${timelineHtml}
         `;
         mainGrid.appendChild(card);
     });

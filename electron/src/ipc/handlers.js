@@ -24,6 +24,7 @@ import { uploadBackupToGitHub, downloadBackupFromGitHub } from '../modules/backu
 import { loadToken } from '../modules/sync/tokenStorage.js';
 import { getRepoConfig } from '../modules/sync/index.js';
 import { generateRecoveryPhrase } from '../lib/wordlist.js';
+import { stampQR } from '../modules/pdf/qrStamper.js';
 
 export const setupIPCHandlers = (mainWindow) => {
   // DB Ready Check
@@ -807,6 +808,22 @@ export const setupIPCHandlers = (mainWindow) => {
       return { success: true };
     } catch (err) {
       logger.error('Error in documents:open-file:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('pdf:stamp-qr', async (_, { entidadTipo, entidadId }) => {
+    try {
+      const result = await stampQR(entidadTipo, entidadId);
+      // Trigger a sync so the updated PDF goes to GitHub Pages
+      try {
+        await enqueueTask('projects', 0, 'sync');
+      } catch (e) {
+        logger.error('Sync trigger error inside pdf:stamp-qr:', e);
+      }
+      return result;
+    } catch (err) {
+      logger.error('Error in pdf:stamp-qr:', err);
       throw err;
     }
   });

@@ -263,20 +263,37 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                     const doc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === agreement.id && d.activo);
                     if (!doc) return null;
                     return (
-                      <button 
-                        onClick={async () => {
-                          try {
-                            await window.legisAPI.invoke('documents:open-file', doc.id);
-                            addToast('Archivo abierto con el visor del sistema', 'success');
-                          } catch (e) {
-                            addToast('Error al abrir el archivo local', 'error');
-                          }
-                        }}
-                        className="flex items-center gap-1.5 text-xs font-black text-amber-500 hover:underline cursor-pointer"
-                        title="Abrir documento PDF local"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Ver PDF Adjunto
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={async () => {
+                            try {
+                              await window.legisAPI.invoke('documents:open-file', doc.id);
+                              addToast('Archivo abierto con el visor del sistema', 'success');
+                            } catch (e) {
+                              addToast('Error al abrir el archivo local', 'error');
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-black text-amber-500 hover:underline cursor-pointer"
+                          title="Abrir documento PDF local"
+                        >
+                          <Download className="w-3.5 h-3.5" /> Ver PDF Adjunto
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              addToast('Estampando QR...', 'info');
+                              await window.legisAPI.invoke('pdf:stamp-qr', { entidadTipo: 'Agreement', entidadId: doc.id });
+                              addToast('QR estampado exitosamente', 'success');
+                            } catch (e) {
+                              addToast('Error al estampar QR', 'error');
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-black text-emerald-500 hover:underline cursor-pointer"
+                          title="Estampar QR de validez en PDF"
+                        >
+                          <QrCode className="w-3.5 h-3.5" /> Estampar QR
+                        </button>
+                      </div>
                     );
                   })()}
                   {agreement.driveLink && (

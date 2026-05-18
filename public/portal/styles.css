@@ -641,3 +641,218 @@ body {
     width: 0;
     transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ==========================================
+   CONTADOR DE DESCARGAS
+   ========================================== */
+.download-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: #f1f5f9;
+    color: #94a3b8;
+    margin-top: 0.4rem;
+    transition: all 0.3s ease;
+    width: fit-content;
+}
+
+.download-counter.has-downloads {
+    background: #ecfdf5;
+    color: #059669;
+    animation: counterPulse 0.4s ease;
+}
+
+@keyframes counterPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+/* ==========================================
+   LÍNEA DE TIEMPO DE FASES LEGISLATIVAS
+   ========================================== */
+.phase-timeline {
+    margin-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.75rem;
+}
+
+.phase-timeline-title {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.phase-timeline-list {
+    position: relative;
+    padding-left: 1.25rem;
+}
+
+.phase-timeline-list::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--primary), #c7d2fe);
+    border-radius: 2px;
+}
+
+.phase-node {
+    position: relative;
+    padding: 0.5rem 0 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.phase-node::before {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    background: white;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.phase-node.phase-current::before {
+    background: var(--primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+
+.phase-node.phase-has-doc::before {
+    background: var(--accent-emerald);
+    border-color: var(--accent-emerald);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.phase-node-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #4b5563;
+    flex: 1;
+}
+
+.phase-node.phase-current .phase-node-label {
+    color: var(--primary);
+    font-weight: 800;
+}
+
+.phase-node.phase-has-doc .phase-node-label {
+    color: #065f46;
+}
+
+.phase-doc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.phase-doc-btn:hover {
+    background: #065f46;
+    color: white;
+    border-color: #065f46;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(6, 95, 70, 0.2);
+}
+
+/* Adjuntos mejorados para Leyes */
+.law-adjuntos {
+    margin-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.75rem;
+}
+
+.law-adjuntos-title {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+}
+
+.law-adjunto-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    background: #f9fafb;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #f3f4f6;
+    margin-bottom: 0.35rem;
+    transition: all 0.2s ease;
+}
+
+.law-adjunto-item:hover {
+    border-color: var(--primary);
+    background: #eef2ff;
+}
+
+.law-adjunto-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #e0e7ff;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.law-adjunto-name {
+    flex: 1;
+    font-weight: 600;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.law-adjunto-download {
+    color: var(--primary);
+    font-weight: 800;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.law-adjunto-download:hover {
+    background: var(--primary);
+    color: white;
+}
