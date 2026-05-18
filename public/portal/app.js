@@ -588,15 +588,7 @@ function renderStatsDashboard() {
                 </div>
             </div>
 
-            <div class="stat-counter-card">
-                <div class="stat-counter-icon" style="background: #ecfdf5; color: #059669;">
-                    <i data-lucide="check-circle" style="width: 24px; height: 24px;"></i>
-                </div>
-                <div class="stat-counter-info">
-                    <h3>Trámites Completados</h3>
-                    <div class="stat-value">${approvedProjects}</div>
-                </div>
-            </div>
+
 
             <div class="stat-counter-card">
                 <div class="stat-counter-icon" style="background: #eff6ff; color: #2563eb;">
