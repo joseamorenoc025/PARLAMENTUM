@@ -12,6 +12,15 @@
     "fecha_ingreso": "2026-05-18",
     "ponente": "Maria Narvaez",
     "comision": "No asignada",
+    "adjuntos": [
+      {
+        "id": 2,
+        "fase": "Recepción",
+        "nombre": "PROLOCAL-PROCESOS-GERENCIALES-para-el-DESARROLLO-LOCAL.pdf",
+        "relative_path": "documentos/doc_1779068186689_PROLOCAL-PROCESOS-GERENCIALES-para-el-DESARROLLO-LOCAL.pdf",
+        "hash": "f446748e5db28febe3437f80da2d00fef4c2558c5ce1b52fce473150d8a87a6b"
+      }
+    ],
     "updated_at": "2026-05-18 01:35:16"
   },
   {
@@ -27,6 +36,15 @@
     "fecha_ingreso": "2026-05-18",
     "ponente": "No asignado",
     "comision": "No asignada",
+    "adjuntos": [
+      {
+        "id": 3,
+        "fase": "Estudio en Comisión",
+        "nombre": "PROLOCAL-PROCESOS-GERENCIALES-para-el-DESARROLLO-LOCAL.pdf",
+        "relative_path": "documentos/doc_1779068270748_PROLOCAL-PROCESOS-GERENCIALES-para-el-DESARROLLO-LOCAL.pdf",
+        "hash": "f446748e5db28febe3437f80da2d00fef4c2558c5ce1b52fce473150d8a87a6b"
+      }
+    ],
     "updated_at": "2026-05-18 01:35:56"
   }
 ]
