@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { launchTestApp, cleanupTestApp } from './electron-test-setup';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 test.describe('Agenda Legislativa', () => {
   let testContext;
@@ -81,5 +84,54 @@ test.describe('Agenda Legislativa', () => {
 
     // Volver al tablero
     await window.getByText('Volver al Tablero').click();
+  });
+
+  test('Debe permitir adjuntar documentos PDF por fase', async () => {
+    // 1. Crear un archivo PDF temporal real para que el backend lo pueda copiar
+    const tempPdfPath = path.join(os.tmpdir(), `test_doc_${Date.now()}.pdf`);
+    fs.writeFileSync(tempPdfPath, 'fake pdf content');
+
+    // 2. Navegar a Agenda y abrir un proyecto
+    await window.getByTestId('nav-agenda').click();
+    await window.getByTestId('agenda-page-title').waitFor({ state: 'visible' });
+    
+    // Crear proyecto para asegurar que tenemos uno
+    await window.getByTestId('btn-new-project').click({ force: true });
+    const proyectoDoc = `Proyecto Docs E2E ${Date.now()}`;
+    await window.getByTestId('project-title-input').fill(proyectoDoc);
+    await window.getByTestId('btn-save-project').click({ force: true });
+    
+    const card = window.getByText(proyectoDoc).first();
+    await expect(card).toBeVisible({ timeout: 20000 });
+    await card.click({ force: true });
+    await expect(window.locator('h2').getByText(proyectoDoc).first()).toBeVisible();
+
+    // 3. Inyectar el mock en la ventana para dialog:open-pdf
+    await window.evaluate((pdfPath) => {
+      const originalInvoke = window.legisAPI.invoke;
+      window.legisAPI.invoke = async (channel, ...args) => {
+        if (channel === 'dialog:open-pdf') {
+          return pdfPath;
+        }
+        return originalInvoke(channel, ...args);
+      };
+    }, tempPdfPath);
+
+    // 4. Hacer clic en "Adjuntar PDF Local" en la fase actual
+    const attachBtn = window.getByRole('button', { name: /Adjuntar PDF Local/i }).first();
+    await expect(attachBtn).toBeVisible();
+    await attachBtn.click({ force: true });
+
+    // 5. Verificar que se muestra el mensaje de éxito
+    await expect(window.getByText('PDF cargado exitosamente en Bóveda').first()).toBeVisible({ timeout: 15000 });
+
+    // 6. Verificar que la UI muestra el archivo vinculado
+    const fileNameElement = window.getByText(path.basename(tempPdfPath)).first();
+    await expect(fileNameElement).toBeVisible();
+
+    // Limpiar archivo temporal
+    if (fs.existsSync(tempPdfPath)) {
+      fs.unlinkSync(tempPdfPath);
+    }
   });
 });

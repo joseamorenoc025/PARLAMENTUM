@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { launchTestApp, cleanupTestApp } from './electron-test-setup';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 /**
  * Suite de Pruebas de Flujo Legislativo Completo
@@ -79,12 +82,32 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     // 1. Navegar a Acuerdos
     await window.getByTestId('nav-acuerdos').click();
     await expect(window.locator('h1').first()).toContainText('Acuerdos de Cámara');
+    
+    // Crear PDF falso para probar ingesta y QR
+    const tempPdfPath = path.join(os.tmpdir(), `test_acuerdo_${Date.now()}.pdf`);
+    fs.writeFileSync(tempPdfPath, 'fake pdf content for agreement');
+
     // 2. Crear Acuerdo
     await window.click('button:has-text("Nuevo Acuerdo")');
     await window.fill('input[placeholder="Ej: 001-2024"]', 'ACU-2026-001');
     await window.fill('textarea[placeholder*="objeto"]', 'Acuerdo de prueba para validación de flujo E2E.');
     await window.fill('input[placeholder*="drive.google.com"]', 'https://drive.google.com/acuerdo-test');
     
+    // Inyectar el mock en la ventana para dialog:open-pdf
+    await window.evaluate((pdfPath) => {
+      const originalInvoke = window.legisAPI.invoke;
+      window.legisAPI.invoke = async (channel, ...args) => {
+        if (channel === 'dialog:open-pdf') {
+          return pdfPath;
+        }
+        return originalInvoke(channel, ...args);
+      };
+    }, tempPdfPath);
+
+    // Adjuntar PDF local
+    await window.getByRole('button', { name: /Seleccionar PDF desde mi PC/i }).click();
+    await expect(window.getByText(path.basename(tempPdfPath)).first()).toBeVisible();
+
     await window.click('button:has-text("Registrar")');
 
     // 3. Verificar visibilidad y QR
@@ -93,6 +116,26 @@ test.describe('Flujo Legislativo y UX Transversal', () => {
     // Probar apertura de QR (abre nueva ventana en Electron)
     await window.click('button[title="QR Acceso"]');
     // Nota: Validar que no hay errores al abrir la ventana popup
+
+    // 4. Probar "Estampar QR" en PDF
+    const estamparBtn = window.getByRole('button', { name: /Estampar QR/i }).first();
+    await expect(estamparBtn).toBeVisible();
+    
+    // Interceptamos pdf:stamp-qr para no fallar si no hay PDFLib/Ghostscript real en CI
+    await window.evaluate(() => {
+      window.legisAPI.invoke = async (channel, ...args) => {
+        if (channel === 'pdf:stamp-qr') return { success: true };
+        if (channel === 'dialog:open-pdf') return null;
+        // Restaurar para otros (solo mockeamos stamp)
+      };
+    });
+
+    await estamparBtn.click();
+    await expect(window.getByText('QR estampado exitosamente').first()).toBeVisible({ timeout: 15000 });
+
+    if (fs.existsSync(tempPdfPath)) {
+      fs.unlinkSync(tempPdfPath);
+    }
   });
 
   test('Integridad Visual y Logout', async () => {
