@@ -13,7 +13,6 @@ paths = [
     '''playwright-report/'''
 ]
 
-[rules]
 # Use default Gitleaks rules if possible, but defining some basic ones as per doc
 [[rules]]
     description = "GitHub Token"

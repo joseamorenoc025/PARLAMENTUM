@@ -2,10 +2,17 @@
 rules:
   - id: electron-unsafe-ipc-no-zod
     patterns:
-      - pattern: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... })
-      - pattern-not: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... validate($DATA, $SCHEMA) ... })
-      - pattern-not: ipcMain.handle($NAME, async ($EVENT, $DATA) => { ... $SCHEMA.parse($DATA) ... })
-    message: "⚠️ IPC handler sin validación aparente detectada. Asegúrate de usar 'validate(data, schema)' o un esquema Zod directamente antes de procesar la entrada."
+      - pattern: |
+          ipcMain.handle($NAME, async ($EVENT, $DATA) => {
+            ...
+          })
+      - pattern-not-inside: |
+          ipcMain.handle($NAME, async ($EVENT, $DATA) => {
+            ...
+            validate(...)
+            ...
+          })
+    message: "⚠️ IPC handler sin validación aparente detectada."
     languages: [javascript, typescript]
     severity: WARNING
 
