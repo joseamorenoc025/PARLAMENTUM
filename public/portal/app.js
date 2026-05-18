@@ -6,12 +6,13 @@
 let allLaws = [];
 let allProjects = [];
 let allLegislators = [];
+let allJunta = [];
 let appConfig = {
     chamber_name: 'Cerebro Legislativo',
     timezone: 'UTC'
 };
 
-let currentView = 'laws'; // 'laws', 'agenda', 'legislators', 'profile'
+let currentView = 'junta'; // 'laws', 'agenda', 'legislators', 'profile', 'junta'
 
 const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23cbd5e1"><circle cx="12" cy="12" r="12"/><path d="M12 12c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="%2364748b"/></svg>`;
 
@@ -68,7 +69,7 @@ function handleRouting() {
     } else if (view) {
         switchView(view);
     } else {
-        switchView('laws');
+        switchView('junta');
     }
 }
 
@@ -89,7 +90,10 @@ async function switchView(view, id = null) {
     document.getElementById('search-section').classList.toggle('hidden', view === 'profile');
 
     // Load Data and Render
-    if (view === 'laws') {
+    if (view === 'junta') {
+        if (allJunta.length === 0) await fetchJunta();
+        setupFilters('junta');
+    } else if (view === 'laws') {
         if (allLaws.length === 0) await fetchLaws();
         setupFilters('laws');
     } else if (view === 'agenda') {
@@ -118,6 +122,13 @@ async function fetchConfig() {
             applyConfig();
         }
     } catch (e) { console.warn('Config default used'); }
+}
+
+async function fetchJunta() {
+    try {
+        const response = await fetch(`./junta_directiva.json?t=${Date.now()}`);
+        allJunta = response.ok ? await response.json() : [];
+    } catch (e) { console.error('Error junta', e); }
 }
 
 async function fetchLaws() {
@@ -181,11 +192,34 @@ function renderCurrentView() {
     mainGrid.innerHTML = '';
     hideStatus();
 
-    if (currentView === 'laws') renderLaws(term);
+    if (currentView === 'junta') renderJunta(term);
+    else if (currentView === 'laws') renderLaws(term);
     else if (currentView === 'agenda') renderAgenda(term);
     else if (currentView === 'legislators') renderLegislators(term);
     
     lucide.createIcons();
+}
+
+function renderJunta(term) {
+    const filtered = allJunta.filter(j => j.nombre.toLowerCase().includes(term) || j.rol.toLowerCase().includes(term) || (j.partido && j.partido.toLowerCase().includes(term)));
+    
+    if (filtered.length === 0) return showStatus('No se encontraron miembros de la Junta Directiva.', 'info');
+    
+    filtered.forEach(j => {
+        const card = document.createElement('div');
+        card.className = 'card legislator-card';
+        card.innerHTML = `
+            <div style="position:absolute; top: 1rem; right: 1rem; background: #fbbf24; color: #78350f; font-weight: 900; font-size: 0.65rem; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; z-index: 10;">
+                <i data-lucide="crown" style="width: 10px; height: 10px;"></i> Junta Directiva
+            </div>
+            <img src="${j.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="legislator-img" style="margin-top: 1rem;">
+            <h3 class="legislator-name">${j.nombre}</h3>
+            <span class="legislator-party" style="background: #e0e7ff; color: #4f46e5; font-weight: bold; border-radius: 6px; padding: 2px 8px; font-size: 0.65rem; margin-top: 0.25rem;">${j.partido}</span>
+            <p style="font-size: 0.8rem; font-weight: 800; color: #374151; margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 0.025em;">${j.rol}</p>
+            <p style="font-size: 0.75rem; color: #6b7280; margin: 0.5rem 1rem 0 1rem; line-height: 1.4;">${j.biografia || 'Sin descripción biográfica disponible.'}</p>
+        `;
+        mainGrid.appendChild(card);
+    });
 }
 
 function renderLaws(term) {
@@ -205,16 +239,41 @@ function renderLaws(term) {
     filtered.forEach(l => {
         const card = document.createElement('div');
         card.className = 'card';
+        
+        let downloadBtnHtml = '';
+        if (l.link_drive) {
+            downloadBtnHtml = `
+                <a href="${l.link_drive}" target="_blank" class="btn-primary" style="margin-bottom: 0.5rem;">
+                    <i data-lucide="download"></i> Descargar Ley
+                </a>
+            `;
+        }
+
+        let adjuntosHtml = '';
+        if (l.adjuntos && l.adjuntos.length > 0) {
+            adjuntosHtml = `
+                <div style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 0.75rem;">
+                    <h4 style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.4rem;">Documentos Adjuntos:</h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${l.adjuntos.map(adj => `
+                            <a href="${adj.relative_path}" target="_blank" class="btn-secondary" style="font-size: 0.7rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border-radius: 8px; font-weight: 600; justify-content: center; background: #f3f4f6; color: #374151;">
+                                <i data-lucide="file-text" style="width: 12px; height: 12px;"></i> ${adj.nombre}
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <span class="law-tag">${l.gaceta || l.tipo || 'Ordinaria'}</span>
             <h3 class="law-title">${l.titulo}</h3>
-            <div class="law-meta">
-                <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente}</div>
-                <div class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${l.anio}</div>
+            <div class="law-meta" style="margin-bottom: 1rem;">
+                <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente || 'No asignado'}</div>
+                <div class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${l.anio || 'N/A'}</div>
             </div>
-            <a href="${l.link_drive}" target="_blank" class="btn-primary">
-                <i data-lucide="download"></i> Descargar
-            </a>
+            ${downloadBtnHtml}
+            ${adjuntosHtml}
         `;
         mainGrid.appendChild(card);
     });
@@ -234,6 +293,26 @@ function renderAgenda(term) {
     filtered.forEach(p => {
         const card = document.createElement('div');
         card.className = 'card';
+
+        let adjuntosHtml = '';
+        if (p.adjuntos && p.adjuntos.length > 0) {
+            adjuntosHtml = `
+                <div style="margin-top: 1rem; border-top: 1px solid #e5e7eb; padding-top: 0.75rem;">
+                    <h4 style="font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #4b5563; margin-bottom: 0.4rem;">Documentos por Fase:</h4>
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${p.adjuntos.map(adj => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; background: #f9fafb; padding: 6px 10px; border-radius: 8px; border: 1px solid #f3f4f6;">
+                                <span style="font-weight: 600; color: #4b5563;">• ${adj.fase}</span>
+                                <a href="${adj.relative_path}" target="_blank" style="color: #4f46e5; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
+                                </a>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
             <h3 class="law-title">${p.titulo}</h3>
@@ -242,6 +321,7 @@ function renderAgenda(term) {
                 <div class="meta-item"><i data-lucide="user" style="width:12px"></i> ${p.ponente}</div>
                 <div class="meta-item"><i data-lucide="users" style="width:12px"></i> ${p.comision}</div>
             </div>
+            ${adjuntosHtml}
         `;
         mainGrid.appendChild(card);
     });
@@ -256,7 +336,7 @@ function renderLegislators(term) {
         const card = document.createElement('div');
         card.className = 'card legislator-card';
         card.innerHTML = `
-            <img src="${l.foto || defaultAvatar}" class="legislator-img">
+            <img src="${l.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="legislator-img">
             <h3 class="legislator-name">${l.nombre}</h3>
             <span class="legislator-party">${l.partido || 'Independiente'}</span>
             <button class="btn-primary" onclick="switchView('profile', ${l.id})">
@@ -279,7 +359,7 @@ function renderLegislatorProfile(id) {
             <i data-lucide="arrow-left"></i> Volver al listado
         </button>
         <div class="profile-header">
-            <img src="${legislator.foto || defaultAvatar}" class="profile-img-lg">
+            <img src="${legislator.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="profile-img-lg">
             <div class="profile-info">
                 <span class="legislator-party">${legislator.partido || 'Independiente'}</span>
                 <h2>${legislator.nombre}</h2>

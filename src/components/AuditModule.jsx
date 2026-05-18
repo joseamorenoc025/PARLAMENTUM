@@ -3,6 +3,7 @@ import {
   Clock, Search, AlertCircle, ChevronLeft, ChevronRight, Hash, 
   Download, PlusCircle, Edit3, Trash2, ShieldCheck, Sparkles, Filter
 } from 'lucide-react';
+import { formatActivity } from '../utils/activityFormatter';
 
 const AuditModule = ({ auditLogs = [], darkMode }) => {
   const [search, setSearch] = useState('');
@@ -130,7 +131,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
         log.entityType || 'Sistema',
         log.entityId || 'N/A',
         log.action,
-        log.changes ? log.changes.replace(/"/g, '""') : '',
+        formatActivity(log.action, log.entityType, log.entityId, log.changes).replace(/"/g, '""'),
         log.signature || 'N/A'
       ]);
 
@@ -256,12 +257,15 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
                 }`}>
                   {/* Fila superior: Acción y Timestamp */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-4 mb-4 dark:border-gray-800 border-gray-100">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex items-center flex-wrap gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-500/10 text-indigo-500`}>
+                        # {log.id}
+                      </span>
                       <span className={`text-xs font-black uppercase tracking-wider ${actDetails.textColor}`}>
                         {actDetails.label}
                       </span>
                       {log.entityId && (
-                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-mono ${
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono ${
                           darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
                         }`}>
                           REGISTRO ID: {log.entityId}
@@ -275,13 +279,11 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
                   </div>
 
                   {/* Cuerpo: Descripción y detalles del cambio */}
-                  {log.changes && (
-                    <div className={`p-4 rounded-2xl text-xs leading-relaxed font-medium mb-4 ${
-                      darkMode ? 'bg-gray-950/40 text-gray-300' : 'bg-gray-50 text-gray-600'
-                    }`}>
-                      {log.changes}
-                    </div>
-                  )}
+                  <div className={`p-4 rounded-2xl text-xs leading-relaxed font-medium mb-4 border border-dashed ${
+                    darkMode ? 'bg-gray-950/40 text-gray-300 border-gray-800' : 'bg-gray-50 text-gray-600 border-gray-100'
+                  }`}>
+                    {formatActivity(log.action, log.entityType, log.entityId, log.changes)}
+                  </div>
 
                   {/* Firma Criptográfica (Sello de integridad) */}
                   {log.signature && (

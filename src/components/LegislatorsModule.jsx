@@ -47,9 +47,15 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
     try {
       const result = await window.legisAPI.invoke('dialog:open-image');
       if (result) {
-        // En un escenario real, guardaríamos el buffer o la ruta. 
-        // Por simplicidad en este MVP, convertimos a dataURL si es pequeño o guardamos ruta.
-        const dataUrl = `data:image/png;base64,${result.buffer.toString('base64')}`;
+        const bytes = result.buffer instanceof Uint8Array ? result.buffer : new Uint8Array(Object.values(result.buffer));
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64 = window.btoa(binary);
+        const ext = result.filePath.split('.').pop().toLowerCase();
+        const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const dataUrl = `data:${mimeType};base64,${base64}`;
         setForm(prev => ({ ...prev, foto: dataUrl }));
         addToast('Foto seleccionada', 'success');
       }
@@ -153,16 +159,17 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           >
             <QrCode className="w-4 h-4 text-indigo-500" /> QR Portal Público
           </button>
-          <button 
-            onClick={() => { 
-              if (tab === 'junta') return; // Junta usa su propio formulario interno
-              setFormType(tab === 'legislators' ? 'legislator' : 'commission');
-              setShowForm(true); 
-            }} 
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
-          >
-            <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : tab === 'commissions' ? 'Comisión' : ''}
-          </button>
+          {tab !== 'junta' && (
+            <button 
+              onClick={() => { 
+                setFormType(tab === 'legislators' ? 'legislator' : 'commission');
+                setShowForm(true); 
+              }} 
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+            >
+              <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : 'Comisión'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -188,7 +195,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
         </button>
       </div>
 
-      {tab === 'legislators' ? (
+      {tab === 'legislators' && (
         legislators.filter(l => l.activo).length === 0 ? (
           <EmptyState 
             icon={UserPlus}
@@ -259,21 +266,93 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             </div>
           </div>
         )
-      ) : (
+      )}
+
+      {tab === 'commissions' && (
         commissions.filter(c => c.activo).length === 0 ? (
-          <EmptyState 
-            icon={Users}
-            title="No se han configurado comisiones"
-            description="Las comisiones organizan el trabajo legislativo. Cree la primera para asignar legisladores y expedientes."
-            action={{
-              label: "Crear comisión",
-              onClick: () => { 
-                setFormType('commission');
-                setShowForm(true); 
-              }
-            }}
-            dataTestId="empty-state-comisiones"
-          />
+          <div className={`max-w-2xl mx-auto p-8 rounded-[2rem] border ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 shadow-sm'} space-y-6`}>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-3">
+                <Users className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-bold">No se han configurado comisiones</h2>
+              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+                Las comisiones organizan el trabajo legislativo. Inicie configurando la primera comisión a continuación.
+              </p>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Nombre de la Comisión</label>
+                <input value={commissionForm.nombre} onChange={e => setCommissionForm({...commissionForm, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Hacienda y Presupuesto" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Presidente</label>
+                  <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                    <option value="">Seleccionar...</option>
+                    {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Vicepresidente</label>
+                  <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                    <option value="">Seleccionar...</option>
+                    {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="p-5 rounded-3xl bg-gray-50 dark:bg-gray-800/30 space-y-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between border-b dark:border-gray-800 pb-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest opacity-40">Configuración Miembros</label>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsCitizenM3(false)}
+                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${!isCitizenM3 ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                    >
+                      LEGISLADORES
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsCitizenM3(true)}
+                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${isCitizenM3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                    >
+                      + CIUDADANO
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                    <option value="">Miembro I...</option>
+                    {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                  <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                    <option value="">Miembro II...</option>
+                    {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                </div>
+
+                {isCitizenM3 ? (
+                  <input 
+                    placeholder="Nombre completo del Ciudadano (M-III)" 
+                    value={commissionForm.miembro3Nombre} 
+                    onChange={e => setCommissionForm({...commissionForm, miembro3Nombre: e.target.value})} 
+                    className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                  />
+                ) : (
+                  <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                    <option value="">Miembro III (Legislador)...</option>
+                    {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                  </select>
+                )}
+              </div>
+
+              <button onClick={handleSaveCommission} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Instalar Comisión</button>
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {commissions.filter(c => c.activo).map(c => (

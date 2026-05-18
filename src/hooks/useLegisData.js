@@ -95,6 +95,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveSession(session);
     await loadAllData();
     await logAction(session.id ? 'UPDATE_SESSION' : 'CREATE_SESSION', 'sessions', id || session.id, session);
+    return id || session.id;
   };
 
   const deleteSession = async (id) => {
@@ -107,6 +108,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveLegislator(legislator);
     await loadAllData();
     await logAction(legislator.id ? 'UPDATE_LEGISLATOR' : 'CREATE_LEGISLATOR', 'legislators', id || legislator.id, legislator);
+    return id || legislator.id;
   };
 
   const deleteLegislator = async (id) => {
@@ -119,6 +121,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveCommission(commission);
     await loadAllData();
     await logAction(commission.id ? 'UPDATE_COMMISSION' : 'CREATE_COMMISSION', 'commissions', id || commission.id, commission);
+    return id || commission.id;
   };
 
   const deleteCommission = async (id) => {
@@ -131,6 +134,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveOficio(oficio);
     await loadAllData();
     await logAction(oficio.id ? 'UPDATE_OFICIO' : 'CREATE_OFICIO', 'oficios', id || oficio.id, oficio);
+    return id || oficio.id;
   };
 
   const deleteOficio = async (id) => {
@@ -143,6 +147,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveProject(project);
     await loadAllData();
     await logAction(project.id ? 'UPDATE_PROJECT' : 'CREATE_PROJECT', 'projects', id || project.id, project);
+    return id || project.id;
   };
 
   const deleteProject = async (id) => {
@@ -155,6 +160,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveAgreement(agreement);
     await loadAllData();
     await logAction(agreement.id ? 'UPDATE_AGREEMENT' : 'CREATE_AGREEMENT', 'agreements', id || agreement.id, agreement);
+    return id || agreement.id;
   };
 
   const deleteAgreement = async (id) => {
@@ -167,6 +173,7 @@ export const useLegisData = (defaultConfig) => {
     const id = await dbService.saveDocument(document);
     await loadAllData();
     await logAction('CREATE_DOCUMENT', 'documents', id, { nombre: document.nombreOriginal });
+    return id || document.id;
   };
 
   const deleteDocument = async (id) => {

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app } from 'electron';
+import { ipcMain, dialog, app, shell } from 'electron';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import path from 'path';
@@ -300,7 +300,31 @@ export const setupIPCHandlers = (mainWindow) => {
         queryBuilder = queryBuilder.where(eq(tableSchema.activo, 1));
       }
 
-      return queryBuilder.all();
+      const records = queryBuilder.all();
+
+      if (table === 'legislators') {
+        return records.map(r => {
+          if (r.foto && !r.foto.startsWith('data:image')) {
+            const fullPath = path.join(app.getPath('userData'), r.foto);
+            if (fs.existsSync(fullPath)) {
+              const ext = path.extname(r.foto).replace('.', '');
+              const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+              const base64 = fs.readFileSync(fullPath).toString('base64');
+              return { ...r, foto: `data:${mimeType};base64,${base64}` };
+            }
+            return { ...r, foto: null };
+          }
+          if (r.foto && r.foto.startsWith('data:image') && r.foto.includes(',')) {
+            const content = r.foto.split(',')[1] || '';
+            if (!content.match(/^[a-zA-Z0-9+/=]+$/)) {
+              return { ...r, foto: null }; // Limpiar fila con bytes crudos
+            }
+          }
+          return r;
+        });
+      }
+
+      return records;
     } catch (err) {
       logger.error(`Select error [${table}]:`, err);
       throw err;
@@ -326,6 +350,23 @@ export const setupIPCHandlers = (mainWindow) => {
     try {
       const tableSchema = schema[table];
       if (!tableSchema) throw new Error(`Table ${table} not found in schema`);
+
+      if (table === 'legislators' && data.foto && data.foto.startsWith('data:image')) {
+        const fotosDir = path.join(app.getPath('userData'), 'attachments', 'fotos');
+        if (!fs.existsSync(fotosDir)) {
+          fs.mkdirSync(fotosDir, { recursive: true });
+        }
+        const matches = data.foto.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+          const base64Data = matches[2];
+          const fileName = `legislador_${Date.now()}.${ext}`;
+          const fotoPath = path.join('attachments', 'fotos', fileName);
+          const fullPath = path.join(app.getPath('userData'), fotoPath);
+          fs.writeFileSync(fullPath, Buffer.from(base64Data, 'base64'));
+          data.foto = fotoPath;
+        }
+      }
 
       if (table === 'config') {
         const { key, ...updateData } = data;
@@ -584,7 +625,26 @@ export const setupIPCHandlers = (mainWindow) => {
   // ── Junta Directiva ─────────────────────────────────────────────────────
   ipcMain.handle('junta:getAll', async () => {
     try {
-      return db.select().from(schema.juntaDirectiva).where(eq(schema.juntaDirectiva.activo, 1)).all();
+      const records = db.select().from(schema.juntaDirectiva).where(eq(schema.juntaDirectiva.activo, 1)).all();
+      return records.map(r => {
+        if (r.foto && !r.foto.startsWith('data:image')) {
+          const fullPath = path.join(app.getPath('userData'), r.foto);
+          if (fs.existsSync(fullPath)) {
+            const ext = path.extname(r.foto).replace('.', '');
+            const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+            const base64 = fs.readFileSync(fullPath).toString('base64');
+            return { ...r, foto: `data:${mimeType};base64,${base64}` };
+          }
+          return { ...r, foto: null };
+        }
+        if (r.foto && r.foto.startsWith('data:image') && r.foto.includes(',')) {
+          const content = r.foto.split(',')[1] || '';
+          if (!content.match(/^[a-zA-Z0-9+/=]+$/)) {
+            return { ...r, foto: null }; // Limpiar fila con bytes crudos
+          }
+        }
+        return r;
+      });
     } catch (err) {
       logger.error('junta:getAll error:', err);
       throw err;
@@ -600,10 +660,28 @@ export const setupIPCHandlers = (mainWindow) => {
           .where(eq(schema.juntaDirectiva.rol, data.rol))
           .run();
       }
+
+      let fotoPath = data.foto || null;
+      if (data.foto && data.foto.startsWith('data:image')) {
+        const fotosDir = path.join(app.getPath('userData'), 'attachments', 'fotos');
+        if (!fs.existsSync(fotosDir)) {
+          fs.mkdirSync(fotosDir, { recursive: true });
+        }
+        const matches = data.foto.match(/^data:image\/([a-zA-Z+]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+          const base64Data = matches[2];
+          const fileName = `junta_${data.rol.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
+          fotoPath = path.join('attachments', 'fotos', fileName);
+          const fullPath = path.join(app.getPath('userData'), fotoPath);
+          fs.writeFileSync(fullPath, Buffer.from(base64Data, 'base64'));
+        }
+      }
+
       const payload = {
         rol: data.rol,
         nombre: data.nombre,
-        foto: data.foto || null,
+        foto: fotoPath,
         partidoPolitico: data.partidoPolitico || null,
         biografia: data.biografia || null,
         fechaInicio: data.fechaInicio,
@@ -636,6 +714,98 @@ export const setupIPCHandlers = (mainWindow) => {
       return { success: true };
     } catch (err) {
       logger.error('junta:delete error:', err);
+      throw err;
+    }
+  });
+
+  // Bóveda Documental - Ingesta y Apertura de Archivos Locales
+  ipcMain.handle('documents:save-file', async (_, { filePath, entidadTipo, entidadId, faseEtiqueta }) => {
+    try {
+      if (!fs.existsSync(filePath)) {
+        throw new Error('El archivo de origen no existe.');
+      }
+
+      // 1. Copiar a la carpeta permanente de datos de la app
+      const docsPath = path.join(app.getPath('userData'), 'documents');
+      if (!fs.existsSync(docsPath)) {
+        fs.mkdirSync(docsPath, { recursive: true });
+      }
+
+      const nombreOriginal = path.basename(filePath);
+      const sanitizado = nombreOriginal.replace(/\s+/g, '_');
+      const destFileName = `doc_${Date.now()}_${sanitizado}`;
+      const destPath = path.join(docsPath, destFileName);
+
+      fs.copyFileSync(filePath, destPath);
+
+      // 2. Leer archivo para calcular el hash sha256 y crear Base64
+      const fileBuffer = fs.readFileSync(destPath);
+      const hashIntegridad = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      const contenidoBase64 = fileBuffer.toString('base64');
+      const tamanoBytes = fileBuffer.length;
+      const tipoMime = 'application/pdf'; // siempre son PDFs en esta app
+      const fechaSubida = new Date().toISOString();
+
+      // 3. Insertar en base de datos local
+      const payload = {
+        entidadTipo,
+        entidadId: entidadId ? Number(entidadId) : null,
+        faseEtiqueta: faseEtiqueta || null,
+        rutaArchivo: destPath,
+        nombreOriginal,
+        tipoMime,
+        tamanoBytes,
+        hashIntegridad,
+        fechaSubida,
+        contenidoBase64,
+        activo: 1
+      };
+
+      const result = db.insert(schema.documents).values(payload).run();
+      
+      // Auto-sync de la bóveda
+      try {
+        await enqueueTask('projects', 0, 'sync'); 
+      } catch (e) {
+        logger.error('Sync trigger error inside documents:save-file:', e);
+      }
+
+      return { success: true, id: result.lastInsertRowid };
+    } catch (err) {
+      logger.error('Error in documents:save-file:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('documents:open-file', async (_, docId) => {
+    try {
+      const doc = db.select().from(schema.documents).where(eq(schema.documents.id, Number(docId))).all();
+      if (!doc || doc.length === 0) {
+        throw new Error('Documento no encontrado en base de datos.');
+      }
+
+      const document = doc[0];
+      let filePath = document.rutaArchivo;
+
+      // Si el archivo físico no existe (ej. tras sincronización), recrearlo usando el Base64
+      if (!fs.existsSync(filePath)) {
+        const docsPath = path.join(app.getPath('userData'), 'documents');
+        if (!fs.existsSync(docsPath)) {
+          fs.mkdirSync(docsPath, { recursive: true });
+        }
+        
+        const sanitizado = (document.nombreOriginal || 'documento.pdf').replace(/\s+/g, '_');
+        filePath = path.join(docsPath, `temp_${Date.now()}_${sanitizado}`);
+        
+        const fileBuffer = Buffer.from(document.contenidoBase64, 'base64');
+        fs.writeFileSync(filePath, fileBuffer);
+      }
+
+      // Abrir el archivo con el visor nativo del sistema
+      await shell.openPath(filePath);
+      return { success: true };
+    } catch (err) {
+      logger.error('Error in documents:open-file:', err);
       throw err;
     }
   });

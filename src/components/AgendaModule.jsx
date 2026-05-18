@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { 
-  Plus, ArrowRight, ChevronLeft, ChevronRight, History, Trash2, Layout, Clock, CheckCircle2, Gavel, Scale, AlertCircle
+  Plus, ArrowRight, ChevronLeft, ChevronRight, History, Trash2, Layout, Clock, CheckCircle2, Gavel, Scale, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
 import { getStagnationColor, getStagnationLabel } from '../utils/helpers';
 
-const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config }) => {
+const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], saveDocument, deleteDocument }) => {
   const [view, setView] = useState('kanban');
   const [editingId, setEditingId] = useState(null);
   const [currentColIndex, setCurrentColIndex] = useState(0);
@@ -68,12 +68,18 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     }
   };
 
-  const phases = ['Estudio en Comisión', '1ra Discusión', 'Consulta Pública', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
+  const phases = ['Recepción', 'Estudio en Comisión', '1ra Discusión', 'Consulta Pública', '2da Discusión', '3ra Discusión', 'Aprobada', 'Promulgada'];
 
   const handleAdvancePhase = async (project) => {
     const currentIdx = phases.indexOf(project.faseActual);
     if (currentIdx === -1 || currentIdx >= phases.length - 1) {
       addToast('El proyecto ya alcanzó su fase final', 'info');
+      return;
+    }
+
+    // Validación crítica: si está en "Estudio en Comisión", es obligatorio tener asignada una comisión
+    if (project.faseActual === 'Estudio en Comisión' && !project.comisionId) {
+      addToast('Error: Debe asignar una comisión responsable en el proyecto antes de poder avanzar de fase.', 'error');
       return;
     }
 
@@ -123,11 +129,34 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             <div className="space-y-3">
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${detailProject.origen === 'Comisión' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>{detailProject.origen}</span>
               <h2 className="text-3xl font-black leading-tight">{detailProject.titulo}</h2>
-              {commission && (
-                <div className={`flex items-center gap-2 p-2 px-3 rounded-xl w-fit border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                  <Gavel className="w-4 h-4 text-indigo-500" />
-                  <span className="text-xs font-bold opacity-70">{commission.nombre}</span>
+              
+              {detailProject.faseActual === 'Estudio en Comisión' ? (
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-indigo-500">Asignar Comisión Responsable *</label>
+                  <select 
+                    value={detailProject.comisionId || ''} 
+                    onChange={async (e) => {
+                      const comId = e.target.value ? Number(e.target.value) : null;
+                      const updatedProject = { ...detailProject, comisionId: comId };
+                      await onSave(updatedProject);
+                      setDetailProject(updatedProject);
+                      addToast('Comisión asignada exitosamente', 'success');
+                    }}
+                    className={`p-2.5 rounded-xl border text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all w-fit min-w-[240px] ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-700'}`}
+                  >
+                    <option value="">Seleccionar comisión...</option>
+                    {commissions.filter(c => c.activo).map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                  </select>
                 </div>
+              ) : (
+                commission && (
+                  <div className={`flex items-center gap-2 p-2 px-3 rounded-xl w-fit border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                    <Gavel className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-bold opacity-70">{commission.nombre}</span>
+                  </div>
+                )
               )}
             </div>
             <div className="flex gap-2">
@@ -158,45 +187,120 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
           <div className="space-y-4 mb-8">
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-1">Documentación por Fases</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
+                { label: 'Recepción', key: null },
+                { label: 'Estudio en Comisión', key: null },
                 { label: '1ra Discusión', key: 'linkPrimeraDiscusion' },
                 { label: 'Consulta Pública', key: 'linkConsultaPublica' },
                 { label: '2da Discusión', key: 'linkSegundaDiscusion' },
                 { label: '3ra Discusión/Aprobada', key: 'linkTerceraDiscusion' }
               ].map((fase) => (
-                <div key={fase.key} className={`p-4 rounded-2xl border flex flex-col gap-3 ${darkMode ? 'bg-gray-800/30 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
+                <div key={fase.label} className={`p-4 rounded-2xl border flex flex-col gap-3 justify-between ${darkMode ? 'bg-gray-800/30 border-gray-800' : 'bg-white border-gray-100 shadow-sm'}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[9px] font-black uppercase opacity-40">{fase.label}</p>
-                      <p className="text-xs font-bold truncate max-w-[150px]">
-                        {detailProject[fase.key] ? 'Documento Vinculado' : 'Sin enlace'}
-                      </p>
+                      {fase.key && detailProject[fase.key] ? (
+                        <p className="text-xs font-bold text-indigo-500 truncate max-w-[150px]">Enlace Digital Activo</p>
+                      ) : (
+                        <p className="text-[9px] font-bold opacity-30">Sin enlace digital</p>
+                      )}
                     </div>
-                    {detailProject[fase.key] && (
+                    {fase.key && detailProject[fase.key] && (
                       <a 
                         href={detailProject[fase.key]} 
                         target="_blank" 
                         rel="noreferrer"
-                        className="p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                        className="p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                        title="Ver en Drive"
                       >
-                        <History className="w-4 h-4" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
                   </div>
                   
-                  <div className="relative">
-                    <input 
-                      type="url"
-                      placeholder="Pegar enlace de Drive..."
-                      value={detailProject[fase.key] || ''}
-                      onChange={(e) => {
-                        const newLink = e.target.value;
-                        onSave({ ...detailProject, [fase.key]: newLink });
-                        setDetailProject(prev => ({ ...prev, [fase.key]: newLink }));
-                      }}
-                      className={`w-full p-2.5 rounded-xl text-[10px] border outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}
-                    />
+                  {fase.key && (
+                    <div className="relative">
+                      <input 
+                        type="url"
+                        placeholder="Pegar enlace de Drive..."
+                        value={detailProject[fase.key] || ''}
+                        onChange={(e) => {
+                          const newLink = e.target.value;
+                          onSave({ ...detailProject, [fase.key]: newLink });
+                          setDetailProject(prev => ({ ...prev, [fase.key]: newLink }));
+                        }}
+                        className={`w-full p-2 rounded-xl text-[10px] border outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Selector y visualizador de archivo local PDF de Bóveda */}
+                  <div className="flex flex-col gap-2 mt-1 pt-2 border-t border-dashed dark:border-gray-800">
+                    <p className="text-[9px] font-black uppercase opacity-40">Archivo PDF Local</p>
+                    {(() => {
+                      const doc = (documents || []).find(d => d.entidadTipo === 'Project' && d.entidadId === detailProject.id && d.faseEtiqueta === fase.label && d.activo);
+                      if (doc) {
+                        return (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <span className="text-[10px] font-bold text-amber-500 truncate max-w-[120px]">{doc.nombreOriginal}</span>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await window.legisAPI.invoke('documents:open-file', doc.id);
+                                    addToast('Archivo abierto con el visor del sistema', 'success');
+                                  } catch (e) {
+                                    addToast('Error al abrir el archivo local', 'error');
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors cursor-pointer"
+                                title="Abrir PDF"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  if (window.confirm('¿Desvincular este PDF?')) {
+                                    await deleteDocument(doc.id);
+                                    addToast('Archivo desvinculado', 'warning');
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                title="Desvincular PDF"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <button
+                          onClick={async () => {
+                            if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
+                            const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+                            if (filePath) {
+                              try {
+                                await window.legisAPI.invoke('documents:save-file', {
+                                  filePath,
+                                  entidadTipo: 'Project',
+                                  entidadId: detailProject.id,
+                                  faseEtiqueta: fase.label
+                                });
+                                addToast('PDF cargado exitosamente en Bóveda', 'success');
+                              } catch (err) {
+                                addToast('Error al archivar el PDF', 'error');
+                              }
+                            }
+                          }}
+                          className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border border-dashed text-[10px] font-black uppercase transition-all cursor-pointer ${darkMode ? 'border-gray-700 hover:border-indigo-500 text-gray-400 hover:text-indigo-500' : 'border-gray-200 hover:border-indigo-500 text-gray-500 hover:text-indigo-600 bg-gray-50/50'}`}
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Adjuntar PDF Local
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -246,9 +350,20 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3">
               <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Origen</label>
-              <select value={form.origen} onChange={e => setForm({...form, origen: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+              <select 
+                value={form.origen} 
+                onChange={e => {
+                  const val = e.target.value;
+                  setForm(prev => ({
+                    ...prev,
+                    origen: val,
+                    faseActual: val === 'Ejecutivo / Órganos del Estado' ? 'Recepción' : 'Estudio en Comisión'
+                  }));
+                }} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+              >
                 <option value="Comisión">Comisión Legislativa</option>
-                <option value="Gobernación">Gobernación / Ejecutivo</option>
+                <option value="Ejecutivo / Órganos del Estado">Ejecutivo / Órganos del Estado</option>
                 <option value="Votantes">Iniciativa Popular</option>
               </select>
             </div>
@@ -364,149 +479,105 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
       </div>
 
       {view === 'kanban' ? (
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Navigation Controls */}
-          <div className={`flex items-center justify-between px-1 mb-3`}>
-            <button
-              onClick={() => {
-                const newIdx = Math.max(0, currentColIndex - 1);
-                setCurrentColIndex(newIdx);
-                if (kanbanRef.current) {
-                  const colWidth = kanbanRef.current.scrollWidth / phases.length;
-                  kanbanRef.current.scrollTo({ left: newIdx * colWidth, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentColIndex === 0}
-              className={`p-2 rounded-xl transition-all ${
-                currentColIndex === 0
-                  ? 'opacity-20 cursor-not-allowed'
-                  : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-600')
-              }`}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              {phases.map((ph, i) => (
-                <button
-                  key={ph}
-                  onClick={() => {
-                    setCurrentColIndex(i);
-                    if (kanbanRef.current) {
-                      const colWidth = kanbanRef.current.scrollWidth / phases.length;
-                      kanbanRef.current.scrollTo({ left: i * colWidth, behavior: 'smooth' });
-                    }
-                  }}
-                  title={ph}
-                  className={`transition-all rounded-full ${
-                    i === currentColIndex
-                      ? 'w-6 h-2 bg-indigo-500'
-                      : (darkMode ? 'w-2 h-2 bg-gray-700 hover:bg-gray-500' : 'w-2 h-2 bg-gray-300 hover:bg-gray-400')
+        <div className="flex-1 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((column) => {
+              const columnProjects = filteredProjects.filter(p => p.faseActual === column);
+              const isEmpty = columnProjects.length === 0;
+              const hasActiveProject = columnProjects.length > 0;
+              
+              return (
+                <div
+                  key={column}
+                  className={`flex flex-col rounded-[2.5rem] border transition-all duration-300 min-h-[260px] ${
+                    hasActiveProject
+                      ? (darkMode 
+                          ? 'bg-indigo-950/20 border-indigo-500/80 shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-[1.01]' 
+                          : 'bg-indigo-50/20 border-indigo-200 shadow-xl shadow-indigo-100/50 scale-[1.01]')
+                      : (darkMode 
+                          ? 'bg-gray-950/40 border-gray-800 opacity-60 hover:opacity-100 hover:scale-[1.005]' 
+                          : 'bg-white border-gray-100 opacity-80 hover:opacity-100 hover:scale-[1.005]')
                   }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={() => {
-                const newIdx = Math.min(phases.length - 1, currentColIndex + 1);
-                setCurrentColIndex(newIdx);
-                if (kanbanRef.current) {
-                  const colWidth = kanbanRef.current.scrollWidth / phases.length;
-                  kanbanRef.current.scrollTo({ left: newIdx * colWidth, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentColIndex === phases.length - 1}
-              className={`p-2 rounded-xl transition-all ${
-                currentColIndex === phases.length - 1
-                  ? 'opacity-20 cursor-not-allowed'
-                  : (darkMode ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-600')
-              }`}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Kanban Board — scrollbar hidden, scroll-snap active */}
-          <div
-            ref={kanbanRef}
-            className={`flex-1 overflow-x-auto pb-4 ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}
-            style={{
-              scrollSnapType: 'x mandatory',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-            }}
-            onScroll={(e) => {
-              if (!kanbanRef.current) return;
-              const colWidth = kanbanRef.current.scrollWidth / phases.length;
-              const idx = Math.round(e.currentTarget.scrollLeft / colWidth);
-              setCurrentColIndex(Math.min(idx, phases.length - 1));
-            }}
-          >
-            <style>{`.kanban-scroll::-webkit-scrollbar { display: none; }`}</style>
-            <div className="flex gap-6 h-full min-w-max px-1 kanban-scroll">
-              {phases.map((column, colIdx) => {
-                const columnProjects = filteredProjects.filter(p => p.faseActual === column);
-                const isEmpty = columnProjects.length === 0;
-                return (
-                  <div
-                    key={column}
-                    style={{ scrollSnapAlign: 'start' }}
-                    className={`flex flex-col rounded-[2rem] border transition-all ${
-                      isEmpty ? 'w-[8rem]' : 'w-[22rem]'
-                    } ${
-                      darkMode ? 'bg-gray-950/40 border-gray-800' : 'bg-gray-50/50 border-gray-100'
-                    }`}
-                  >
-                  <div className="p-6 border-b dark:border-gray-800 flex items-center justify-between">
-                    <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-30 ${isEmpty ? 'truncate' : ''}`}>
-                      {isEmpty ? column.split(' ')[0] : column}
-                    </h3>
-                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-black shadow-inner flex-shrink-0">{columnProjects.length}</span>
-                  </div>
-                  {!isEmpty && (
-                    <div className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-360px)] custom-scrollbar">
-                    {columnProjects.map(p => (
-                      <div 
-                        key={p.id} 
-                        onClick={() => setDetailProject(p)}
-                        className={`p-6 rounded-3xl border transition-all cursor-pointer group hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'}`}
-                      >
-                        <p className="text-[13px] font-black leading-snug mb-4 line-clamp-3">{p.titulo}</p>
-                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50 dark:border-gray-800">
-                          <div className="flex items-center gap-3">
-                             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest opacity-30">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>{p.fechaActualizacion || p.fechaIngreso}</span>
-                             </div>
-                             <button 
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 setForm(p);
-                                 setEditingId(p.id);
-                                 setView('form');
-                               }}
-                               className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-indigo-500 transition-colors"
-                               title="Editar proyecto"
-                             >
-                                <Plus className="w-3.5 h-3.5 rotate-45" />
-                             </button>
-                          </div>
-                          {p.urgenciaParlamentaria ? (
-                            <div className="flex items-center gap-1 text-red-500">
-                               <AlertCircle className="w-3 h-3" />
-                               <span className="text-[8px] font-black uppercase tracking-tighter">Urgencia</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
+                >
+                  <div className={`p-5 border-b flex items-center justify-between ${
+                    hasActiveProject 
+                      ? (darkMode ? 'border-indigo-500/30' : 'border-indigo-100') 
+                      : (darkMode ? 'border-gray-800' : 'border-gray-100')
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {hasActiveProject && (
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
+                        </span>
+                      )}
+                      <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                        hasActiveProject 
+                          ? 'text-indigo-500' 
+                          : 'opacity-40'
+                      }`}>
+                        {column}
+                      </h3>
                     </div>
-                  )}
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black shadow-inner flex-shrink-0 ${
+                      hasActiveProject 
+                        ? 'bg-indigo-500 text-white' 
+                        : (darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500')
+                    }`}>
+                      {columnProjects.length}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  
+                  <div className="flex-1 p-4 space-y-4 max-h-[320px] overflow-y-auto custom-scrollbar">
+                    {isEmpty ? (
+                      <div className="h-full flex items-center justify-center py-12">
+                        <p className="text-[10px] uppercase font-black opacity-20 tracking-widest">Sin proyectos</p>
+                      </div>
+                    ) : (
+                      columnProjects.map(p => (
+                        <div 
+                          key={p.id} 
+                          onClick={() => setDetailProject(p)}
+                          className={`p-5 rounded-2xl border transition-all cursor-pointer group hover:shadow-lg hover:-translate-y-0.5 active:scale-95 ${
+                            darkMode 
+                              ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50 hover:bg-gray-800/80' 
+                              : 'bg-white border-gray-200 hover:border-indigo-300 shadow-sm hover:bg-gray-50'
+                          }`}
+                        >
+                          <p className="text-xs font-bold leading-snug mb-3 line-clamp-3 group-hover:text-indigo-500 transition-colors">{p.titulo}</p>
+                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1 text-[9px] font-bold opacity-40">
+                                <Clock className="w-3 h-3" />
+                                <span>{p.fechaActualizacion || p.fechaIngreso}</span>
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setForm(p);
+                                  setEditingId(p.id);
+                                  setView('form');
+                                }}
+                                className="p-1 rounded-lg hover:bg-indigo-500/10 text-indigo-500 transition-colors"
+                                title="Editar proyecto"
+                              >
+                                <Plus className="w-3 h-3 rotate-45" />
+                              </button>
+                            </div>
+                            {p.urgenciaParlamentaria ? (
+                              <div className="flex items-center gap-0.5 text-red-500">
+                                <AlertCircle className="w-2.5 h-2.5 animate-pulse" />
+                                <span className="text-[8px] font-black uppercase tracking-tighter">Urgente</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : (

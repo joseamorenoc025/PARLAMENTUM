@@ -6,7 +6,7 @@ import {
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
 
-const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
+const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], saveDocument, deleteDocument }) => {
   const [agreements, setAgreements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -68,7 +68,28 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
         activo: 1
       };
       
-      await dbService.saveAgreement(data);
+      const savedId = await dbService.saveAgreement(data);
+
+      // Ingesta de archivo local a la Bóveda Documental
+      if (form.localFilePath) {
+        const existingDoc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === (editingId || savedId) && d.activo);
+        if (!existingDoc || existingDoc.rutaArchivo !== form.localFilePath) {
+          if (existingDoc) {
+            await deleteDocument(existingDoc.id);
+          }
+          await window.legisAPI.invoke('documents:save-file', {
+            filePath: form.localFilePath,
+            entidadTipo: 'Agreement',
+            entidadId: editingId || savedId
+          });
+        }
+      } else {
+        const existingDoc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === (editingId || savedId) && d.activo);
+        if (existingDoc) {
+          await deleteDocument(existingDoc.id);
+        }
+      }
+
       addToast(editingId ? 'Acuerdo actualizado' : 'Acuerdo registrado exitosamente', 'success');
       
       setShowForm(false);
@@ -84,6 +105,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
       });
       loadAgreements();
     } catch (err) {
+      console.error('Error al guardar el acuerdo:', err);
       addToast('Error al guardar el acuerdo', 'error');
     } finally {
       setIsSaving(false);
@@ -94,6 +116,13 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
     if (!window.confirm('¿Eliminar este acuerdo permanentemente?')) return;
     try {
       await dbService.deleteAgreement(id);
+      
+      // Desactivar el documento en la Bóveda Documental si existe
+      const existingDoc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === id && d.activo);
+      if (existingDoc) {
+        await deleteDocument(existingDoc.id);
+      }
+
       addToast('Acuerdo eliminado', 'warning');
       loadAgreements();
     } catch (err) {
@@ -102,6 +131,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
   };
 
   const handleEdit = (agreement) => {
+    const doc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === agreement.id && d.activo);
     setEditingId(agreement.id);
     setForm({
       numeroCorrelativo: agreement.numeroCorrelativo,
@@ -109,8 +139,8 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
       objeto: agreement.objeto,
       sesionId: agreement.sesionId || '',
       driveLink: agreement.driveLink || '',
-      localFilePath: null,
-      localFileName: ''
+      localFilePath: doc ? doc.rutaArchivo : null,
+      localFileName: doc ? doc.nombreOriginal : ''
     });
     setShowForm(true);
   };
@@ -228,16 +258,38 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [] }) => {
                      <span className="text-[10px] font-bold opacity-20 uppercase tracking-widest italic">Sin sesión vinculada</span>
                    )}
                 </div>
-                {agreement.driveLink && (
-                  <a 
-                    href={agreement.driveLink} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-black text-indigo-500 hover:underline"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" /> Ver Digital
-                  </a>
-                )}
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const doc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === agreement.id && d.activo);
+                    if (!doc) return null;
+                    return (
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await window.legisAPI.invoke('documents:open-file', doc.id);
+                            addToast('Archivo abierto con el visor del sistema', 'success');
+                          } catch (e) {
+                            addToast('Error al abrir el archivo local', 'error');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-xs font-black text-amber-500 hover:underline cursor-pointer"
+                        title="Abrir documento PDF local"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Ver PDF Adjunto
+                      </button>
+                    );
+                  })()}
+                  {agreement.driveLink && (
+                    <a 
+                      href={agreement.driveLink} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-black text-indigo-500 hover:underline"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Ver Digital
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           ))}

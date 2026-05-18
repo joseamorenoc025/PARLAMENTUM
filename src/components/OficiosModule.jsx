@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
-const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate }) => {
+const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], saveDocument, deleteDocument }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });
@@ -36,13 +36,40 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
     }
   }, [view, oficios]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.organoReceptor) { addToast('El órgano receptor es requerido', 'error'); return; }
     if (!form.asunto) { addToast('El asunto es requerido', 'error'); return; }
     const sesionIdVal = form.sesionId ? Number(form.sesionId) : null;
-    onSave(editingId ? { ...form, id: editingId, sesionId: sesionIdVal } : { ...form, sesionId: sesionIdVal });
-    addToast(editingId ? 'Oficio actualizado' : 'Oficio creado', 'success');
-    resetForm();
+    
+    try {
+      const savedId = await onSave(editingId ? { ...form, id: editingId, sesionId: sesionIdVal } : { ...form, sesionId: sesionIdVal });
+
+      // Ingesta de archivo PDF a la Bóveda Documental
+      if (form.localFilePath) {
+        const existingDoc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === (editingId || savedId) && d.activo);
+        if (!existingDoc || existingDoc.rutaArchivo !== form.localFilePath) {
+          if (existingDoc) {
+            await deleteDocument(existingDoc.id);
+          }
+          await window.legisAPI.invoke('documents:save-file', {
+            filePath: form.localFilePath,
+            entidadTipo: 'Oficio',
+            entidadId: editingId || savedId
+          });
+        }
+      } else {
+        const existingDoc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === (editingId || savedId) && d.activo);
+        if (existingDoc) {
+          await deleteDocument(existingDoc.id);
+        }
+      }
+
+      addToast(editingId ? 'Oficio actualizado' : 'Oficio creado', 'success');
+      resetForm();
+    } catch (e) {
+      console.error('Error al guardar el oficio:', e);
+      addToast('Error al guardar el oficio', 'error');
+    }
   };
 
   const activeOficios = useMemo(() => oficios.filter(o => o.activo).sort((a, b) => b.fecha.localeCompare(a.fecha)), [oficios]);
@@ -141,6 +168,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                   <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Fecha</th>
                   <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Receptor</th>
                   <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Asunto</th>
+                  <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Adjunto</th>
                   <th className={`text-left px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Sesión</th>
                   <th className={`text-right px-6 py-3 text-xs font-medium uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Acciones</th>
                 </tr>
@@ -163,6 +191,29 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                         <span className={`text-sm max-w-xs truncate block ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{o.asunto}</span>
                       </td>
                       <td className="px-6 py-4">
+                        {(() => {
+                          const doc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === o.id && d.activo);
+                          if (!doc) return <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>Sin archivo</span>;
+                          return (
+                            <button 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await window.legisAPI.invoke('documents:open-file', doc.id);
+                                  addToast('Archivo abierto con el visor del sistema', 'success');
+                                } catch (e) {
+                                  addToast('Error al abrir el archivo local', 'error');
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-600 transition-colors font-semibold cursor-pointer"
+                              title="Abrir PDF local"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-amber-500" /> Ver PDF
+                            </button>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4">
                         {sesion ? (
                           <button 
                             onClick={(e) => { e.stopPropagation(); onNavigate?.('sesion', sesion.id); }}
@@ -177,10 +228,35 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setEditingId(o.id); setForm({ numeroOficio: o.numeroOficio, fecha: o.fecha, organoReceptor: o.organoReceptor, asunto: o.asunto, sesionId: o.sesionId || '' }); setView('edit'); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                          <button onClick={() => { 
+                            const doc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === o.id && d.activo);
+                            setEditingId(o.id); 
+                            setForm({ 
+                              numeroOficio: o.numeroOficio, 
+                              fecha: o.fecha, 
+                              organoReceptor: o.organoReceptor, 
+                              asunto: o.asunto, 
+                              sesionId: o.sesionId || '', 
+                              localFilePath: doc ? doc.rutaArchivo : null, 
+                              localFileName: doc ? doc.nombreOriginal : '' 
+                            }); 
+                            setView('edit'); 
+                          }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => { onDelete(o.id); addToast('Oficio eliminado', 'warning'); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
+                          <button onClick={async () => {
+                            if (window.confirm('¿Eliminar este oficio permanentemente?')) {
+                              await onDelete(o.id);
+                              
+                              // Desactivar el documento en la Bóveda Documental si existe
+                              const existingDoc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === o.id && d.activo);
+                              if (existingDoc) {
+                                await deleteDocument(existingDoc.id);
+                              }
+                              
+                              addToast('Oficio eliminado', 'warning');
+                            }
+                          }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

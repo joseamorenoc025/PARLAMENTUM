@@ -83,7 +83,15 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
     try {
       const result = await window.legisAPI.invoke('dialog:open-image');
       if (result) {
-        const dataUrl = `data:image/png;base64,${result.buffer.toString('base64')}`;
+        const bytes = result.buffer instanceof Uint8Array ? result.buffer : new Uint8Array(Object.values(result.buffer));
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64 = window.btoa(binary);
+        const ext = result.filePath.split('.').pop().toLowerCase();
+        const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const dataUrl = `data:${mimeType};base64,${base64}`;
         setForm(prev => ({ ...prev, foto: dataUrl }));
       }
     } catch { addToast('Error al seleccionar foto', 'error'); }

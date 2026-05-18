@@ -7,6 +7,7 @@ import { GitHubClient } from './githubClient.js';
 import { eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
+import { app } from 'electron';
 
 // Esquema de validación para una ley en el JSON remoto
 const LawMetadataSchema = z.object({
@@ -31,6 +32,7 @@ export class SyncEngine {
     this.repo = repo;
     this.lawsPath = 'public/portal/leyes.json';
     this.legislatorsPath = 'public/portal/legisladores.json';
+    this.juntaPath = 'public/portal/junta_directiva.json';
     this.projectsPath = 'public/portal/proyectos.json';
     this.configPath = 'public/portal/config.json';
     this.logoPath = 'public/portal/logo.png';
@@ -38,15 +40,23 @@ export class SyncEngine {
 
   async syncLaws(client) {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
+    const localDocuments = db.select().from(schema.documents).where(eq(schema.documents.activo, 1)).all();
     const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
     
     const lawsJson = localLaws.map(local => {
       let link = local.driveLink ? this.transformDriveLink(local.driveLink) : null;
       if (local.rutaPdf) {
-        // En GitHub Pages, si el JSON está en public/portal/leyes.json, 
-        // y los documentos en public/portal/documentos/, el link relativo es:
         link = `documentos/${path.basename(local.rutaPdf)}`;
       }
+
+      // Buscar documentos adicionales en Bóveda Documental
+      const extraDocs = localDocuments.filter(d => d.entidadTipo === 'Law' && d.entidadId === local.id);
+      const adjuntos = extraDocs.map(d => ({
+        id: d.id,
+        nombre: d.nombreOriginal,
+        relative_path: d.rutaArchivo ? `documentos/${path.basename(d.rutaArchivo)}` : null,
+        hash: d.hashIntegridad
+      }));
 
       return {
         id: local.id,
@@ -58,6 +68,7 @@ export class SyncEngine {
         expediente: local.expediente,
         link_drive: link || this.transformDriveLink(local.contenido?.replace('Enlace de descarga: ', '')),
         fecha_publicacion: local.fechaPublicacion,
+        adjuntos: adjuntos,
         updated_at: new Date().toISOString()
       };
     });
@@ -68,7 +79,7 @@ export class SyncEngine {
 
     await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
     
-    // Sincronizar archivos físicos
+    // Sincronizar archivos físicos de leyes primarias
     for (const law of localLaws) {
       if (law.rutaPdf && fs.existsSync(law.rutaPdf)) {
         const fileName = path.basename(law.rutaPdf);
@@ -84,6 +95,25 @@ export class SyncEngine {
           logger.error(`Error syncing PDF file ${fileName}:`, e);
         }
       }
+
+      // Sincronizar archivos físicos de la Bóveda vinculados a Leyes
+      const extraDocs = localDocuments.filter(d => d.entidadTipo === 'Law' && d.entidadId === law.id);
+      for (const doc of extraDocs) {
+        if (doc.rutaArchivo && fs.existsSync(doc.rutaArchivo)) {
+          const fileName = path.basename(doc.rutaArchivo);
+          const remoteDocPath = `public/portal/documentos/${fileName}`;
+          const buffer = fs.readFileSync(doc.rutaArchivo);
+          
+          try {
+            const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteDocPath);
+            if (!remoteFile.exists) {
+              await client.updateFile(this.owner, this.repo, remoteDocPath, buffer, `Sync: Adjunto Ley ${fileName}`);
+            }
+          } catch (e) {
+            logger.error(`Error syncing law Bóveda PDF ${fileName}:`, e);
+          }
+        }
+      }
     }
 
     return lawsJson.length;
@@ -93,35 +123,101 @@ export class SyncEngine {
     const localProjects = db.select().from(schema.projects).where(eq(schema.projects.activo, 1)).all();
     const localLegislators = db.select().from(schema.legislators).all();
     const localCommissions = db.select().from(schema.commissions).all();
+    const localDocuments = db.select().from(schema.documents).where(eq(schema.documents.activo, 1)).all();
 
-    const projectsJson = localProjects.map(p => ({
-      id: p.id,
-      expediente: p.expediente,
-      titulo: p.titulo,
-      extracto: p.extracto,
-      fase_actual: p.faseActual,
-      origen: p.origen,
-      urgencia: p.urgenciaParlamentaria,
-      estado: p.estado,
-      prioridad: p.prioridad,
-      fecha_ingreso: p.fechaIngreso,
-      ponente: localLegislators.find(l => l.id === p.ponenteId)?.nombre || 'No asignado',
-      comision: localCommissions.find(c => c.id === p.comisionId)?.nombre || 'No asignada',
-      updated_at: p.ultimaActualizacion
-    }));
+    const projectsJson = localProjects.map(p => {
+      // Buscar documentos de fases en Bóveda Documental
+      const projectDocs = localDocuments.filter(d => d.entidadTipo === 'Project' && d.entidadId === p.id);
+      const adjuntos = projectDocs.map(d => ({
+        id: d.id,
+        fase: d.faseEtiqueta,
+        nombre: d.nombreOriginal,
+        relative_path: d.rutaArchivo ? `documentos/${path.basename(d.rutaArchivo)}` : null,
+        hash: d.hashIntegridad
+      }));
+
+      return {
+        id: p.id,
+        expediente: p.expediente,
+        titulo: p.titulo,
+        extracto: p.extracto,
+        fase_actual: p.faseActual,
+        origen: p.origen,
+        urgencia: p.urgenciaParlamentaria,
+        estado: p.estado,
+        prioridad: p.prioridad,
+        fecha_ingreso: p.fechaIngreso,
+        ponente: localLegislators.find(l => l.id === p.ponenteId)?.nombre || 'No asignado',
+        comision: localCommissions.find(c => c.id === p.comisionId)?.nombre || 'No asignada',
+        adjuntos: adjuntos,
+        updated_at: p.ultimaActualizacion
+      };
+    });
 
     const remote = await client.getRemoteFile(this.owner, this.repo, this.projectsPath);
     const localPortalPath = path.join(process.cwd(), this.projectsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(projectsJson, null, 2));
 
     await client.updateFile(this.owner, this.repo, this.projectsPath, JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
+
+    // Sincronizar archivos físicos de las fases de proyectos a public/portal/documentos/
+    for (const p of localProjects) {
+      const projectDocs = localDocuments.filter(d => d.entidadTipo === 'Project' && d.entidadId === p.id);
+      for (const doc of projectDocs) {
+        if (doc.rutaArchivo && fs.existsSync(doc.rutaArchivo)) {
+          const fileName = path.basename(doc.rutaArchivo);
+          const remoteDocPath = `public/portal/documentos/${fileName}`;
+          const buffer = fs.readFileSync(doc.rutaArchivo);
+          
+          try {
+            const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteDocPath);
+            if (!remoteFile.exists) {
+              await client.updateFile(this.owner, this.repo, remoteDocPath, buffer, `Sync: Adjunto Proyecto ${fileName}`);
+            }
+          } catch (e) {
+            logger.error(`Error syncing project PDF file ${fileName}:`, e);
+          }
+        }
+      }
+    }
   }
 
   async syncLegislators(client) {
     const localLegislators = db.select().from(schema.legislators).where(eq(schema.legislators.activo, 1)).all();
     const localCommissions = db.select().from(schema.commissions).where(eq(schema.commissions.activo, 1)).all();
 
-    const legislatorsJson = localLegislators.map(l => {
+    const portalFotosDir = path.join(process.cwd(), 'public', 'portal', 'fotos');
+    if (!fs.existsSync(portalFotosDir)) {
+      fs.mkdirSync(portalFotosDir, { recursive: true });
+    }
+
+    const legislatorsJson = [];
+    for (const l of localLegislators) {
+      let relativeWebFotoPath = null;
+      if (l.foto) {
+        if (!l.foto.startsWith('data:image')) {
+          const fullPath = path.join(app.getPath('userData'), l.foto);
+          if (fs.existsSync(fullPath)) {
+            const fileName = path.basename(l.foto);
+            const destPath = path.join(portalFotosDir, fileName);
+            fs.copyFileSync(fullPath, destPath);
+            relativeWebFotoPath = `fotos/${fileName}`;
+
+            // Sync file physically to GitHub Pages via API
+            const remoteFotoPath = `public/portal/fotos/${fileName}`;
+            const buffer = fs.readFileSync(fullPath);
+            try {
+              const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteFotoPath);
+              if (!remoteFile.exists) {
+                await client.updateFile(this.owner, this.repo, remoteFotoPath, buffer, `Sync: Foto Legislador ${fileName}`);
+              }
+            } catch (e) {
+              logger.error(`Error syncing legislator photo ${fileName}:`, e);
+            }
+          }
+        }
+      }
+
       const coms = localCommissions.filter(c => 
         c.presidenteId === l.id || 
         c.vicepresidenteId === l.id || 
@@ -134,22 +230,76 @@ export class SyncEngine {
                c.vicepresidenteId === l.id ? 'Vicepresidente' : 'Miembro'
       }));
 
-      return {
+      legislatorsJson.push({
         id: l.id,
         nombre: l.nombre,
         partido: l.partidoPolitico,
         biografia: l.biografia,
-        foto: l.foto,
+        foto: relativeWebFotoPath,
         comisiones: coms,
         updated_at: new Date().toISOString()
-      };
-    });
+      });
+    }
 
     const remote = await client.getRemoteFile(this.owner, this.repo, this.legislatorsPath);
     const localPortalPath = path.join(process.cwd(), this.legislatorsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(legislatorsJson, null, 2));
 
     await client.updateFile(this.owner, this.repo, this.legislatorsPath, JSON.stringify(legislatorsJson, null, 2), `Sync: Legisladores ${new Date().toISOString()}`, remote.sha);
+  }
+
+  async syncJunta(client) {
+    const localJunta = db.select().from(schema.juntaDirectiva).where(eq(schema.juntaDirectiva.activo, 1)).all();
+    const portalFotosDir = path.join(process.cwd(), 'public', 'portal', 'fotos');
+    if (!fs.existsSync(portalFotosDir)) {
+      fs.mkdirSync(portalFotosDir, { recursive: true });
+    }
+
+    const juntaJson = [];
+    for (const j of localJunta) {
+      let relativeWebFotoPath = null;
+      if (j.foto) {
+        if (!j.foto.startsWith('data:image')) {
+          const fullPath = path.join(app.getPath('userData'), j.foto);
+          if (fs.existsSync(fullPath)) {
+            const fileName = path.basename(j.foto);
+            const destPath = path.join(portalFotosDir, fileName);
+            fs.copyFileSync(fullPath, destPath);
+            relativeWebFotoPath = `fotos/${fileName}`;
+
+            // Sync file physically to GitHub Pages via API
+            const remoteFotoPath = `public/portal/fotos/${fileName}`;
+            const buffer = fs.readFileSync(fullPath);
+            try {
+              const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteFotoPath);
+              if (!remoteFile.exists) {
+                await client.updateFile(this.owner, this.repo, remoteFotoPath, buffer, `Sync: Foto Junta ${fileName}`);
+              }
+            } catch (e) {
+              logger.error(`Error syncing junta photo ${fileName}:`, e);
+            }
+          }
+        }
+      }
+
+      juntaJson.push({
+        id: j.id,
+        rol: j.rol,
+        nombre: j.nombre,
+        foto: relativeWebFotoPath,
+        partido: j.partidoPolitico || 'N/A',
+        biografia: j.biografia || '',
+        fecha_inicio: j.fechaInicio,
+        fecha_fin: j.fechaFin,
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.juntaPath);
+    const localPortalPath = path.join(process.cwd(), this.juntaPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(juntaJson, null, 2));
+
+    await client.updateFile(this.owner, this.repo, this.juntaPath, JSON.stringify(juntaJson, null, 2), `Sync: Junta Directiva ${new Date().toISOString()}`, remote.sha);
   }
 
   async syncConfig(client) {
@@ -233,7 +383,10 @@ export class SyncEngine {
 
       // Legisladores
       try {
-        if (type === 'all' || type === 'legislators') await this.syncLegislators(client);
+        if (type === 'all' || type === 'legislators') {
+          await this.syncLegislators(client);
+          await this.syncJunta(client);
+        }
       } catch (e) {
         logger.error('Error sincronizando legisladores:', e);
       }

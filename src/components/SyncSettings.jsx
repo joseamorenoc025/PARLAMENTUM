@@ -4,7 +4,7 @@ import {
   AlertCircle, ExternalLink, Shield, CloudOff,
   Database, Download, Upload, Lock, FileJson,
   Activity, Cloud, CloudUpload, CloudDownload,
-  FolderOpen, FileText, CalendarDays, Scale, Search, Filter
+  FolderOpen, FileText, CalendarDays, Scale, Search, Filter, Gavel
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
 
@@ -15,6 +15,8 @@ export default function SyncSettings({
   sessions = [],
   oficios = [],
   projects = [],
+  agreements = [],
+  laws = [],
   onDeleteDocument
 }) {
   const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'files'
@@ -283,9 +285,17 @@ export default function SyncSettings({
       const o = oficios.find(o => o.id === doc.entidadId);
       return o ? o.numeroOficio : 'Oficio no encontrado';
     }
-    if (doc.entidadTipo === 'ProyectoLey') {
+    if (doc.entidadTipo === 'ProyectoLey' || doc.entidadTipo === 'Project') {
       const p = projects.find(p => p.id === doc.entidadId);
       return p ? p.titulo : 'Proyecto no encontrado';
+    }
+    if (doc.entidadTipo === 'Agreement') {
+      const a = agreements.find(a => a.id === doc.entidadId);
+      return a ? `${a.numeroCorrelativo} - ${a.objeto ? (a.objeto.substring(0, 30) + '...') : ''}` : 'Acuerdo de Cámara no encontrado';
+    }
+    if (doc.entidadTipo === 'Law') {
+      const l = laws.find(l => l.id === doc.entidadId);
+      return l ? l.titulo : 'Ley no encontrada';
     }
     return 'Documento Huérfano';
   };
@@ -293,12 +303,18 @@ export default function SyncSettings({
   const typeIcons = { 
     Sesion: <CalendarDays className="w-4 h-4" />, 
     Oficio: <FileText className="w-4 h-4" />, 
-    ProyectoLey: <Scale className="w-4 h-4" /> 
+    ProyectoLey: <Scale className="w-4 h-4" />,
+    Project: <Scale className="w-4 h-4" />,
+    Agreement: <Gavel className="w-4 h-4" />,
+    Law: <Scale className="w-4 h-4" />
   };
   const typeColors = { 
     Sesion: 'text-blue-500 bg-blue-500/10', 
     Oficio: 'text-purple-500 bg-purple-500/10', 
-    ProyectoLey: 'text-emerald-500 bg-emerald-500/10' 
+    ProyectoLey: 'text-emerald-500 bg-emerald-500/10',
+    Project: 'text-emerald-500 bg-emerald-500/10',
+    Agreement: 'text-amber-500 bg-amber-500/10',
+    Law: 'text-indigo-500 bg-indigo-500/10'
   };
 
   // Filtrado de documentos de Bóveda
@@ -774,7 +790,10 @@ export default function SyncSettings({
                 <option value="">Todos los Orígenes</option>
                 <option value="Sesion">Sesiones</option>
                 <option value="Oficio">Oficios</option>
-                <option value="ProyectoLey">Proyectos de Ley</option>
+                <option value="ProyectoLey">Proyectos (Old)</option>
+                <option value="Project">Proyectos de Ley</option>
+                <option value="Agreement">Acuerdos de Cámara</option>
+                <option value="Law">Biblioteca de Leyes</option>
               </select>
             </div>
           </div>
