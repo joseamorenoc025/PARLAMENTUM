@@ -13,6 +13,7 @@ export const lawImportSchema = z.object({
     driveLink: z.string().url('Debe ser una URL válida de Google Drive').or(z.string().length(0)).nullable().optional(),
     localFilePath: z.string().nullable().optional(),
     fileHash: z.string().nullable().optional().default(''),
+    tags: z.string().nullable().optional(),
   }),
 });
 

@@ -92,6 +92,7 @@ export const laws = sqliteTable('laws', {
   contenido: text('contenido'),
   fileHash: text('file_hash'),
   driveLink: text('drive_link'),
+  tags: text('tags'),
   activo: integer('activo').default(1),
 });
 

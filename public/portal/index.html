@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="shortcut icon" href="logo.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
 </head>
 <body>
     <div class="app-container">
@@ -48,6 +50,9 @@
                     <button class="nav-btn" data-view="agenda">
                         <i data-lucide="calendar"></i> Agenda Legislativa
                     </button>
+                    <button class="nav-btn" data-view="stats">
+                        <i data-lucide="bar-chart-2"></i> Estadísticas
+                    </button>
                 </div>
             </div>
         </nav>
@@ -83,6 +88,11 @@
             <div id="legislator-profile" class="legislator-profile hidden">
                 <!-- Se carga dinámicamente -->
             </div>
+
+            <!-- Panel de Estadísticas (Analytics) -->
+            <div id="stats-dashboard" class="stats-dashboard hidden">
+                <!-- Se carga dinámicamente -->
+            </div>
         </main>
 
         <!-- Footer -->
@@ -95,5 +105,14 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

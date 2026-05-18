@@ -65,6 +65,7 @@ export const setupIPCHandlers = (mainWindow) => {
         driveLink: metadata.driveLink || null,
         fileHash: metadata.fileHash || null,
         rutaPdf: rutaPdf,
+        tags: metadata.tags || null,
         activo: 1
       };
       

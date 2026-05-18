@@ -26,7 +26,8 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
     driveLink: '',
     localFilePath: null,
     localFileName: '',
-    fileHash: ''
+    fileHash: '',
+    tags: ''
   });
 
   const loadLaws = React.useCallback(async () => {
@@ -77,7 +78,6 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
     setIsSaving(true);
     try {
-      // Usar el nuevo canal IPC laws:import que configuramos en handlers.js
       await window.legisAPI.invoke('laws:import', {
         metadata: {
           id: editingId,
@@ -88,7 +88,8 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
           fechaPublicacion: form.fechaPublicacion,
           driveLink: form.driveLink,
           localFilePath: form.localFilePath,
-          fileHash: form.fileHash
+          fileHash: form.fileHash,
+          tags: form.tags
         }
       });
 
@@ -104,7 +105,8 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
         driveLink: '',
         localFilePath: null,
         localFileName: '',
-        fileHash: ''
+        fileHash: '',
+        tags: ''
       });
       loadLaws();
     } catch (err) {
@@ -182,7 +184,8 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
       fechaPublicacion: law.fechaPublicacion,
       driveLink: law.driveLink || law.contenido.replace('Enlace de descarga: ', ''),
       fileHash: law.fileHash || '',
-      localFilePath: ''
+      localFilePath: '',
+      tags: law.tags || ''
     });
     setShowForm(true);
   };
@@ -281,9 +284,19 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                 </div>
               </div>
               <h3 className="font-bold text-lg mb-1 line-clamp-2">{law.titulo}</h3>
-              <p className={`text-xs mb-4 font-medium ${law.tipo === 'Extraordinaria' ? 'text-amber-500' : 'text-indigo-500'}`}>
+              <p className={`text-xs ${law.tags ? 'mb-2' : 'mb-4'} font-medium ${law.tipo === 'Extraordinaria' ? 'text-amber-500' : 'text-indigo-500'}`}>
                 Gaceta {law.tipo} {law.numero ? `#${law.numero}` : ''} ({law.anio})
               </p>
+
+              {law.tags && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {law.tags.split(',').map(tag => tag.trim()).filter(Boolean).map((tag, i) => (
+                    <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               
               <div className={`p-3 rounded-xl mb-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
                 <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">
@@ -378,6 +391,16 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                     className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Etiquetas / Ejes Temáticos</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: Salud, Presupuesto, Educación (separados por comas)"
+                  value={form.tags}
+                  onChange={e => setForm({...form, tags: e.target.value})}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">Enlace de Google Drive</label>

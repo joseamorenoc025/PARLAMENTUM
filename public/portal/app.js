@@ -84,10 +84,14 @@ async function switchView(view, id = null) {
         btn.classList.toggle('active', btn.dataset.view === view);
     });
 
+    const isStats = view === 'stats';
+    const isProfile = view === 'profile';
+
     // Toggle Containers
-    mainGrid.classList.toggle('hidden', view === 'profile');
-    legislatorProfile.classList.toggle('hidden', view !== 'profile');
-    document.getElementById('search-section').classList.toggle('hidden', view === 'profile');
+    mainGrid.classList.toggle('hidden', isProfile || isStats);
+    legislatorProfile.classList.toggle('hidden', !isProfile);
+    document.getElementById('stats-dashboard').classList.toggle('hidden', !isStats);
+    document.getElementById('search-section').classList.toggle('hidden', isProfile || isStats);
 
     // Load Data and Render
     if (view === 'junta') {
@@ -105,6 +109,12 @@ async function switchView(view, id = null) {
     } else if (view === 'profile') {
         if (allLegislators.length === 0) await fetchLegislators();
         renderLegislatorProfile(id);
+        return;
+    } else if (view === 'stats') {
+        if (allLaws.length === 0) await fetchLaws();
+        if (allProjects.length === 0) await fetchProjects();
+        if (allLegislators.length === 0) await fetchLegislators();
+        renderStatsDashboard();
         return;
     }
 
@@ -170,17 +180,51 @@ function setupFilters(view) {
         typeSelect.id = 'filter-type';
         typeSelect.innerHTML = '<option value="">Gaceta: Todas</option><option value="Ordinaria">Ordinaria</option><option value="Extraordinaria">Extraordinaria</option>';
         
+        const tagSelect = document.createElement('select');
+        tagSelect.id = 'filter-tag';
+        tagSelect.innerHTML = '<option value="">Materia / Eje Temático</option>';
+        
+        const allTags = new Set();
+        allLaws.forEach(l => {
+            if (l.tags) {
+                l.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTags.add(t));
+            }
+        });
+        Array.from(allTags).sort().forEach(t => {
+            tagSelect.innerHTML += `<option value="${t}">#${t}</option>`;
+        });
+
         filtersContainer.appendChild(yearSelect);
         filtersContainer.appendChild(typeSelect);
+        filtersContainer.appendChild(tagSelect);
         
         yearSelect.addEventListener('change', renderCurrentView);
         typeSelect.addEventListener('change', renderCurrentView);
+        tagSelect.addEventListener('change', renderCurrentView);
     } else if (view === 'agenda') {
         const stateSelect = document.createElement('select');
         stateSelect.id = 'filter-state';
         stateSelect.innerHTML = '<option value="">Todos los estados</option><option value="en_comision">En Comisión</option><option value="aprobado">Aprobado</option><option value="rechazado">Rechazado</option>';
+        
+        const tagSelect = document.createElement('select');
+        tagSelect.id = 'filter-tag';
+        tagSelect.innerHTML = '<option value="">Materia / Eje Temático</option>';
+        
+        const allTags = new Set();
+        allProjects.forEach(p => {
+            if (p.tags) {
+                p.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTags.add(t));
+            }
+        });
+        Array.from(allTags).sort().forEach(t => {
+            tagSelect.innerHTML += `<option value="${t}">#${t}</option>`;
+        });
+
         filtersContainer.appendChild(stateSelect);
+        filtersContainer.appendChild(tagSelect);
+        
         stateSelect.addEventListener('change', renderCurrentView);
+        tagSelect.addEventListener('change', renderCurrentView);
     }
 }
 
@@ -225,13 +269,17 @@ function renderJunta(term) {
 function renderLaws(term) {
     const year = document.getElementById('filter-year')?.value;
     const type = document.getElementById('filter-type')?.value;
+    const selectedTag = document.getElementById('filter-tag')?.value;
 
     const filtered = allLaws.filter(l => {
-        const matchTerm = l.titulo.toLowerCase().includes(term) || (l.expediente && l.expediente.toLowerCase().includes(term));
+        const matchTerm = l.titulo.toLowerCase().includes(term) || 
+                          (l.expediente && l.expediente.toLowerCase().includes(term)) ||
+                          (l.tags && l.tags.toLowerCase().includes(term));
         const matchYear = !year || String(l.anio) === year;
         const lawType = l.gaceta || l.tipo || 'Ordinaria';
         const matchType = !type || lawType === type;
-        return matchTerm && matchYear && matchType;
+        const matchTag = !selectedTag || (l.tags && l.tags.split(',').map(t => t.trim().toLowerCase()).includes(selectedTag.toLowerCase()));
+        return matchTerm && matchYear && matchType && matchTag;
     });
 
     if (filtered.length === 0) return showStatus('No se encontraron leyes.', 'info');
@@ -265,6 +313,17 @@ function renderLaws(term) {
             `;
         }
 
+        let tagsHtml = '';
+        if (l.tags) {
+            tagsHtml = `
+                <div class="tag-badges-container" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; border-top: 1px solid #f3f4f6; padding-top: 0.75rem;">
+                    ${l.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => `
+                        <span class="badge tag-badge-clickable" style="font-size: 0.65rem; font-weight: 700; background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#4f46e5'; this.style.color='white'" onmouseout="this.style.background='#e0e7ff'; this.style.color='#4f46e5'" onclick="setTagFilter('${tag}')">#${tag}</span>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <span class="law-tag">${l.gaceta || l.tipo || 'Ordinaria'}</span>
             <h3 class="law-title">${l.titulo}</h3>
@@ -272,6 +331,7 @@ function renderLaws(term) {
                 <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente || 'No asignado'}</div>
                 <div class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${l.anio || 'N/A'}</div>
             </div>
+            ${tagsHtml}
             ${downloadBtnHtml}
             ${adjuntosHtml}
         `;
@@ -281,11 +341,15 @@ function renderLaws(term) {
 
 function renderAgenda(term) {
     const state = document.getElementById('filter-state')?.value;
+    const selectedTag = document.getElementById('filter-tag')?.value;
 
     const filtered = allProjects.filter(p => {
-        const matchTerm = p.titulo.toLowerCase().includes(term) || (p.expediente && p.expediente.toLowerCase().includes(term));
+        const matchTerm = p.titulo.toLowerCase().includes(term) || 
+                          (p.expediente && p.expediente.toLowerCase().includes(term)) ||
+                          (p.tags && p.tags.toLowerCase().includes(term));
         const matchState = !state || p.estado === state;
-        return matchTerm && matchState;
+        const matchTag = !selectedTag || (p.tags && p.tags.split(',').map(t => t.trim().toLowerCase()).includes(selectedTag.toLowerCase()));
+        return matchTerm && matchState && matchTag;
     });
 
     if (filtered.length === 0) return showStatus('No hay proyectos en la agenda.', 'info');
@@ -313,14 +377,26 @@ function renderAgenda(term) {
             `;
         }
 
+        let tagsHtml = '';
+        if (p.tags) {
+            tagsHtml = `
+                <div class="tag-badges-container" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; border-top: 1px solid #f3f4f6; padding-top: 0.75rem;">
+                    ${p.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => `
+                        <span class="badge tag-badge-clickable" style="font-size: 0.65rem; font-weight: 700; background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#4f46e5'; this.style.color='white'" onmouseout="this.style.background='#e0e7ff'; this.style.color='#4f46e5'" onclick="setTagFilter('${tag}')">#${tag}</span>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
             <h3 class="law-title">${p.titulo}</h3>
             <p class="law-meta" style="margin-bottom:1rem">${p.extracto || ''}</p>
-            <div class="law-meta">
+            <div class="law-meta" style="margin-bottom: 1rem;">
                 <div class="meta-item"><i data-lucide="user" style="width:12px"></i> ${p.ponente}</div>
                 <div class="meta-item"><i data-lucide="users" style="width:12px"></i> ${p.comision}</div>
             </div>
+            ${tagsHtml}
             ${adjuntosHtml}
         `;
         mainGrid.appendChild(card);
@@ -404,4 +480,159 @@ function showStatus(msg, type) {
 
 function hideStatus() {
     statusMessage.classList.add('hidden');
+}
+
+/**
+ * Clickable tag badge search filter handler
+ */
+window.setTagFilter = function(tag) {
+    const select = document.getElementById('filter-tag');
+    if (select) {
+        select.value = tag;
+        renderCurrentView();
+    }
+};
+
+/**
+ * Renders the Visual Statistics / Analytics Dashboard
+ */
+function renderStatsDashboard() {
+    const statsDashboard = document.getElementById('stats-dashboard');
+    statsDashboard.innerHTML = '';
+
+    // 1. Calculations
+    const totalLaws = allLaws.length;
+    const activeProjects = allProjects.filter(p => p.estado !== 'aprobado' && p.estado !== 'rechazado').length;
+    const approvedProjects = allProjects.filter(p => p.estado === 'aprobado').length;
+    const totalProjects = allProjects.length;
+    const efficiencyRate = totalProjects > 0 ? Math.round((approvedProjects / totalProjects) * 100) : 0;
+
+    // Laws passed per year
+    const lawsByYear = {};
+    allLaws.forEach(l => {
+        if (l.anio) {
+            lawsByYear[l.anio] = (lawsByYear[l.anio] || 0) + 1;
+        }
+    });
+
+    // Projects per phase
+    const projectsByPhase = {};
+    allProjects.forEach(p => {
+        const phase = p.fase_actual || 'Estudio en Comisión';
+        projectsByPhase[phase] = (projectsByPhase[phase] || 0) + 1;
+    });
+
+    const maxLawsCount = Math.max(...Object.values(lawsByYear), 1);
+    const maxProjectsCount = Math.max(...Object.values(projectsByPhase), 1);
+
+    const lawsBarsHtml = Object.keys(lawsByYear).sort((a,b) => b-a).map((year, index) => {
+        const count = lawsByYear[year];
+        const percentage = Math.round((count / maxLawsCount) * 100);
+        const hue = 240 + (index * 15) % 80; 
+        return `
+            <div class="chart-bar-item">
+                <div class="chart-bar-label">
+                    <span>Año ${year}</span>
+                    <span>${count} ${count === 1 ? 'Ley' : 'Leyes'}</span>
+                </div>
+                <div class="chart-bar-track">
+                    <div class="chart-bar-fill" data-width="${percentage}%" style="background: hsl(${hue}, 70%, 60%);"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const projectsBarsHtml = Object.keys(projectsByPhase).sort((a,b) => projectsByPhase[b] - projectsByPhase[a]).map((phase, index) => {
+        const count = projectsByPhase[phase];
+        const percentage = Math.round((count / maxProjectsCount) * 100);
+        const hue = 140 + (index * 25) % 100; 
+        return `
+            <div class="chart-bar-item">
+                <div class="chart-bar-label">
+                    <span>${phase}</span>
+                    <span>${count} ${count === 1 ? 'Proyecto' : 'Proyectos'}</span>
+                </div>
+                <div class="chart-bar-track">
+                    <div class="chart-bar-fill" data-width="${percentage}%" style="background: hsl(${hue}, 70%, 50%);"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Generate Layout
+    statsDashboard.innerHTML = `
+        <div class="stats-header">
+            <h2>Estadísticas Legislativas</h2>
+            <p>Monitoreo en tiempo real de la productividad legislativa, leyes aprobadas y trámites en curso.</p>
+        </div>
+
+        <!-- KPI Counters Grid -->
+        <div class="stats-grid">
+            <div class="stat-counter-card">
+                <div class="stat-counter-icon" style="background: #e0e7ff; color: #4f46e5;">
+                    <i data-lucide="scale" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div class="stat-counter-info">
+                    <h3>Leyes Aprobadas</h3>
+                    <div class="stat-value">${totalLaws}</div>
+                </div>
+            </div>
+
+            <div class="stat-counter-card">
+                <div class="stat-counter-icon" style="background: #fffbeb; color: #d97706;">
+                    <i data-lucide="calendar" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div class="stat-counter-info">
+                    <h3>En Debate Activo</h3>
+                    <div class="stat-value">${activeProjects}</div>
+                </div>
+            </div>
+
+            <div class="stat-counter-card">
+                <div class="stat-counter-icon" style="background: #ecfdf5; color: #059669;">
+                    <i data-lucide="check-circle" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div class="stat-counter-info">
+                    <h3>Trámites Completados</h3>
+                    <div class="stat-value">${approvedProjects}</div>
+                </div>
+            </div>
+
+            <div class="stat-counter-card">
+                <div class="stat-counter-icon" style="background: #eff6ff; color: #2563eb;">
+                    <i data-lucide="trending-up" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div class="stat-counter-info">
+                    <h3>Eficiencia de Aprobación</h3>
+                    <div class="stat-value">${efficiencyRate}%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="stats-charts-row">
+            <div class="chart-card">
+                <h3><i data-lucide="bar-chart" style="color: #4f46e5; width: 18px; height: 18px;"></i> Histórico de Leyes Aprobadas</h3>
+                <div class="chart-bars">
+                    ${totalLaws > 0 ? lawsBarsHtml : '<p style="font-size: 0.85rem; color: #94a3b8; text-align: center; padding: 2rem 0;">No hay registro histórico de leyes.</p>'}
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3><i data-lucide="pie-chart" style="color: #10b981; width: 18px; height: 18px;"></i> Proyectos por Fase del Proceso</h3>
+                <div class="chart-bars">
+                    ${totalProjects > 0 ? projectsBarsHtml : '<p style="font-size: 0.85rem; color: #94a3b8; text-align: center; padding: 2rem 0;">No hay proyectos registrados en la agenda.</p>'}
+                </div>
+            </div>
+        </div>
+    `;
+
+    lucide.createIcons();
+
+    // Trigger smooth bar-width animations after DOM update
+    setTimeout(() => {
+        statsDashboard.querySelectorAll('.chart-bar-fill').forEach(fill => {
+            fill.style.width = fill.getAttribute('data-width');
+        });
+    }, 100);
 }

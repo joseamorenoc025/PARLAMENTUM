@@ -23,7 +23,8 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     linkConsultaPublica: '',
     linkSegundaDiscusion: '',
     linkTerceraDiscusion: '',
-    fechaConsultaPublica: ''
+    fechaConsultaPublica: '',
+    tags: ''
   });
   const [detailProject, setDetailProject] = useState(null);
 
@@ -40,7 +41,8 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
       linkConsultaPublica: '',
       linkSegundaDiscusion: '',
       linkTerceraDiscusion: '',
-      fechaConsultaPublica: ''
+      fechaConsultaPublica: '',
+      tags: ''
     }); 
     setEditingId(null); 
     setView('kanban'); 
@@ -387,6 +389,17 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             </select>
           </div>
 
+          <div className="space-y-3">
+            <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Etiquetas / Ejes Temáticos</label>
+            <input 
+              type="text" 
+              placeholder="Ej: Salud, Presupuesto, Educación (separados por comas)" 
+              value={form.tags || ''} 
+              onChange={e => setForm({...form, tags: e.target.value})} 
+              className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-800'}`} 
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Enlace 1ra Discusión (Opcional)</label>
@@ -544,7 +557,18 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                               : 'bg-white border-gray-200 hover:border-indigo-300 shadow-sm hover:bg-gray-50'
                           }`}
                         >
-                          <p className="text-xs font-bold leading-snug mb-3 line-clamp-3 group-hover:text-indigo-500 transition-colors">{p.titulo}</p>
+                          <p className="text-xs font-bold leading-snug mb-2 line-clamp-3 group-hover:text-indigo-500 transition-colors">{p.titulo}</p>
+                          
+                          {p.tags && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {p.tags.split(',').map(tag => tag.trim()).filter(Boolean).map((tag, i) => (
+                                <span key={i} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
                           <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-gray-100 dark:border-gray-800">
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-1 text-[9px] font-bold opacity-40">
@@ -554,7 +578,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setForm(p);
+                                  setForm({ ...p, tags: p.tags || '' });
                                   setEditingId(p.id);
                                   setView('form');
                                 }}
@@ -605,7 +629,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setForm(p);
+                    setForm({ ...p, tags: p.tags || '' });
                     setEditingId(p.id);
                     setView('form');
                   }}

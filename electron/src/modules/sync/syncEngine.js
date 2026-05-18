@@ -69,6 +69,7 @@ export class SyncEngine {
         link_drive: link || this.transformDriveLink(local.contenido?.replace('Enlace de descarga: ', '')),
         fecha_publicacion: local.fechaPublicacion,
         adjuntos: adjuntos,
+        tags: local.tags || null,
         updated_at: new Date().toISOString()
       };
     });
@@ -170,6 +171,7 @@ export class SyncEngine {
         ponente: localLegislators.find(l => l.id === p.ponenteId)?.nombre || 'No asignado',
         comision: localCommissions.find(c => c.id === p.comisionId)?.nombre || 'No asignada',
         adjuntos: adjuntos,
+        tags: p.tags || null,
         updated_at: p.ultimaActualizacion
       };
     });
@@ -364,7 +366,9 @@ export class SyncEngine {
     const uiFiles = [
       { local: 'public/portal/index.html', remote: 'public/portal/index.html' },
       { local: 'public/portal/styles.css', remote: 'public/portal/styles.css' },
-      { local: 'public/portal/app.js', remote: 'public/portal/app.js' }
+      { local: 'public/portal/app.js', remote: 'public/portal/app.js' },
+      { local: 'public/portal/manifest.json', remote: 'public/portal/manifest.json' },
+      { local: 'public/portal/service-worker.js', remote: 'public/portal/service-worker.js' }
     ];
 
     for (const file of uiFiles) {
