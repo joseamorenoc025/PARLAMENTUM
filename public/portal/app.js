@@ -28,11 +28,19 @@ function incrementDownload(entityType, entityId) {
     const key = `dl_${entityType}_${entityId}`;
     const count = getDownloadCount(entityType, entityId) + 1;
     localStorage.setItem(key, String(count));
-    // Update badge in DOM
+    // Update individual badge in DOM
     const badge = document.getElementById(`dl-badge-${entityType}-${entityId}`);
     if (badge) {
         badge.textContent = `${count}`;
         badge.closest('.download-counter').classList.add('has-downloads');
+    }
+    // Update global law counter if applicable
+    if (entityType === 'ley') {
+        const globalCount = document.getElementById('global-law-count');
+        if (globalCount) {
+            const newTotal = getTotalDownloads('ley', allLaws);
+            globalCount.textContent = newTotal;
+        }
     }
     return count;
 }
@@ -41,6 +49,14 @@ function buildCounterBadge(entityType, entityId) {
     const count = getDownloadCount(entityType, entityId);
     const hasClass = count > 0 ? ' has-downloads' : '';
     return `<div class="download-counter${hasClass}"><i data-lucide="arrow-down-to-line" style="width: 11px; height: 11px;"></i> <span id="dl-badge-${entityType}-${entityId}">${count}</span></div>`;
+}
+
+function getTotalDownloads(entityType, items) {
+    let total = 0;
+    items.forEach(item => {
+        total += getDownloadCount(entityType, item.id);
+    });
+    return total;
 }
 
 // Expose for inline onclick
@@ -370,6 +386,17 @@ function renderLaws(term) {
         `;
         mainGrid.appendChild(card);
     });
+
+    // Global download counter banner for laws
+    const totalDownloads = getTotalDownloads('ley', allLaws);
+    const globalBanner = document.createElement('div');
+    globalBanner.className = 'global-downloads-banner';
+    globalBanner.innerHTML = `
+        <div class="global-downloads-icon">📜</div>
+        <p class="global-downloads-text">Las Leyes del Estado han sido descargadas <strong id="global-law-count">${totalDownloads}</strong> ${totalDownloads === 1 ? 'vez' : 'veces'}</p>
+        <div class="global-downloads-sparkle">⚖️</div>
+    `;
+    mainGrid.appendChild(globalBanner);
 }
 
 /**

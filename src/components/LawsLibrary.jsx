@@ -329,24 +329,6 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                     >
                       <Download className="w-3 h-3" /> {law.rutaPdf ? 'PDF Local' : 'Descargar'}
                     </button>
-                    {law.rutaPdf && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            addToast('Estampando QR...', 'info');
-                            await window.legisAPI.invoke('pdf:stamp-qr', { entidadTipo: 'Law', entidadId: law.id });
-                            addToast('QR estampado exitosamente. Recargando...', 'success');
-                            loadLaws(); // Recargar para mostrar hash actualizado
-                          } catch (e) {
-                            addToast('Error al estampar QR', 'error');
-                          }
-                        }}
-                        className="text-xs font-bold text-emerald-500 hover:underline flex items-center gap-1"
-                        title="Estampar QR de validez"
-                      >
-                        <QrCode className="w-3 h-3" /> Estampar QR
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
