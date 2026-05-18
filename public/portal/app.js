@@ -14,7 +14,7 @@ let appConfig = {
 
 let currentView = 'junta'; // 'laws', 'agenda', 'legislators', 'profile', 'junta'
 
-const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23cbd5e1"><circle cx="12" cy="12" r="12"/><path d="M12 12c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="%2364748b"/></svg>`;
+const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiLz48cGF0aCBkPSJNMTIgMTJjLTIuNjcgMC04IDEuMzQtOCA0djJoMTZ2LTJjMC0yLjY2LTUuMzMtNC04LTR6bTAtMmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6IiBmaWxsPSIjNjQ3NDhiIi8+PC9zdmc+';
 
 // DOM Elements
 const mainGrid = document.getElementById('main-grid');
@@ -212,7 +212,7 @@ function renderJunta(term) {
             <div style="position:absolute; top: 1rem; right: 1rem; background: #fbbf24; color: #78350f; font-weight: 900; font-size: 0.65rem; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; z-index: 10;">
                 <i data-lucide="crown" style="width: 10px; height: 10px;"></i> Junta Directiva
             </div>
-            <img src="${j.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="legislator-img" style="margin-top: 1rem;">
+            <img src="${j.foto || defaultAvatar}" onerror="this.onerror=null; this.src=defaultAvatar;" class="legislator-img" style="margin-top: 1rem;">
             <h3 class="legislator-name">${j.nombre}</h3>
             <span class="legislator-party" style="background: #e0e7ff; color: #4f46e5; font-weight: bold; border-radius: 6px; padding: 2px 8px; font-size: 0.65rem; margin-top: 0.25rem;">${j.partido}</span>
             <p style="font-size: 0.8rem; font-weight: 800; color: #374151; margin-top: 0.5rem; text-transform: uppercase; letter-spacing: 0.025em;">${j.rol}</p>
@@ -336,7 +336,7 @@ function renderLegislators(term) {
         const card = document.createElement('div');
         card.className = 'card legislator-card';
         card.innerHTML = `
-            <img src="${l.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="legislator-img">
+            <img src="${l.foto || defaultAvatar}" onerror="this.onerror=null; this.src=defaultAvatar;" class="legislator-img">
             <h3 class="legislator-name">${l.nombre}</h3>
             <span class="legislator-party">${l.partido || 'Independiente'}</span>
             <button class="btn-primary" onclick="switchView('profile', ${l.id})">
@@ -359,7 +359,7 @@ function renderLegislatorProfile(id) {
             <i data-lucide="arrow-left"></i> Volver al listado
         </button>
         <div class="profile-header">
-            <img src="${legislator.foto || defaultAvatar}" onerror="this.onerror=null; this.src='${defaultAvatar}';" class="profile-img-lg">
+            <img src="${legislator.foto || defaultAvatar}" onerror="this.onerror=null; this.src=defaultAvatar;" class="profile-img-lg">
             <div class="profile-info">
                 <span class="legislator-party">${legislator.partido || 'Independiente'}</span>
                 <h2>${legislator.nombre}</h2>

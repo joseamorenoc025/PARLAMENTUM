@@ -49,8 +49,8 @@ export class SyncEngine {
         link = `documentos/${path.basename(local.rutaPdf)}`;
       }
 
-      // Buscar documentos adicionales en Bóveda Documental
-      const extraDocs = localDocuments.filter(d => d.entidadTipo === 'Law' && d.entidadId === local.id);
+      // Buscar documentos adicionales en Bóveda Documental con filtro insensible a mayúsculas y numérico
+      const extraDocs = localDocuments.filter(d => d.entidadTipo?.toLowerCase() === 'law' && Number(d.entidadId) === Number(local.id));
       const adjuntos = extraDocs.map(d => ({
         id: d.id,
         nombre: d.nombreOriginal,
@@ -79,10 +79,23 @@ export class SyncEngine {
 
     await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
     
+    // Ensure local public/portal/documentos directory exists
+    const portalDocsDir = path.join(process.cwd(), 'public', 'portal', 'documentos');
+    if (!fs.existsSync(portalDocsDir)) {
+      fs.mkdirSync(portalDocsDir, { recursive: true });
+    }
+
     // Sincronizar archivos físicos de leyes primarias
     for (const law of localLaws) {
       if (law.rutaPdf && fs.existsSync(law.rutaPdf)) {
         const fileName = path.basename(law.rutaPdf);
+        const localDocPath = path.join(portalDocsDir, fileName);
+        try {
+          fs.copyFileSync(law.rutaPdf, localDocPath);
+        } catch (e) {
+          logger.error(`Error copying local PDF file ${fileName}:`, e);
+        }
+
         const remoteDocPath = `public/portal/documentos/${fileName}`;
         const buffer = fs.readFileSync(law.rutaPdf);
         
@@ -97,10 +110,17 @@ export class SyncEngine {
       }
 
       // Sincronizar archivos físicos de la Bóveda vinculados a Leyes
-      const extraDocs = localDocuments.filter(d => d.entidadTipo === 'Law' && d.entidadId === law.id);
+      const extraDocs = localDocuments.filter(d => d.entidadTipo?.toLowerCase() === 'law' && Number(d.entidadId) === Number(law.id));
       for (const doc of extraDocs) {
         if (doc.rutaArchivo && fs.existsSync(doc.rutaArchivo)) {
           const fileName = path.basename(doc.rutaArchivo);
+          const localDocPath = path.join(portalDocsDir, fileName);
+          try {
+            fs.copyFileSync(doc.rutaArchivo, localDocPath);
+          } catch (e) {
+            logger.error(`Error copying extra local PDF file ${fileName}:`, e);
+          }
+
           const remoteDocPath = `public/portal/documentos/${fileName}`;
           const buffer = fs.readFileSync(doc.rutaArchivo);
           
@@ -126,8 +146,8 @@ export class SyncEngine {
     const localDocuments = db.select().from(schema.documents).where(eq(schema.documents.activo, 1)).all();
 
     const projectsJson = localProjects.map(p => {
-      // Buscar documentos de fases en Bóveda Documental
-      const projectDocs = localDocuments.filter(d => d.entidadTipo === 'Project' && d.entidadId === p.id);
+      // Buscar documentos de fases en Bóveda Documental con filtro insensible a mayúsculas y numérico
+      const projectDocs = localDocuments.filter(d => d.entidadTipo?.toLowerCase() === 'project' && Number(d.entidadId) === Number(p.id));
       const adjuntos = projectDocs.map(d => ({
         id: d.id,
         fase: d.faseEtiqueta,
@@ -160,12 +180,25 @@ export class SyncEngine {
 
     await client.updateFile(this.owner, this.repo, this.projectsPath, JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
 
+    // Ensure local public/portal/documentos directory exists
+    const portalDocsDir = path.join(process.cwd(), 'public', 'portal', 'documentos');
+    if (!fs.existsSync(portalDocsDir)) {
+      fs.mkdirSync(portalDocsDir, { recursive: true });
+    }
+
     // Sincronizar archivos físicos de las fases de proyectos a public/portal/documentos/
     for (const p of localProjects) {
-      const projectDocs = localDocuments.filter(d => d.entidadTipo === 'Project' && d.entidadId === p.id);
+      const projectDocs = localDocuments.filter(d => d.entidadTipo?.toLowerCase() === 'project' && Number(d.entidadId) === Number(p.id));
       for (const doc of projectDocs) {
         if (doc.rutaArchivo && fs.existsSync(doc.rutaArchivo)) {
           const fileName = path.basename(doc.rutaArchivo);
+          const localDocPath = path.join(portalDocsDir, fileName);
+          try {
+            fs.copyFileSync(doc.rutaArchivo, localDocPath);
+          } catch (e) {
+            logger.error(`Error copying project PDF file ${fileName}:`, e);
+          }
+
           const remoteDocPath = `public/portal/documentos/${fileName}`;
           const buffer = fs.readFileSync(doc.rutaArchivo);
           
