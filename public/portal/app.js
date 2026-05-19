@@ -1105,7 +1105,7 @@ async function openPdfPreview(url, title, type, id) {
                 </div>
             </div>
             <div class="pdf-download-footer">
-                <a href="${url}" target="_blank" class="download-btn" onclick="trackDownload('${title.replace(/'/g, "\\'")}', '${type}', ${id})">
+                <a href="${url}" target="_blank" class="download-btn" onclick="trackDownload('${title.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', '${type}', ${id})">
                     <i data-lucide="download"></i> Descargar PDF Completo
                 </a>
             </div>
