@@ -220,15 +220,9 @@ export default function App() {
         {/* Sidebar */}
         <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r ${sidebarOpen ? 'w-64' : 'w-16'}`}>
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800/50">
-            {logo ? (
-              <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700/50 bg-white">
-                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <Gavel className="w-5 h-5 text-white" />
-              </div>
-            )}
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700/50 bg-white flex items-center justify-center">
+              <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-full h-full object-contain" />
+            </div>
             {sidebarOpen && (
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate">{config.chamber_name || 'PARLAMENTUM'}</p>
@@ -282,6 +276,11 @@ export default function App() {
           {/* Top Bar */}
           <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
             <div className="flex items-center gap-2">
+              {logo && (
+                <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-gray-200 dark:border-gray-800 flex items-center justify-center mr-1 flex-shrink-0">
+                  <img src={logo} alt="Logo Institucional" className="w-full h-full object-contain" />
+                </div>
+              )}
               <span className="text-sm font-semibold">{navItems.find(i => i.id === currentPage)?.label}</span>
             </div>
             <div className="flex items-center gap-3">

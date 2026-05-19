@@ -577,8 +577,22 @@ function applyConfig() {
     document.getElementById('footer-chamber-name').textContent = appConfig.chamber_name;
     if (institutionalLogo) {
         const img = new Image();
-        img.onload = () => institutionalLogo.src = './assets/logo-institucional.png';
-        img.src = './assets/logo-institucional.png';
+        img.onload = () => {
+            institutionalLogo.src = './logo.png';
+            institutionalLogo.style.display = 'block';
+        };
+        img.onerror = () => {
+            const fallbackImg = new Image();
+            fallbackImg.onload = () => {
+                institutionalLogo.src = './assets/logo-institucional.png';
+                institutionalLogo.style.display = 'block';
+            };
+            fallbackImg.onerror = () => {
+                institutionalLogo.style.display = 'none';
+            };
+            fallbackImg.src = './assets/logo-institucional.png';
+        };
+        img.src = './logo.png';
     }
 }
 
