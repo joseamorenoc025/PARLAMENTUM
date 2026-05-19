@@ -17,7 +17,9 @@ export default function SyncSettings({
   projects = [],
   agreements = [],
   laws = [],
-  onDeleteDocument
+  onDeleteDocument,
+  config = {},
+  setConfig
 }) {
   const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'files'
   
@@ -738,6 +740,48 @@ export default function SyncSettings({
                 ID Anónimo: {analyticsStatus.anonymousId}
               </div>
             )}
+          </div>
+
+          {/* Portal Analytics Link Section */}
+          <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm mt-6`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
+                <Activity className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Panel de Analíticas del Portal Ciudadano</h2>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Ingresa el enlace compartido (Shared Link) de Plausible para monitorear el portal desde la pestaña de analíticas.
+                </p>
+              </div>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const val = e.target.plausibleLink.value.trim();
+              setConfig({ plausible_shared_link: val });
+              addToast('Shared Link de Plausible guardado con éxito', 'success');
+            }} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-gray-500">Shared Link de Plausible</label>
+                <input
+                  type="text"
+                  name="plausibleLink"
+                  defaultValue={config?.plausible_shared_link || ''}
+                  placeholder="https://plausible.io/share/parlamentum.legislativo.com?auth=..."
+                  className={`w-full px-4 py-2.5 rounded-xl border transition-all outline-none text-sm ${
+                    darkMode ? 'bg-gray-800 border-gray-700 focus:border-indigo-500' : 'bg-gray-50 border-gray-200 focus:border-indigo-500'
+                  }`}
+                />
+              </div>
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors text-xs"
+              >
+                <Save className="w-4 h-4" />
+                Guardar Enlace
+              </button>
+            </form>
           </div>
 
           {/* Footer Info */}

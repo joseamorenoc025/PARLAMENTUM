@@ -17,12 +17,13 @@ import LawsLibrary from './components/LawsLibrary';
 import AgreementsModule from './components/AgreementsModule';
 import AuditModule from './components/AuditModule';
 import SyncSettings from './components/SyncSettings';
+import AnalyticsModule from './components/AnalyticsModule';
 
 // Iconos
 import { 
   LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
   Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel, ShieldCheck,
-  LogOut, Database, Github, Activity
+  LogOut, Database, Github, Activity, BarChart3
 } from 'lucide-react';
 
 const defaultConfig = {
@@ -157,6 +158,7 @@ export default function App() {
     { id: 'legisladores', label: 'Legisladores', icon: <Users className="w-5 h-5" /> },
     { id: 'leyes', label: 'Biblioteca', icon: <Scale className="w-5 h-5" /> },
     { id: 'acuerdos', label: 'Acuerdos', icon: <Gavel className="w-5 h-5" /> },
+    { id: 'analytics', label: 'Impacto y Analíticas', icon: <BarChart3 className="w-5 h-5" />, roles: ['admin'] },
     { id: 'auditoria', label: 'Actividad', icon: <Activity className="w-5 h-5" />, roles: ['admin'] },
     { id: 'sincronizacion', label: 'Configuración', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
   ];
@@ -333,6 +335,14 @@ export default function App() {
             {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />}
             {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
             {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
+            {currentPage === 'analytics' && (
+              <AnalyticsModule 
+                config={config} 
+                darkMode={darkMode} 
+                addToast={addToast} 
+                setCurrentPage={setCurrentPage} 
+              />
+            )}
             {currentPage === 'sincronizacion' && (
               <SyncSettings 
                 darkMode={darkMode} 
@@ -344,6 +354,8 @@ export default function App() {
                 agreements={agreements}
                 laws={laws}
                 onDeleteDocument={deleteDocument} 
+                config={config}
+                setConfig={setConfig}
               />
             )}
           </main>

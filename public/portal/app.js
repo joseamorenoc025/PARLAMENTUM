@@ -582,8 +582,22 @@ function renderLaws(term) {
             `;
         }
 
+        const localDl = getDownloadCount('ley', l.id);
+        const serverDl = l.descargas || 0;
+        const totalDl = localDl + serverDl;
+        
+        let popularityBadgeHtml = '';
+        if (totalDl >= 10) {
+            popularityBadgeHtml = `<span class="badge" style="background: #fef08a; color: #b45309; font-weight: 800; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; border: 1px solid #fde047; box-shadow: 0 2px 4px rgba(253,224,71,0.2); animation: pulse 2s infinite;"><i data-lucide="flame" style="width:10px; height:10px; display:inline; margin-right:2px;"></i> Popular</span>`;
+        } else if (totalDl >= 3) {
+            popularityBadgeHtml = `<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 800; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; border: 1px solid #bbf7d0;"><i data-lucide="trending-up" style="width:10px; height:10px; display:inline; margin-right:2px;"></i> Interés Reciente</span>`;
+        }
+
         card.innerHTML = `
-            <span class="law-tag">${l.gaceta || l.tipo || 'Ordinaria'}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span class="law-tag">${l.gaceta || l.tipo || 'Ordinaria'}</span>
+                ${popularityBadgeHtml}
+            </div>
             <h3 class="law-title">${l.titulo}</h3>
             <div class="law-meta" style="margin-bottom: 1rem;">
                 <div class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente || 'No asignado'}</div>
@@ -741,11 +755,25 @@ function renderAgenda(term) {
             `;
         }
 
+        const localDl = getDownloadCount('proyecto', p.id);
+        const serverDl = p.descargas || 0;
+        const totalDl = localDl + serverDl;
+
+        let popularityBadgeHtml = '';
+        if (totalDl >= 10) {
+            popularityBadgeHtml = `<span class="badge" style="background: #fef08a; color: #b45309; font-weight: 800; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; border: 1px solid #fde047; box-shadow: 0 2px 4px rgba(253,224,71,0.2); animation: pulse 2s infinite;"><i data-lucide="flame" style="width:10px; height:10px; display:inline; margin-right:2px;"></i> Popular</span>`;
+        } else if (totalDl >= 3) {
+            popularityBadgeHtml = `<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 800; padding: 2px 8px; border-radius: 9999px; font-size: 0.65rem; border: 1px solid #bbf7d0;"><i data-lucide="trending-up" style="width:10px; height:10px; display:inline; margin-right:2px;"></i> Interés Reciente</span>`;
+        }
+
         const counterBadge = buildCounterBadge('proyecto', p.id);
 
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span class="status-tag status-${p.estado}">${p.estado.replace('_', ' ')}</span>
+                    ${popularityBadgeHtml}
+                </div>
                 ${counterBadge}
             </div>
             <h3 class="law-title">${p.titulo}</h3>
