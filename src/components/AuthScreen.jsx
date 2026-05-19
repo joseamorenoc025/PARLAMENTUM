@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Gavel, User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
 import { dbService } from '../services/db';
 
 const AuthScreen = ({ onLogin, darkMode, addToast }) => {
@@ -117,8 +117,8 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     <div className={`min-h-screen flex items-center justify-center p-4 ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <div className={`w-full max-w-md p-8 rounded-3xl border shadow-2xl transition-all ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 shadow-lg">
-            <Gavel className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-gray-200 dark:border-gray-800 flex items-center justify-center mb-4 shadow-lg">
+            <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold">
             {isSignUp ? 'Crear Administrador' : 'PARLAMENTUM'}
