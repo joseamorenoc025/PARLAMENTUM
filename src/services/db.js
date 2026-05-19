@@ -1,5 +1,5 @@
 /**
- * Servicio de Base de Datos para Segundo Cerebro Legislativo
+ * Servicio de Base de Datos para PARLAMENTUM
  * Se comunica con el proceso principal de Electron a través de IPC
  */
 

@@ -1,5 +1,5 @@
 /**
- * Portal Ciudadano - Segundo Cerebro Legislativo
+ * Portal Ciudadano - PARLAMENTUM
  * Core logic for Laws, Agenda, and Legislators
  */
 
@@ -8,7 +8,7 @@ let allProjects = [];
 let allLegislators = [];
 let allJunta = [];
 let appConfig = {
-    chamber_name: 'Cerebro Legislativo',
+    chamber_name: 'PARLAMENTUM',
     timezone: 'UTC'
 };
 
@@ -577,8 +577,8 @@ function applyConfig() {
     document.getElementById('footer-chamber-name').textContent = appConfig.chamber_name;
     if (institutionalLogo) {
         const img = new Image();
-        img.onload = () => institutionalLogo.src = './logo.png';
-        img.src = './logo.png';
+        img.onload = () => institutionalLogo.src = './assets/logo-institucional.png';
+        img.src = './assets/logo-institucional.png';
     }
 }
 

@@ -1,11 +1,11 @@
-# 🏛️ Cerebro Legislativo
+# 🏛️ PARLAMENTUM
 
 ![GitHub Pages](https://img.shields.io/badge/Status-Stable-success?style=for-the-badge)
 ![Electron](https://img.shields.io/badge/Electron-31.7.7-47848F?style=for-the-badge&logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![SQLite](https://img.shields.io/badge/SQLite-3.x-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 
-**Cerebro Legislativo** es una plataforma de gestión parlamentaria de vanguardia diseñada para Secretarías de Cámara. Combina la potencia de una aplicación de escritorio **Local-First** y una bóveda documental estricta, con la transparencia de un **Portal Ciudadano PWA (Progressive Web App)** dinámico alojado gratuitamente en GitHub Pages.
+**PARLAMENTUM** es una plataforma de gestión parlamentaria de vanguardia diseñada para Secretarías de Cámara. Combina la potencia de una aplicación de escritorio **Local-First** y una bóveda documental estricta, con la transparencia de un **Portal Ciudadano PWA (Progressive Web App)** dinámico alojado gratuitamente en GitHub Pages.
 
 ---
 
@@ -76,7 +76,7 @@ Al tratarse de una aplicación **Local-First**, toda la información se almacena
 
 📂 **Ruta Base (AppData):**
 ```text
-C:\Users\<TuUsuario>\AppData\Roaming\Cerebro Legislativo\
+C:\Users\<TuUsuario>\AppData\Roaming\PARLAMENTUM\
 ```
 
 ### Contenido del Directorio:
@@ -85,13 +85,13 @@ C:\Users\<TuUsuario>\AppData\Roaming\Cerebro Legislativo\
 3.  **`fotos_legisladores/`**: Carpeta local donde se almacenan las fotos cargadas de la junta directiva y legisladores.
 
 > [!WARNING]
-> **Estrategia de Respaldo Manual:** Para realizar una copia de seguridad 100% segura del sistema, solo debes copiar la carpeta `Cerebro Legislativo` de tu directorio AppData a un medio de almacenamiento externo (Disco Duro, Google Drive, OneDrive). Si deseas restaurarlo o migrar de PC, instala la app en el nuevo equipo y pega la carpeta en el mismo directorio antes de abrirla.
+> **Estrategia de Respaldo Manual:** Para realizar una copia de seguridad 100% segura del sistema, solo debes copiar la carpeta `PARLAMENTUM` de tu directorio AppData a un medio de almacenamiento externo (Disco Duro, Google Drive, OneDrive). Si deseas restaurarlo o migrar de PC, instala la app en el nuevo equipo y pega la carpeta en el mismo directorio antes de abrirla.
 
 ---
 
 ## 🚀 Puesta en Marcha Inicial (Onboarding)
 
-Cuando instalas e inicias **Cerebro Legislativo** en un equipo completamente nuevo, el asistente inteligente (Onboarding Wizard) te guiará en los siguientes pasos:
+Cuando instalas e inicias **PARLAMENTUM** en un equipo completamente nuevo, el asistente inteligente (Onboarding Wizard) te guiará en los siguientes pasos:
 1.  **Registro del Administrador:** Se solicita definir la contraseña maestra de seguridad. El sistema requiere políticas de contraseña seguras (mínimo 8 caracteres, números y símbolos).
 2.  **Frase de Recuperación (BIP39):** Se generará una frase única de **12 palabras de recuperación**. Esta frase es el único método para restablecer la contraseña maestra en caso de olvido. **Debes exportarla a PDF o anotarla físicamente en un lugar seguro.**
 3.  **Datos Institucionales:** Define el nombre de la cámara (ej. *Cámara Legislativa del Estado*), el nombre del secretario a cargo del registro y el período legislativo actual.
@@ -114,7 +114,7 @@ Para generar el instalador interactivo (`NSIS`) y la versión portable autónoma
 npm run build:win
 ```
 Los archivos de salida se guardarán en la carpeta `dist/` en la raíz del proyecto. El archivo principal de distribución será:
-*   📦 **`Cerebro Legislativo-1.0.0-win.exe`** (Instalador listo para entregar al usuario).
+*   📦 **`PARLAMENTUM-1.0.0-win.exe`** (Instalador listo para entregar al usuario).
 
 ### 2. Publicación Automatizada en GitHub Releases:
 Si dispones de un token de acceso personal (PAT) de GitHub, puedes compilar y subir los entregables automáticamente como borrador de Release en un solo comando:
@@ -130,7 +130,7 @@ npx electron-builder --win -p always
 
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/joseamorenoc025/cerebro_legislativo.git
+    git clone https://github.com/joseamorenoc025/parlamentum.git
     ```
 2.  **Instalar dependencias:**
     ```bash

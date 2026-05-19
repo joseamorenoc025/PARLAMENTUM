@@ -34,9 +34,9 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    background: #1B365D;
     color: white;
-    padding: 2rem 0 4rem 0;
+    padding: 1.5rem 0 3rem 0;
     box-shadow: var(--shadow);
 }
 
@@ -44,43 +44,43 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 1.5rem;
 }
 
-.logo-area {
+.logo-app {
     display: flex;
     align-items: center;
     gap: 1rem;
+    order: 1; /* Izquierda */
 }
 
-.logo-img {
-    width: 48px;
+.logo-institucion {
+    display: flex;
+    align-items: center;
+    order: 2; /* Derecha */
+}
+
+.logo-parlamentum,
+.logo-institucional {
     height: 48px;
+    width: auto;
     object-fit: contain;
+}
+
+.logo-institucional {
     background: white;
     border-radius: 12px;
     padding: 4px;
 }
 
-.logo-icon {
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.logo-area h1 {
+.logo-app h1 {
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: -0.025em;
 }
 
-.logo-area p {
+.logo-app p {
     font-size: 0.75rem;
     opacity: 0.7;
     font-weight: 500;

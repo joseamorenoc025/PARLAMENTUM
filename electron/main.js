@@ -32,7 +32,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    title: 'Segundo Cerebro Legislativo',
+    title: 'PARLAMENTUM',
   });
 
   if (process.env.NODE_ENV === 'development') {

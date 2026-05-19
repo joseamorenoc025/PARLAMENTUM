@@ -11,7 +11,7 @@ test('Smoke Test: App launches and shows login or dashboard', async () => {
   
   // Check title
   const title = await window.title();
-  expect(title).toBe('Segundo Cerebro Legislativo');
+  expect(title).toBe('PARLAMENTUM');
 
   // Check if we are at login, onboarding or dashboard
   const content = await window.textContent('body');

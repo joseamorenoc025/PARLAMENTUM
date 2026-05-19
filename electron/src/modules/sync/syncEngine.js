@@ -364,17 +364,19 @@ export class SyncEngine {
 
   async syncPortalUI(client) {
     const uiFiles = [
-      { local: 'public/portal/index.html', remote: 'public/portal/index.html' },
-      { local: 'public/portal/styles.css', remote: 'public/portal/styles.css' },
-      { local: 'public/portal/app.js', remote: 'public/portal/app.js' },
-      { local: 'public/portal/manifest.json', remote: 'public/portal/manifest.json' },
-      { local: 'public/portal/service-worker.js', remote: 'public/portal/service-worker.js' }
+      { local: 'public/portal/index.html', remote: 'public/portal/index.html', binary: false },
+      { local: 'public/portal/styles.css', remote: 'public/portal/styles.css', binary: false },
+      { local: 'public/portal/app.js', remote: 'public/portal/app.js', binary: false },
+      { local: 'public/portal/manifest.json', remote: 'public/portal/manifest.json', binary: false },
+      { local: 'public/portal/service-worker.js', remote: 'public/portal/service-worker.js', binary: false },
+      { local: 'public/portal/assets/logo-parlamentum.png', remote: 'public/portal/assets/logo-parlamentum.png', binary: true },
+      { local: 'public/portal/assets/logo-institucional.png', remote: 'public/portal/assets/logo-institucional.png', binary: true }
     ];
 
     for (const file of uiFiles) {
       const localPath = path.join(process.cwd(), file.local);
       if (fs.existsSync(localPath)) {
-        const content = fs.readFileSync(localPath, 'utf8');
+        const content = file.binary ? fs.readFileSync(localPath) : fs.readFileSync(localPath, 'utf8');
         const remoteFile = await client.getRemoteFile(this.owner, this.repo, file.remote);
         // Solo actualizar si el contenido es diferente (opcional, por ahora siempre actualizamos)
         await client.updateFile(this.owner, this.repo, file.remote, content, `Sync: UI ${path.basename(file.local)}`, remoteFile.sha);

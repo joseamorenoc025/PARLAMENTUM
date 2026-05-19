@@ -80,7 +80,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
               <Building2 className="w-12 h-12 text-indigo-500" />
             </div>
             <div>
-              <h2 data-testid="onboarding-welcome-title" className="text-3xl font-black mb-3">Bienvenido a Cerebro Legislativo</h2>
+              <h2 data-testid="onboarding-welcome-title" className="text-3xl font-black mb-3">Bienvenido a PARLAMENTUM</h2>
               <p className={`text-lg leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Este asistente le permitirá preparar el sistema en menos de 3 minutos. 
                 Los datos configurados habilitarán la creación de sesiones, oficios y el portal público de leyes.
@@ -258,7 +258,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                   import('jspdf').then(({ jsPDF }) => {
                     const doc = new jsPDF();
                     doc.setFontSize(22);
-                    doc.text("Cerebro Legislativo", 20, 30);
+                    doc.text("PARLAMENTUM", 20, 30);
                     doc.setFontSize(16);
                     doc.text("Frase de Recuperación", 20, 45);
                     doc.setFontSize(12);
@@ -275,7 +275,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                       doc.text(line, 20, y);
                       y += 15;
                     }
-                    doc.save("Frase_de_Recuperacion_Cerebro_Legislativo.pdf");
+                    doc.save("Frase_de_Recuperacion_PARLAMENTUM.pdf");
                   });
                 }}
                 className="w-full py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors"

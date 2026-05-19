@@ -91,7 +91,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           <div style="padding:20px;border:2px solid #eee;border-radius:20px;background:white;">
             <img src="${dataURL}" style="width:300px;height:300px;display:block;"/>
           </div>
-          <p style="margin-top:20px;font-size:14px;color:#888;">Segundo Cerebro Legislativo • Transparencia</p>
+          <p style="margin-top:20px;font-size:14px;color:#888;">PARLAMENTUM • Transparencia</p>
           <button onclick="window.print()" style="margin-top:30px;padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">Imprimir Código</button>
         </div>
       `);
@@ -149,7 +149,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                     <div style="padding:20px;border:2px solid #eee;border-radius:20px;background:white;">
                       <img src="${dataURL}" style="width:300px;height:300px;display:block;"/>
                     </div>
-                    <p style="margin-top:20px;font-size:14px;color:#888;">Segundo Cerebro Legislativo • Transparencia</p>
+                    <p style="margin-top:20px;font-size:14px;color:#888;">PARLAMENTUM • Transparencia</p>
                     <button onclick="window.print()" style="margin-top:30px;padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">Imprimir Código</button>
                   </div>
                 `);

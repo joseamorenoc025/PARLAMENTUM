@@ -220,7 +220,7 @@ function renderLaws(append = false) {
         const date = law.fecha_publicacion ? new Date(law.fecha_publicacion).toLocaleDateString() : 'N/A';
         const downloadUrl = transformDriveLink(law.link_drive);
         
-        const shareText = encodeURIComponent(`📌 *${appConfig.chamber_name || 'Cerebro Legislativo'}*\n📜 *Ley:* ${law.titulo}\n🔗 *Descargar:* ${downloadUrl}`);
+        const shareText = encodeURIComponent(`📌 *${appConfig.chamber_name || 'PARLAMENTUM'}*\n📜 *Ley:* ${law.titulo}\n🔗 *Descargar:* ${downloadUrl}`);
         const whatsappUrl = `https://wa.me/?text=${shareText}`;
         
         card.innerHTML = `

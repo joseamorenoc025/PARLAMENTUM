@@ -173,7 +173,7 @@ export default function App() {
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-4">Entorno No Soportado</h1>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              Cerebro Legislativo requiere ser ejecutado a través de la aplicación de escritorio (**Electron**). 
+              PARLAMENTUM requiere ser ejecutado a través de la aplicación de escritorio (**Electron**). 
               No puede funcionar correctamente en un navegador web convencional.
             </p>
             <div className="bg-gray-50 p-4 rounded-xl text-left font-mono text-xs text-gray-500 mb-8">
@@ -186,8 +186,23 @@ export default function App() {
 
     if (isLoading || setupStatus.isLoading) {
       return (
-        <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+          <div className="flex flex-col items-center space-y-6 animate-[scale-in_0.5s_ease-out]">
+            <div className="relative flex items-center justify-center">
+              {/* Pulsing ring */}
+              <div className="absolute w-28 h-28 rounded-full border-2 border-indigo-500/20 animate-ping"></div>
+              {/* Logo container */}
+              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-700/50 shadow-2xl z-10">
+                <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-20 h-20 object-contain" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-black tracking-widest text-indigo-500 uppercase">PARLAMENTUM</h2>
+              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-semibold tracking-wide animate-pulse`}>
+                Cargando sistema legislativo...
+              </p>
+            </div>
+          </div>
         </div>
       );
     }
@@ -216,7 +231,7 @@ export default function App() {
             )}
             {sidebarOpen && (
               <div className="min-w-0">
-                <p className="text-sm font-bold truncate">{config.chamber_name || 'Segundo Cerebro'}</p>
+                <p className="text-sm font-bold truncate">{config.chamber_name || 'PARLAMENTUM'}</p>
                 <p className={`text-[10px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{config.chamber_name ? 'Legislativo' : 'Sistema de Gestión'}</p>
               </div>
             )}

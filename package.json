@@ -1,7 +1,7 @@
 {
-  "name": "segundo-cerebro-legislativo",
+  "name": "parlamentum",
   "version": "1.0.0",
-  "description": "Sistema de gestión legislativa profesional",
+  "description": "Sistema de gestión parlamentaria profesional",
   "author": {
     "name": "Jose Moreno",
     "email": "joseamorenoc025@gmail.com"
@@ -31,6 +31,7 @@
     "better-sqlite3": "^12.9.0",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.2",
+    "electron-updater": "^6.8.3",
     "googleapis": "^171.4.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
@@ -60,7 +61,6 @@
     "drizzle-kit": "^0.31.10",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
-    "electron-updater": "^6.8.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -74,13 +74,13 @@
     "tar": "^6.2.1"
   },
   "build": {
-    "appId": "com.cerebrolegislativo.app",
-    "productName": "Cerebro Legislativo",
+    "appId": "com.parlamentum.app",
+    "productName": "PARLAMENTUM",
     "publish": [
       {
         "provider": "github",
         "owner": "joseamorenoc025",
-        "repo": "cerebro_legislativo"
+        "repo": "parlamentum"
       }
     ],
     "directories": {

@@ -9,7 +9,7 @@ import * as schema from '../../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 const DEFAULT_OWNER = 'joseamorenoc025';
-const DEFAULT_REPO = 'cerebro_legislativo';
+const DEFAULT_REPO = 'parlamentum';
 
 /**
  * Obtiene la configuración de repositorio de la DB o usa defaults.

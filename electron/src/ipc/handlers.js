@@ -164,7 +164,7 @@ export const setupIPCHandlers = (mainWindow) => {
       const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
         title: 'Exportar Respaldo de Seguridad',
         defaultPath: `respaldo_legislativo_${new Date().toISOString().split('T')[0]}.clbak`,
-        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }]
+        filters: [{ name: 'Respaldo PARLAMENTUM', extensions: ['clbak'] }]
       });
 
       if (canceled || !filePath) return { success: false, message: 'Operación cancelada' };
@@ -185,7 +185,7 @@ export const setupIPCHandlers = (mainWindow) => {
     try {
       const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
         title: 'Seleccionar Archivo de Respaldo',
-        filters: [{ name: 'Respaldo Cerebro Legislativo', extensions: ['clbak'] }],
+        filters: [{ name: 'Respaldo PARLAMENTUM', extensions: ['clbak'] }],
         properties: ['openFile']
       });
 

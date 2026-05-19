@@ -121,7 +121,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
             <Gavel className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold">
-            {isSignUp ? 'Crear Administrador' : 'Segundo Cerebro'}
+            {isSignUp ? 'Crear Administrador' : 'PARLAMENTUM'}
           </h1>
           <p className="text-sm mt-1 opacity-60">
             {isSignUp ? 'Configuración inicial del sistema' : 'Sistema de Gestión Legislativa'}
