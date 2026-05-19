@@ -12,6 +12,57 @@ let appConfig = {
     timezone: 'UTC'
 };
 
+// PDF.js worker setup
+if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// PDF.js State Variables
+let pdfDoc = null;
+let currentPage = 1;
+let totalPages = 0;
+let pdfScale = 1.0;
+let pdfUrl = '';
+let currentEntityId = null;
+let currentEntityType = '';
+
+// Fuse.js Instances
+let fuseJunta = null;
+let fuseLaws = null;
+let fuseAgenda = null;
+let fuseLegislators = null;
+
+// Plausible tracking functions
+function trackDownload(title, type, id) {
+    if (window.plausible) {
+        window.plausible('Download', { props: { title: title, type: type, id: id } });
+    }
+    incrementDownload(type, id);
+}
+
+function trackSearch(term) {
+    if (window.plausible) {
+        window.plausible('Search', { props: { term: term } });
+    }
+}
+
+function trackProfileView(name) {
+    if (window.plausible) {
+        window.plausible('Profile View', { props: { name: name } });
+    }
+}
+
+function trackPreview(title, type, id) {
+    if (window.plausible) {
+        window.plausible('Preview PDF', { props: { title: title, type: type, id: id } });
+    }
+}
+
+window.trackDownload = trackDownload;
+window.trackPreview = trackPreview;
+window.trackProfileView = trackProfileView;
+
+
 let currentView = 'junta'; // 'laws', 'agenda', 'legislators', 'profile', 'junta'
 
 const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiLz48cGF0aCBkPSJNMTIgMTJjLTIuNjcgMC04IDEuMzQtOCA0djJoMTZ2LTJjMC0yLjY2LTUuMzMtNC04LTR6bTAtMmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6IiBmaWxsPSIjNjQ3NDhiIi8+PC9zdmc+';
@@ -92,8 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 4. Search Handler
+    let searchDebounceTimeout = null;
     searchInput.addEventListener('input', () => {
         renderCurrentView();
+        clearTimeout(searchDebounceTimeout);
+        searchDebounceTimeout = setTimeout(() => {
+            const val = searchInput.value.trim();
+            if (val.length >= 2) {
+                trackSearch(val);
+            }
+        }, 1000);
     });
 });
 
@@ -180,10 +239,83 @@ async function fetchConfig() {
     } catch (e) { console.warn('Config default used'); }
 }
 
+function initFuseJunta() {
+    if (!window.Fuse) return;
+    const options = {
+        keys: [
+            { name: 'nombre', weight: 0.5 },
+            { name: 'rol', weight: 0.3 },
+            { name: 'partido', weight: 0.2 },
+            { name: 'biografia', weight: 0.1 }
+        ],
+        threshold: 0.4,
+        distance: 100,
+        includeScore: true,
+        ignoreLocation: true,
+        minMatchCharLength: 2
+    };
+    fuseJunta = new Fuse(allJunta, options);
+}
+
+function initFuseLaws() {
+    if (!window.Fuse) return;
+    const options = {
+        keys: [
+            { name: 'titulo', weight: 0.4 },
+            { name: 'expediente', weight: 0.3 },
+            { name: 'tags', weight: 0.2 },
+            { name: 'tipo', weight: 0.1 }
+        ],
+        threshold: 0.4,
+        distance: 100,
+        includeScore: true,
+        ignoreLocation: true,
+        minMatchCharLength: 2
+    };
+    fuseLaws = new Fuse(allLaws, options);
+}
+
+function initFuseAgenda() {
+    if (!window.Fuse) return;
+    const options = {
+        keys: [
+            { name: 'titulo', weight: 0.4 },
+            { name: 'expediente', weight: 0.2 },
+            { name: 'tags', weight: 0.2 },
+            { name: 'extracto', weight: 0.1 },
+            { name: 'ponente', weight: 0.1 }
+        ],
+        threshold: 0.4,
+        distance: 100,
+        includeScore: true,
+        ignoreLocation: true,
+        minMatchCharLength: 2
+    };
+    fuseAgenda = new Fuse(allProjects, options);
+}
+
+function initFuseLegislators() {
+    if (!window.Fuse) return;
+    const options = {
+        keys: [
+            { name: 'nombre', weight: 0.5 },
+            { name: 'partido', weight: 0.3 },
+            { name: 'biografia', weight: 0.2 }
+        ],
+        threshold: 0.4,
+        distance: 100,
+        includeScore: true,
+        ignoreLocation: true,
+        minMatchCharLength: 2
+    };
+    fuseLegislators = new Fuse(allLegislators, options);
+}
+
 async function fetchJunta() {
     try {
         const response = await fetch(`./junta_directiva.json?t=${Date.now()}`);
         allJunta = response.ok ? await response.json() : [];
+        initFuseJunta();
     } catch (e) { console.error('Error junta', e); }
 }
 
@@ -192,6 +324,7 @@ async function fetchLaws() {
         const response = await fetch(`./leyes.json?t=${Date.now()}`);
         allLaws = response.ok ? await response.json() : [];
         allLaws.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        initFuseLaws();
     } catch (e) { console.error('Error laws', e); }
 }
 
@@ -199,6 +332,7 @@ async function fetchProjects() {
     try {
         const response = await fetch(`./proyectos.json?t=${Date.now()}`);
         allProjects = response.ok ? await response.json() : [];
+        initFuseAgenda();
     } catch (e) { console.error('Error agenda', e); }
 }
 
@@ -206,6 +340,7 @@ async function fetchLegislators() {
     try {
         const response = await fetch(`./legisladores.json?t=${Date.now()}`);
         allLegislators = response.ok ? await response.json() : [];
+        initFuseLegislators();
     } catch (e) { console.error('Error legislators', e); }
 }
 
@@ -291,7 +426,36 @@ function renderCurrentView() {
 }
 
 function renderJunta(term) {
-    const filtered = allJunta.filter(j => j.nombre.toLowerCase().includes(term) || j.rol.toLowerCase().includes(term) || (j.partido && j.partido.toLowerCase().includes(term)));
+    let filtered = allJunta;
+    let matchScoreHtml = '';
+    
+    if (term.length >= 2 && fuseJunta) {
+        const results = fuseJunta.search(term);
+        filtered = results.map(r => r.item);
+        if (results.length > 0) {
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 Encontrados <strong>${results.length}</strong> directivos para "<em>${term}</em>"</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        } else {
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 No se encontraron miembros de la Junta Directiva para "<em>${term}</em>"</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        }
+    } else if (term.length > 0) {
+        filtered = allJunta.filter(j => j.nombre.toLowerCase().includes(term) || j.rol.toLowerCase().includes(term) || (j.partido && j.partido.toLowerCase().includes(term)));
+    }
+    
+    if (matchScoreHtml) {
+        const div = document.createElement('div');
+        div.innerHTML = matchScoreHtml;
+        mainGrid.appendChild(div.firstElementChild);
+    }
     
     if (filtered.length === 0) return showStatus('No se encontraron miembros de la Junta Directiva.', 'info');
     
@@ -317,15 +481,49 @@ function renderLaws(term) {
     const type = document.getElementById('filter-type')?.value;
     const selectedTag = document.getElementById('filter-tag')?.value;
 
-    const filtered = allLaws.filter(l => {
-        const matchTerm = l.titulo.toLowerCase().includes(term) || 
-                          (l.expediente && l.expediente.toLowerCase().includes(term)) ||
-                          (l.tags && l.tags.toLowerCase().includes(term));
+    let filtered = allLaws;
+    let matchScoreHtml = '';
+
+    if (term.length >= 2 && fuseLaws) {
+        const results = fuseLaws.search(term);
+        filtered = results.map(r => r.item);
+        if (results.length > 0) {
+            const bestScore = Math.round((1 - results[0].score) * 100);
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 Encontradas <strong>${results.length}</strong> leyes para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        } else {
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 No se encontraron leyes para "<em>${term}</em>"</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        }
+    } else if (term.length > 0) {
+        filtered = allLaws.filter(l => {
+            return l.titulo.toLowerCase().includes(term) || 
+                   (l.expediente && l.expediente.toLowerCase().includes(term)) ||
+                   (l.tags && l.tags.toLowerCase().includes(term));
+        });
+    }
+
+    if (matchScoreHtml) {
+        const div = document.createElement('div');
+        div.innerHTML = matchScoreHtml;
+        mainGrid.appendChild(div.firstElementChild);
+    }
+
+    // Apply filters
+    filtered = filtered.filter(l => {
         const matchYear = !year || String(l.anio) === year;
         const lawType = l.gaceta || l.tipo || 'Ordinaria';
         const matchType = !type || lawType === type;
         const matchTag = !selectedTag || (l.tags && l.tags.split(',').map(t => t.trim().toLowerCase()).includes(selectedTag.toLowerCase()));
-        return matchTerm && matchYear && matchType && matchTag;
+        return matchYear && matchType && matchTag;
     });
 
     if (filtered.length === 0) return showStatus('No se encontraron leyes.', 'info');
@@ -337,9 +535,14 @@ function renderLaws(term) {
         let downloadBtnHtml = '';
         if (l.link_drive) {
             downloadBtnHtml = `
-                <a href="${l.link_drive}" target="_blank" class="btn-primary" style="margin-bottom: 0.5rem;" onclick="incrementDownload('ley', ${l.id})">
-                    <i data-lucide="download"></i> Descargar Ley
-                </a>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                    <button onclick="openPdfPreview('${l.link_drive}', '${l.titulo.replace(/'/g, "\\'")}', 'ley', ${l.id})" class="btn-primary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver PDF
+                    </button>
+                    <a href="${l.link_drive}" target="_blank" class="btn-secondary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="trackDownload('${l.titulo.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                        <i data-lucide="download" style="width: 14px; height: 14px;"></i> Descargar
+                    </a>
+                </div>
                 ${buildCounterBadge('ley', l.id)}
             `;
         }
@@ -353,9 +556,15 @@ function renderLaws(term) {
                         <div class="law-adjunto-item">
                             <div class="law-adjunto-icon"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i></div>
                             <span class="law-adjunto-name" title="${adj.nombre}">${adj.nombre}</span>
-                            <a href="${adj.relative_path}" target="_blank" class="law-adjunto-download" onclick="incrementDownload('ley', ${l.id})">
-                                <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
-                            </a>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="law-adjunto-download" style="background: transparent; border: none; cursor: pointer; color: var(--primary); display: flex; align-items: center; gap: 2px;" onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                                    <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver
+                                </button>
+                                <span style="opacity: 0.3; font-size: 0.75rem;">|</span>
+                                <a href="${adj.relative_path}" target="_blank" class="law-adjunto-download" onclick="trackDownload('${adj.nombre.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                                    <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
+                                </a>
+                            </div>
                         </div>
                     `).join('')}
                 </div>
@@ -433,7 +642,10 @@ function buildPhaseTimeline(project) {
         if (hasDoc) classes += ' phase-has-doc';
 
         const docBtn = hasDoc 
-            ? `<a href="${doc.relative_path}" target="_blank" class="phase-doc-btn" onclick="incrementDownload('proyecto', ${project.id})"><i data-lucide="download" style="width: 10px; height: 10px;"></i> PDF</a>`
+            ? `<div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
+                 <button onclick="openPdfPreview('${doc.relative_path}', '${doc.nombre.replace(/'/g, "\\'") || phase.replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
+                 <a href="${doc.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${doc.nombre.replace(/'/g, "\\'") || phase.replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+               </div>`
             : '';
 
         return `<div class="${classes}"><span class="phase-node-label">${phase}</span>${docBtn}</div>`;
@@ -445,7 +657,10 @@ function buildPhaseTimeline(project) {
         extraHtml = extraAdjuntos.map(adj => `
             <div class="phase-node phase-has-doc">
                 <span class="phase-node-label">${adj.fase}</span>
-                <a href="${adj.relative_path}" target="_blank" class="phase-doc-btn" onclick="incrementDownload('proyecto', ${project.id})"><i data-lucide="download" style="width: 10px; height: 10px;"></i> PDF</a>
+                <div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
+                    <button onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
+                    <a href="${adj.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${adj.nombre.replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+                </div>
             </div>
         `).join('');
     }
@@ -465,13 +680,46 @@ function renderAgenda(term) {
     const state = document.getElementById('filter-state')?.value;
     const selectedTag = document.getElementById('filter-tag')?.value;
 
-    const filtered = allProjects.filter(p => {
-        const matchTerm = p.titulo.toLowerCase().includes(term) || 
-                          (p.expediente && p.expediente.toLowerCase().includes(term)) ||
-                          (p.tags && p.tags.toLowerCase().includes(term));
+    let filtered = allProjects;
+    let matchScoreHtml = '';
+
+    if (term.length >= 2 && fuseAgenda) {
+        const results = fuseAgenda.search(term);
+        filtered = results.map(r => r.item);
+        if (results.length > 0) {
+            const bestScore = Math.round((1 - results[0].score) * 100);
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 Encontrados <strong>${results.length}</strong> proyectos para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        } else {
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 No se encontraron proyectos para "<em>${term}</em>"</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        }
+    } else if (term.length > 0) {
+        filtered = allProjects.filter(p => {
+            return p.titulo.toLowerCase().includes(term) || 
+                   (p.expediente && p.expediente.toLowerCase().includes(term)) ||
+                   (p.tags && p.tags.toLowerCase().includes(term));
+        });
+    }
+
+    if (matchScoreHtml) {
+        const div = document.createElement('div');
+        div.innerHTML = matchScoreHtml;
+        mainGrid.appendChild(div.firstElementChild);
+    }
+
+    filtered = filtered.filter(p => {
         const matchState = !state || p.estado === state;
         const matchTag = !selectedTag || (p.tags && p.tags.split(',').map(t => t.trim().toLowerCase()).includes(selectedTag.toLowerCase()));
-        return matchTerm && matchState && matchTag;
+        return matchState && matchTag;
     });
 
     if (filtered.length === 0) return showStatus('No hay proyectos en la agenda.', 'info');
@@ -514,7 +762,37 @@ function renderAgenda(term) {
 }
 
 function renderLegislators(term) {
-    const filtered = allLegislators.filter(l => l.nombre.toLowerCase().includes(term) || (l.partido && l.partido.toLowerCase().includes(term)));
+    let filtered = allLegislators;
+    let matchScoreHtml = '';
+
+    if (term.length >= 2 && fuseLegislators) {
+        const results = fuseLegislators.search(term);
+        filtered = results.map(r => r.item);
+        if (results.length > 0) {
+            const bestScore = Math.round((1 - results[0].score) * 100);
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 Encontrados <strong>${results.length}</strong> legisladores para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        } else {
+            matchScoreHtml = `
+                <div class="search-results-info">
+                    <span>🔍 No se encontraron legisladores para "<em>${term}</em>"</span>
+                    <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
+                </div>
+            `;
+        }
+    } else if (term.length > 0) {
+        filtered = allLegislators.filter(l => l.nombre.toLowerCase().includes(term) || (l.partido && l.partido.toLowerCase().includes(term)));
+    }
+
+    if (matchScoreHtml) {
+        const div = document.createElement('div');
+        div.innerHTML = matchScoreHtml;
+        mainGrid.appendChild(div.firstElementChild);
+    }
 
     if (filtered.length === 0) return showStatus('No se encontraron legisladores.', 'info');
 
@@ -539,6 +817,8 @@ function renderLegislators(term) {
 function renderLegislatorProfile(id) {
     const legislator = allLegislators.find(l => String(l.id) === String(id));
     if (!legislator) return showStatus('Legislador no encontrado', 'error');
+
+    trackProfileView(legislator.nombre);
 
     legislatorProfile.innerHTML = `
         <button class="btn-primary back-btn" onclick="switchView('legislators')">
@@ -752,3 +1032,162 @@ function renderStatsDashboard() {
         });
     }, 100);
 }
+
+// ==========================================
+// PDF.js Preview Modal & Event Controls
+// ==========================================
+async function openPdfPreview(url, title, type, id) {
+    trackPreview(title, type, id);
+    pdfUrl = url;
+    currentEntityId = id;
+    currentEntityType = type;
+    currentPage = 1;
+    pdfScale = 1.0;
+    
+    // Remove existing modal if any
+    closePdfPreview();
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'pdf-preview-modal';
+    modal.innerHTML = `
+        <div class="pdf-modal-content">
+            <div class="pdf-modal-header">
+                <h3 title="${title}">${title}</h3>
+                <button class="pdf-close-btn" onclick="closePdfPreview()">✕ Cerrar</button>
+            </div>
+            <div class="pdf-canvas-container">
+                <div class="pdf-loading-spinner" id="pdf-spinner">
+                    <div class="spinner"></div>
+                    <span>Cargando documento...</span>
+                </div>
+                <canvas id="pdf-canvas"></canvas>
+            </div>
+            <div class="pdf-controls">
+                <div class="pdf-controls-group">
+                    <button id="pdf-prev" class="pdf-btn" onclick="changePage(-1)">◀ Anterior</button>
+                    <span class="pdf-page-indicator">Pág. <span id="pdf-page-num">1</span> de <span id="pdf-page-count">-</span></span>
+                    <button id="pdf-next" class="pdf-btn" onclick="changePage(1)">Siguiente ▶</button>
+                </div>
+                <div class="pdf-controls-group">
+                    <button class="pdf-btn" onclick="changeZoom(-0.25)"><i data-lucide="zoom-out" style="width:14px;height:14px;"></i></button>
+                    <span id="pdf-zoom-percent" style="font-size:0.75rem; font-weight:600; min-width:40px; text-align:center;">100%</span>
+                    <button class="pdf-btn" onclick="changeZoom(0.25)"><i data-lucide="zoom-in" style="width:14px;height:14px;"></i></button>
+                    <button class="pdf-btn" onclick="changeZoom('fit')"><i data-lucide="maximize" style="width:14px;height:14px;"></i> Ajustar</button>
+                </div>
+            </div>
+            <div class="pdf-download-footer">
+                <a href="${url}" target="_blank" class="download-btn" onclick="trackDownload('${title.replace(/'/g, "\\'")}', '${type}', ${id})">
+                    <i data-lucide="download"></i> Descargar PDF Completo
+                </a>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    lucide.createIcons();
+    
+    // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
+    
+    // Load PDF Document
+    try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        pdfDoc = await loadingTask.promise;
+        totalPages = pdfDoc.numPages;
+        document.getElementById('pdf-page-count').textContent = totalPages;
+        renderPage(1);
+    } catch (error) {
+        console.error('Error loading PDF:', error);
+        const spinner = document.getElementById('pdf-spinner');
+        if (spinner) {
+            spinner.innerHTML = `<span style="color:#f87171; text-align:center; padding: 1rem;">⚠️ Vista previa no disponible para este enlace externo. Puede intentar descargarlo directamente.</span>`;
+        }
+    }
+}
+
+function renderPage(num) {
+    if (!pdfDoc) return;
+    currentPage = num;
+    document.getElementById('pdf-page-num').textContent = num;
+    
+    // Disable/enable pagination buttons
+    document.getElementById('pdf-prev').disabled = num <= 1;
+    document.getElementById('pdf-next').disabled = num >= totalPages;
+    
+    // Show spinner while rendering
+    const spinner = document.getElementById('pdf-spinner');
+    if (spinner) spinner.style.display = 'flex';
+    
+    pdfDoc.getPage(num).then(function(page) {
+        const canvas = document.getElementById('pdf-canvas');
+        if (!canvas) return;
+        const context = canvas.getContext('2d');
+        
+        let viewport = page.getViewport({ scale: pdfScale });
+        
+        // Auto-scale check if 'fit'
+        if (pdfScale === 'fit') {
+            const container = canvas.parentElement;
+            const containerWidth = container.clientWidth - 48; // padding
+            const pageViewport = page.getViewport({ scale: 1.0 });
+            const fitScale = containerWidth / pageViewport.width;
+            pdfScale = Math.min(Math.max(fitScale, 0.5), 2.0); // limits
+            viewport = page.getViewport({ scale: pdfScale });
+            document.getElementById('pdf-zoom-percent').textContent = `${Math.round(pdfScale * 100)}%`;
+        }
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+        };
+        
+        page.render(renderContext).promise.then(() => {
+            if (spinner) spinner.style.display = 'none';
+        });
+    });
+}
+
+function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+        renderPage(newPage);
+    }
+}
+
+function changeZoom(delta) {
+    if (delta === 'fit') {
+        pdfScale = 'fit';
+        document.getElementById('pdf-zoom-percent').textContent = `Ajustar`;
+    } else {
+        if (pdfScale === 'fit') pdfScale = 1.0;
+        const newScale = pdfScale + delta;
+        if (newScale >= 0.5 && newScale <= 3.0) {
+            pdfScale = newScale;
+            document.getElementById('pdf-zoom-percent').textContent = `${Math.round(pdfScale * 100)}%`;
+        }
+    }
+    renderPage(currentPage);
+}
+
+function closePdfPreview() {
+    const modal = document.getElementById('pdf-preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+    document.body.style.overflow = '';
+    pdfDoc = null;
+}
+
+window.clearSearch = function() {
+    searchInput.value = '';
+    renderCurrentView();
+};
+
+window.openPdfPreview = openPdfPreview;
+window.closePdfPreview = closePdfPreview;
+window.changePage = changePage;
+window.changeZoom = changeZoom;
+
