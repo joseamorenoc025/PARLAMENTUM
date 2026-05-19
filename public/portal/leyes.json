@@ -1,15 +1,16 @@
 [
   {
-    "id": 2,
-    "titulo": "constitucion",
-    "tipo": "Ordinaria",
-    "numero": "025",
+    "id": 1,
+    "titulo": "Constitucion del Estado Bolivariano Delta Amacuro",
+    "tipo": "Extraordinaria",
+    "numero": "36",
     "gaceta": null,
     "anio": 2026,
-    "expediente": "Ordinaria #025 (2026)",
-    "link_drive": "documentos/ley_1778941420763_GACETA_N°_36_EXTRAORDINARIO.pdf",
-    "fecha_publicacion": "2026-05-16",
+    "expediente": "Extraordinaria #36 (2026)",
+    "link_drive": "documentos/ley_1779227452337_Constitución_Estado_Bolivariano_Delta_Amacuro.pdf",
+    "fecha_publicacion": "2015-12-16",
     "adjuntos": [],
-    "updated_at": "2026-05-18T02:22:05.906Z"
+    "tags": "Constitución",
+    "updated_at": "2026-05-19T21:51:23.191Z"
   }
 ]
