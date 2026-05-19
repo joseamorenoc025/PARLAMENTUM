@@ -63,6 +63,17 @@ window.trackPreview = trackPreview;
 window.trackProfileView = trackProfileView;
 
 
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[tag] || tag));
+}
+
 let currentView = 'junta'; // 'laws', 'agenda', 'legislators', 'profile', 'junta'
 
 const defaultAvatar = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2NiZDVlMSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiLz48cGF0aCBkPSJNMTIgMTJjLTIuNjcgMC04IDEuMzQtOCA0djJoMTZ2LTJjMC0yLjY2LTUuMzMtNC04LTR6bTAtMmEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6IiBmaWxsPSIjNjQ3NDhiIi8+PC9zdmc+';
@@ -435,14 +446,14 @@ function renderJunta(term) {
         if (results.length > 0) {
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 Encontrados <strong>${results.length}</strong> directivos para "<em>${term}</em>"</span>
+                    <span>🔍 Encontrados <strong>${results.length}</strong> directivos para "<em>${escapeHTML(term)}</em>"</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
         } else {
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 No se encontraron miembros de la Junta Directiva para "<em>${term}</em>"</span>
+                    <span>🔍 No se encontraron miembros de la Junta Directiva para "<em>${escapeHTML(term)}</em>"</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
@@ -491,14 +502,14 @@ function renderLaws(term) {
             const bestScore = Math.round((1 - results[0].score) * 100);
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 Encontradas <strong>${results.length}</strong> leyes para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <span>🔍 Encontradas <strong>${results.length}</strong> leyes para "<em>${escapeHTML(term)}</em>" (${bestScore}% relevancia)</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
         } else {
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 No se encontraron leyes para "<em>${term}</em>"</span>
+                    <span>🔍 No se encontraron leyes para "<em>${escapeHTML(term)}</em>"</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
@@ -536,10 +547,10 @@ function renderLaws(term) {
         if (l.link_drive) {
             downloadBtnHtml = `
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-                    <button onclick="openPdfPreview('${l.link_drive}', '${l.titulo.replace(/'/g, "\\'")}', 'ley', ${l.id})" class="btn-primary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    <button onclick="openPdfPreview('${l.link_drive}', '${l.titulo.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'ley', ${l.id})" class="btn-primary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
                         <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver PDF
                     </button>
-                    <a href="${l.link_drive}" target="_blank" class="btn-secondary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="trackDownload('${l.titulo.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                    <a href="${l.link_drive}" target="_blank" class="btn-secondary" style="flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="trackDownload('${l.titulo.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'ley', ${l.id})">
                         <i data-lucide="download" style="width: 14px; height: 14px;"></i> Descargar
                     </a>
                 </div>
@@ -557,11 +568,11 @@ function renderLaws(term) {
                             <div class="law-adjunto-icon"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i></div>
                             <span class="law-adjunto-name" title="${adj.nombre}">${adj.nombre}</span>
                             <div style="display: flex; gap: 6px; align-items: center;">
-                                <button class="law-adjunto-download" style="background: transparent; border: none; cursor: pointer; color: var(--primary); display: flex; align-items: center; gap: 2px;" onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                                <button class="law-adjunto-download" style="background: transparent; border: none; cursor: pointer; color: var(--primary); display: flex; align-items: center; gap: 2px;" onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'ley', ${l.id})">
                                     <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver
                                 </button>
                                 <span style="opacity: 0.3; font-size: 0.75rem;">|</span>
-                                <a href="${adj.relative_path}" target="_blank" class="law-adjunto-download" onclick="trackDownload('${adj.nombre.replace(/'/g, "\\'")}', 'ley', ${l.id})">
+                                <a href="${adj.relative_path}" target="_blank" class="law-adjunto-download" onclick="trackDownload('${adj.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'ley', ${l.id})">
                                     <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
                                 </a>
                             </div>
@@ -657,8 +668,8 @@ function buildPhaseTimeline(project) {
 
         const docBtn = hasDoc 
             ? `<div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
-                 <button onclick="openPdfPreview('${doc.relative_path}', '${doc.nombre.replace(/'/g, "\\'") || phase.replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
-                 <a href="${doc.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${doc.nombre.replace(/'/g, "\\'") || phase.replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+                 <button onclick="openPdfPreview('${doc.relative_path}', '${doc.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'") || phase.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
+                 <a href="${doc.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${doc.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'") || phase.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
                </div>`
             : '';
 
@@ -672,8 +683,8 @@ function buildPhaseTimeline(project) {
             <div class="phase-node phase-has-doc">
                 <span class="phase-node-label">${adj.fase}</span>
                 <div style="display: flex; gap: 4px; align-items: center; margin-top: 4px;">
-                    <button onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
-                    <a href="${adj.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${adj.nombre.replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+                    <button onclick="openPdfPreview('${adj.relative_path}', '${adj.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'proyecto', ${project.id})" class="phase-doc-btn" style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; color: var(--primary);"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
+                    <a href="${adj.relative_path}" target="_blank" class="phase-doc-btn" style="display: inline-flex; align-items: center; gap: 2px;" onclick="trackDownload('${adj.nombre.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}', 'proyecto', ${project.id})"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
                 </div>
             </div>
         `).join('');
@@ -704,14 +715,14 @@ function renderAgenda(term) {
             const bestScore = Math.round((1 - results[0].score) * 100);
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 Encontrados <strong>${results.length}</strong> proyectos para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <span>🔍 Encontrados <strong>${results.length}</strong> proyectos para "<em>${escapeHTML(term)}</em>" (${bestScore}% relevancia)</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
         } else {
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 No se encontraron proyectos para "<em>${term}</em>"</span>
+                    <span>🔍 No se encontraron proyectos para "<em>${escapeHTML(term)}</em>"</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
@@ -800,14 +811,14 @@ function renderLegislators(term) {
             const bestScore = Math.round((1 - results[0].score) * 100);
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 Encontrados <strong>${results.length}</strong> legisladores para "<em>${term}</em>" (${bestScore}% relevancia)</span>
+                    <span>🔍 Encontrados <strong>${results.length}</strong> legisladores para "<em>${escapeHTML(term)}</em>" (${bestScore}% relevancia)</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
         } else {
             matchScoreHtml = `
                 <div class="search-results-info">
-                    <span>🔍 No se encontraron legisladores para "<em>${term}</em>"</span>
+                    <span>🔍 No se encontraron legisladores para "<em>${escapeHTML(term)}</em>"</span>
                     <button class="search-results-clear" onclick="clearSearch()">Limpiar</button>
                 </div>
             `;
