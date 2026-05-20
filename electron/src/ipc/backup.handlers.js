@@ -215,4 +215,102 @@ export const setupBackupHandlers = (mainWindow) => {
       return { success: false, error: err.message };
     }
   });
+
+  const cloudBackupSchema = z.object({
+    filePath: z.string().min(1, 'El path no puede estar vacío')
+  });
+
+  ipcMain.handle('backup:uploadToCloud', async (_, rawData) => {
+    try {
+      const validation = validateIPCInput(cloudBackupSchema, rawData, 'backup:uploadToCloud');
+      const { filePath } = validation.data;
+
+      // 1. Check if file exists
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: 'FILE_NOT_FOUND', details: 'El archivo de respaldo no existe localmente.' };
+      }
+
+      // 2. Get GitHub config
+      const repoConfig = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_repo')).get();
+      const ownerConfig = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_owner')).get();
+      
+      const repo = repoConfig?.value;
+      const owner = ownerConfig?.value;
+
+      if (!repo || !owner) {
+        return { success: false, error: 'CONFIG_MISSING', details: 'Repositorio de GitHub no configurado.' };
+      }
+
+      // 3. Get token from DPAPI
+      const { loadToken } = await import('../modules/sync/tokenStorage.js');
+      const token = await loadToken();
+
+      if (!token) {
+        return { success: false, error: 'TOKEN_MISSING', details: 'No hay credenciales de GitHub almacenadas.' };
+      }
+
+      // 4. Upload to GitHub
+      const { uploadBackupToGitHub } = await import('../modules/backup/githubBackup.js');
+      const result = await uploadBackupToGitHub(token, owner, repo, filePath);
+
+      return result;
+    } catch (err) {
+      logger.error('Error in backup:uploadToCloud handler:', err);
+      return { success: false, error: 'UPLOAD_FAILED', details: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:checkCloudToken', async () => {
+    try {
+      const { loadToken } = await import('../modules/sync/tokenStorage.js');
+      const token = await loadToken();
+      return { exists: !!token };
+    } catch (err) {
+      return { exists: false, error: err.message };
+    }
+  });
+
+  const setTokenSchema = z.object({
+    token: z.string().min(1, 'El token no puede estar vacío')
+  });
+
+  ipcMain.handle('backup:setCloudToken', async (_, rawData) => {
+    try {
+      const validation = validateIPCInput(setTokenSchema, rawData, 'backup:setCloudToken');
+      const { saveToken } = await import('../modules/sync/tokenStorage.js');
+      await saveToken(validation.data.token);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('backup:downloadFromCloud', async () => {
+    try {
+      const { loadToken } = await import('../modules/sync/tokenStorage.js');
+      const token = await loadToken();
+      if (!token) return { success: false, error: 'TOKEN_MISSING' };
+
+      const repoConfig = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_repo')).get();
+      const ownerConfig = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_owner')).get();
+      
+      const repo = repoConfig?.value;
+      const owner = ownerConfig?.value;
+
+      if (!repo || !owner) {
+        return { success: false, error: 'CONFIG_MISSING' };
+      }
+
+      const { downloadBackupFromGitHub } = await import('../modules/backup/githubBackup.js');
+      const userDataPath = app.getPath('userData');
+      const tempPath = path.join(userDataPath, `cloud-backup-${Date.now()}.clbak`);
+      
+      const result = await downloadBackupFromGitHub(token, owner, repo, tempPath);
+      
+      return { success: true, filePath: tempPath, date: result.date };
+    } catch (err) {
+      logger.error('Error in backup:downloadFromCloud handler:', err);
+      return { success: false, error: 'DOWNLOAD_FAILED', details: err.message };
+    }
+  });
 };

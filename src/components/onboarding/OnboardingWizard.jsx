@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, UserPlus, ShieldCheck, CheckCircle2, 
   ChevronRight, ChevronLeft, Loader2, Image as ImageIcon,
-  ShieldAlert, AlertCircle, RefreshCw
+  ShieldAlert, AlertCircle, RefreshCw, Copy, Download, FileText, Lock
 } from 'lucide-react';
 import BackupRestoreStep from './BackupRestoreStep';
 
@@ -10,6 +10,11 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
   const [step, setStep] = useState(1); // 1: Welcome, 2: Admin, 3: Institutional, 4: Success, 5: Restore
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState(null);
+  const [saveOption, setSaveOption] = useState('A');
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationIndices, setVerificationIndices] = useState([]);
+  const [verificationInputs, setVerificationInputs] = useState(['', '', '']);
+  const [clipboardTimeoutId, setClipboardTimeoutId] = useState(null);
   
   const [formData, setFormData] = useState({
     password: '',
@@ -69,6 +74,44 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
     } catch (err) {
       console.error('Logo selection failed:', err);
     }
+  };
+
+  useEffect(() => {
+    if (recoveryCode && verificationIndices.length === 0) {
+      const indices = [];
+      while (indices.length < 3) {
+        const r = Math.floor(Math.random() * 12);
+        if (!indices.includes(r)) indices.push(r);
+      }
+      setVerificationIndices(indices.sort((a, b) => a - b));
+    }
+  }, [recoveryCode, verificationIndices.length]);
+
+  useEffect(() => {
+    return () => {
+      if (clipboardTimeoutId) clearTimeout(clipboardTimeoutId);
+    };
+  }, [clipboardTimeoutId]);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(recoveryCode);
+    if (addToast) addToast('Copiado. Pégalo en tu gestor de contraseñas. El portapapeles se limpiará en 30s.', 'success');
+    
+    if (clipboardTimeoutId) clearTimeout(clipboardTimeoutId);
+    const id = setTimeout(() => {
+        navigator.clipboard.writeText('');
+        if (addToast) addToast('Portapapeles limpiado por seguridad.', 'info');
+    }, 30000);
+    setClipboardTimeoutId(id);
+  };
+
+  const isVerificationCorrect = () => {
+    if (!recoveryCode || verificationIndices.length !== 3) return false;
+    const words = recoveryCode.split(' ');
+    return verificationInputs.every((input, index) => {
+        const targetWord = words[verificationIndices[index]];
+        return input.trim().toLowerCase() === targetWord.toLowerCase();
+    });
   };
 
   const renderStep = () => {
@@ -229,6 +272,64 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
         );
 
       case 4:
+        if (showVerification) {
+          const words = recoveryCode ? recoveryCode.split(' ') : [];
+          return (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 py-4">
+              <div className="mx-auto p-4 rounded-full bg-indigo-500/10 text-indigo-500 w-fit mb-4">
+                <ShieldCheck className="w-16 h-16" />
+              </div>
+              <h2 className="text-3xl font-black text-center">Verificación de Seguridad</h2>
+              <p className={`text-lg text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Para confirmar que guardaste tu frase, ingresa las palabras correspondientes.
+              </p>
+              
+              <div className="space-y-4 max-w-sm mx-auto mt-8">
+                {verificationIndices.map((idx, i) => (
+                  <div key={idx}>
+                    <label className="block text-xs font-black uppercase tracking-widest opacity-40 mb-2 ml-1">
+                      Palabra #{idx + 1}
+                    </label>
+                    <input 
+                      type="text"
+                      data-testid={`verification-input-${i}`}
+                      value={verificationInputs[i]}
+                      onChange={(e) => {
+                        const newInputs = [...verificationInputs];
+                        newInputs[i] = e.target.value;
+                        setVerificationInputs(newInputs);
+                      }}
+                      className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                      placeholder={`Palabra ${idx + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-4 pt-8">
+                <button 
+                  onClick={() => setShowVerification(false)} 
+                  className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                >
+                  Volver a ver la frase
+                </button>
+                <button 
+                  onClick={() => onComplete()}
+                  disabled={!isVerificationCorrect()}
+                  data-testid="btn-onboarding-start-using"
+                  className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg flex items-center justify-center transition-all ${
+                    isVerificationCorrect() 
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  }`}
+                >
+                  Comenzar a usar
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6 animate-in zoom-in duration-500 text-center py-4">
             <div className="mx-auto p-4 rounded-full bg-emerald-500/10 text-emerald-500 w-fit mb-4">
@@ -242,59 +343,116 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                 <ShieldAlert className="w-5 h-5" />
                 <span className="text-sm font-black uppercase tracking-widest">Frase de Recuperación (12 Palabras)</span>
               </div>
-              <p className="text-xs opacity-60 mb-4 leading-relaxed">Guarde esta frase en un lugar seguro (se recomienda imprimirla). Le permitirá restablecer su contraseña si pierde el acceso.</p>
-              
-              <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base`}>
-                {recoveryCode && recoveryCode.split(' ').map((word, i) => (
-                  <div key={i} className="flex gap-2 justify-center">
-                    <span className="opacity-40 text-[10px] self-center">{i + 1}.</span>
-                    <span className="tracking-widest uppercase">{word}</span>
+              <p className="text-xs opacity-60 mb-6 leading-relaxed">
+                Seleccione un método seguro para respaldar estas palabras. Son la ÚNICA forma de recuperar el acceso si olvida su contraseña.
+              </p>
+
+              <div className="flex flex-col gap-3 mb-6">
+                <label className={`flex items-center p-3 rounded-xl cursor-pointer border-2 transition-all ${saveOption === 'A' ? 'border-indigo-500 bg-indigo-500/5' : (darkMode ? 'border-gray-800' : 'border-gray-200')}`}>
+                  <input type="radio" name="saveOption" value="A" checked={saveOption === 'A'} onChange={() => setSaveOption('A')} className="mr-3" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm flex items-center gap-2"><Lock className="w-4 h-4"/> Opción A (Recomendada): Bóveda Digital</p>
+                    <p className="text-[10px] opacity-60">Proton Pass, Bitwarden, 1Password, etc.</p>
                   </div>
-                ))}
+                </label>
+                <label className={`flex items-center p-3 rounded-xl cursor-pointer border-2 transition-all ${saveOption === 'B' ? 'border-indigo-500 bg-indigo-500/5' : (darkMode ? 'border-gray-800' : 'border-gray-200')}`}>
+                  <input type="radio" name="saveOption" value="B" checked={saveOption === 'B'} onChange={() => setSaveOption('B')} className="mr-3" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm flex items-center gap-2"><FileText className="w-4 h-4"/> Opción B: Imprimir en papel</p>
+                    <p className="text-[10px] opacity-60">Copiar manualmente o imprimir la frase.</p>
+                  </div>
+                </label>
+                <label className={`flex items-center p-3 rounded-xl cursor-pointer border-2 transition-all ${saveOption === 'C' ? 'border-indigo-500 bg-indigo-500/5' : (darkMode ? 'border-gray-800' : 'border-gray-200')}`}>
+                  <input type="radio" name="saveOption" value="C" checked={saveOption === 'C'} onChange={() => setSaveOption('C')} className="mr-3" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm flex items-center gap-2"><Download className="w-4 h-4"/> Opción C: Exportar como PDF</p>
+                    <p className="text-[10px] opacity-60">Guardar un archivo PDF en un lugar seguro.</p>
+                  </div>
+                </label>
               </div>
+              
+              {saveOption === 'A' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-2 p-3 bg-indigo-500/10 text-indigo-500 rounded-xl mb-4">
+                     <AlertCircle className="w-4 h-4" />
+                     <p className="text-xs font-bold">Abre tu app de contraseñas, crea una "Nota Segura" y pega las palabras allí.</p>
+                  </div>
+                  <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base`}>
+                    {recoveryCode && recoveryCode.split(' ').map((word, i) => (
+                      <div key={i} className="flex gap-2 justify-center">
+                        <span className="opacity-40 text-[10px] self-center">{i + 1}.</span>
+                        <span className="tracking-widest uppercase">{word}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={handleCopyCode} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/20">
+                    <Copy className="w-4 h-4" /> Copiar al Portapapeles
+                  </button>
+                </div>
+              )}
 
-              <button 
-                onClick={() => {
-                  import('jspdf').then(({ jsPDF }) => {
-                    const doc = new jsPDF();
-                    doc.setFontSize(22);
-                    doc.text("PARLAMENTUM", 20, 30);
-                    doc.setFontSize(16);
-                    doc.text("Frase de Recuperación", 20, 45);
-                    doc.setFontSize(12);
-                    doc.text("Guarde este documento en un lugar seguro (ej. caja fuerte).", 20, 60);
-                    doc.text("Estas 12 palabras son la ÚNICA forma de recuperar el acceso", 20, 70);
-                    doc.text("si olvida su contraseña.", 20, 80);
-                    
-                    doc.setFontSize(14);
-                    doc.setFont("courier", "bold");
-                    const words = recoveryCode.split(' ');
-                    let y = 100;
-                    for (let i = 0; i < words.length; i += 3) {
-                      const line = words.slice(i, i + 3).map((w, idx) => `${i + idx + 1}. ${w.toUpperCase()}`).join('    ');
-                      doc.text(line, 20, y);
-                      y += 15;
-                    }
-                    doc.save("Frase_de_Recuperacion_PARLAMENTUM.pdf");
-                  });
-                }}
-                className="w-full py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors"
-              >
-                Exportar como PDF
-              </button>
-            </div>
+              {saveOption === 'B' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base`}>
+                    {recoveryCode && recoveryCode.split(' ').map((word, i) => (
+                      <div key={i} className="flex gap-2 justify-center">
+                        <span className="opacity-40 text-[10px] self-center">{i + 1}.</span>
+                        <span className="tracking-widest uppercase">{word}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            <div className="flex items-center gap-3 p-4 bg-amber-500/5 text-amber-500 rounded-2xl border border-amber-500/10 text-left">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-[10px] font-bold leading-tight">ATENCIÓN: Por seguridad, esta frase no volverá a mostrarse. Asegúrese de haberla guardado antes de continuar.</p>
+              {saveOption === 'C' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base blur-sm hover:blur-none transition-all`}>
+                    {recoveryCode && recoveryCode.split(' ').map((word, i) => (
+                      <div key={i} className="flex gap-2 justify-center">
+                        <span className="opacity-40 text-[10px] self-center">{i + 1}.</span>
+                        <span className="tracking-widest uppercase">{word}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      import('jspdf').then(({ jsPDF }) => {
+                        const doc = new jsPDF();
+                        doc.setFontSize(22);
+                        doc.text("PARLAMENTUM", 20, 30);
+                        doc.setFontSize(16);
+                        doc.text("Frase de Recuperación", 20, 45);
+                        doc.setFontSize(12);
+                        doc.text("Guarde este documento en un lugar seguro (ej. caja fuerte).", 20, 60);
+                        doc.text("Estas 12 palabras son la ÚNICA forma de recuperar el acceso", 20, 70);
+                        doc.text("si olvida su contraseña.", 20, 80);
+                        
+                        doc.setFontSize(14);
+                        doc.setFont("courier", "bold");
+                        const words = recoveryCode.split(' ');
+                        let y = 100;
+                        for (let i = 0; i < words.length; i += 3) {
+                          const line = words.slice(i, i + 3).map((w, idx) => `${i + idx + 1}. ${w.toUpperCase()}`).join('    ');
+                          doc.text(line, 20, y);
+                          y += 15;
+                        }
+                        doc.save("Frase_de_Recuperacion_PARLAMENTUM.pdf");
+                      });
+                    }}
+                    className="w-full py-4 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> Descargar PDF
+                  </button>
+                </div>
+              )}
             </div>
 
             <button 
-              onClick={() => onComplete()}
-              data-testid="btn-onboarding-start-using"
-              className="w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl shadow-emerald-500/20 transition-all uppercase tracking-widest"
+              onClick={() => setShowVerification(true)}
+              data-testid="btn-onboarding-verify"
+              className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-xl shadow-indigo-500/20 transition-all uppercase tracking-widest mt-4"
             >
-              Comenzar a usar el sistema
+              Ya guardé mi frase, Continuar
             </button>
           </div>
         );

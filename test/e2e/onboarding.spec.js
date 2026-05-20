@@ -37,9 +37,32 @@ test.describe('Onboarding Wizard', () => {
  
     // Paso 4: Finalización
     await expect(window.getByTestId('onboarding-success-title')).toBeVisible({ timeout: 15000 });
-    await expect(window.getByText('Frase de Recuperación')).toBeVisible();
+    await expect(window.getByText('Frase de Recuperación (12 Palabras)')).toBeVisible();
     
-    // Click en "Comenzar a usar el sistema"
+    // Extraer las palabras de la Bóveda Digital (Opción A, visible por defecto)
+    const wordLocator = window.locator('.grid.grid-cols-3 span.tracking-widest.uppercase').first();
+    await wordLocator.waitFor({ state: 'visible', timeout: 10000 });
+    const wordElements = await window.locator('.grid.grid-cols-3 span.tracking-widest.uppercase').allInnerTexts();
+    
+    // Esto extraerá 12 palabras de la opción A
+    const words = wordElements.slice(0, 12).map(w => w.trim());
+
+    // Click en "Ya guardé mi frase, Continuar"
+    await window.getByTestId('btn-onboarding-verify').click({ force: true });
+    
+    // Pantalla de Verificación
+    await expect(window.getByText('Verificación de Seguridad')).toBeVisible();
+    
+    // Rellenar las 3 palabras requeridas
+    for (let i = 0; i < 3; i++) {
+        const inputLocator = window.getByTestId(`verification-input-${i}`);
+        await inputLocator.waitFor({ state: 'visible', timeout: 10000 });
+        const placeholder = await inputLocator.getAttribute('placeholder'); // "Palabra 3"
+        const wordIndex = parseInt(placeholder.replace('Palabra ', '')) - 1; // 2
+        await inputLocator.fill(words[wordIndex]);
+    }
+
+    // Click en "Comenzar a usar"
     await window.getByTestId('btn-onboarding-start-using').click({ force: true });
  
     // Debería redirigir al login (AuthScreen)
