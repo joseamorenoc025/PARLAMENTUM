@@ -153,8 +153,12 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   const showQR = async (law) => {
     try {
       const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
-      // Apuntar al portal con el expediente/título como búsqueda
-      const portalUrl = `https://${repoInfo.owner}.github.io/${repoInfo.repo}/public/portal/?q=${encodeURIComponent(law.titulo)}`;
+      const isUserPage = repoInfo.repo.toLowerCase() === `${repoInfo.owner.toLowerCase()}.github.io`;
+      const baseUrl = isUserPage 
+        ? `https://${repoInfo.repo}/public/portal/`
+        : `https://${repoInfo.owner}.github.io/${repoInfo.repo}/public/portal/`;
+
+      const portalUrl = `${baseUrl}?q=${encodeURIComponent(law.titulo)}`;
       const dataURL = await window.legisAPI.qr.generate(portalUrl);
       
       const win = window.open();

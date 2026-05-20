@@ -1130,7 +1130,7 @@ async function openPdfPreview(url, title, type, id) {
     
     // Load PDF Document
     try {
-        const loadingTask = pdfjsLib.getDocument(url);
+        const loadingTask = pdfjsLib.getDocument(encodeURI(url));
         pdfDoc = await loadingTask.promise;
         totalPages = pdfDoc.numPages;
         document.getElementById('pdf-page-count').textContent = totalPages;
