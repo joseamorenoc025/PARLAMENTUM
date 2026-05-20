@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Ciudadano | PARLAMENTUM</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Plausible Analytics -->
+    <script defer data-domain="parlamentum.legislativo.com" src="https://plausible.io/js/script.js"></script>
+    <script>
+      window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }
+    </script>
+    <!-- Fuse.js Search -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+    <!-- PDF.js Visor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="shortcut icon" href="assets/logo-parlamentum.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="logo-app">
+                    <img src="assets/logo-parlamentum.png" alt="PARLAMENTUM" class="logo-parlamentum">
+                    <div>
+                        <h1 id="chamber-name-display">PARLAMENTUM</h1>
+                        <p>Transparencia y Acceso a la Información</p>
+                    </div>
+                </div>
+                <div class="logo-institucion">
+                    <img id="institutional-logo" src="logo.png" alt="Logo" class="logo-institucional" onerror="if(this.src.indexOf('assets') === -1) { this.src='assets/logo-institucional.png'; } else { this.style.display='none'; }">
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Bar -->
+        <nav class="nav-bar">
+            <div class="container">
+                <div class="nav-links">
+                    <button class="nav-btn active" data-view="junta">
+                        <i data-lucide="crown"></i> Junta Directiva
+                    </button>
+                    <button class="nav-btn" data-view="legislators">
+                        <i data-lucide="users"></i> Conoce a tus Legisladores
+                    </button>
+                    <button class="nav-btn" data-view="laws">
+                        <i data-lucide="scale"></i> Biblioteca de Leyes
+                    </button>
+                    <button class="nav-btn" data-view="agenda">
+                        <i data-lucide="calendar"></i> Agenda Legislativa
+                    </button>
+                    <button class="nav-btn" data-view="stats">
+                        <i data-lucide="bar-chart-2"></i> Estadísticas
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Search Section -->
+        <section id="search-section" class="search-section">
+            <div class="container">
+                <div class="search-card">
+                    <div class="search-input-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Buscar información...">
+                    </div>
+                    <div id="filters-container" class="filters">
+                        <!-- Filtros dinámicos según la vista -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="container">
+            <div id="status-message" class="status-message hidden"></div>
+            
+            <!-- Grid Principal (Leyes, Proyectos, Legisladores) -->
+            <div id="main-grid" class="main-grid">
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <p>Cargando información...</p>
+                </div>
+            </div>
+
+            <!-- Detalle de Legislador (Perfil) -->
+            <div id="legislator-profile" class="legislator-profile hidden">
+                <!-- Se carga dinámicamente -->
+            </div>
+
+            <!-- Panel de Estadísticas (Analytics) -->
+            <div id="stats-dashboard" class="stats-dashboard hidden">
+                <!-- Se carga dinámicamente -->
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 <span id="footer-chamber-name">CLEBDA</span>. Todos los derechos reservados.</p>
+                <p class="footer-note">Sistema PARLAMENTUM - Desarrollado por José Alberto Moreno - Secretario de Cámara.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
