@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": 1,
+    "nombre": "Abogado Pedro Perez",
+    "partido": "PSUV",
+    "biografia": "* Registrador Público (2015)\n* Coordinador JPSUV (2018)",
+    "foto": "fotos/legislador_1779321027677.png",
+    "comisiones": [],
+    "updated_at": "2026-05-20T23:50:35.608Z"
+  }
+]
