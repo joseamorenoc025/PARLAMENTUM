@@ -805,6 +805,11 @@ export const setupIPCHandlers = (mainWindow) => {
         const sanitizado = (document.nombreOriginal || 'documento.pdf').replace(/\s+/g, '_');
         filePath = path.join(docsPath, `temp_${Date.now()}_${sanitizado}`);
         
+        // Si no hay archivo físico ni contenidoBase64, no se puede recuperar
+        if (!document.contenidoBase64) {
+          throw new Error(`El documento no tiene archivo físico ni contenido para restaurar: ${document.nombreOriginal || document.id}`);
+        }
+        
         const fileBuffer = Buffer.from(document.contenidoBase64, 'base64');
         fs.writeFileSync(filePath, fileBuffer);
       }

@@ -62,6 +62,17 @@ export default function App() {
   // Verificar entorno Electron
   const isElectron = window.legisAPI !== undefined;
 
+  // Glassmorphism classes
+  const glassBase = darkMode
+    ? 'bg-gray-900/80 border border-white/10'
+    : 'bg-white/80 border border-black/5';
+  const glassCard = darkMode
+    ? 'bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-glass'
+    : 'bg-white/60 backdrop-blur-xl border border-black/5 shadow-glass-light';
+  const glassHover = darkMode
+    ? 'hover:bg-gray-800/80 hover:border-white/20'
+    : 'hover:bg-white/90 hover:border-black/10';
+
   useEffect(() => {
     if (!isElectron) return;
 
@@ -188,18 +199,19 @@ export default function App() {
 
     if (isLoading || setupStatus.isLoading) {
       return (
-        <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
           <div className="flex flex-col items-center space-y-6 animate-[scale-in_0.5s_ease-out]">
             <div className="relative flex items-center justify-center">
-              {/* Pulsing ring */}
-              <div className="absolute w-28 h-28 rounded-full border-2 border-indigo-500/20 animate-ping"></div>
-              {/* Logo container */}
-              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-white border border-gray-700/50 shadow-2xl z-10">
+              {/* Pulsing rings */}
+              <div className="absolute w-28 h-28 rounded-2xl border border-amber-500/20 animate-ping"></div>
+              <div className="absolute w-36 h-36 rounded-2xl border border-amber-500/10 animate-ping" style={{animationDelay: '0.5s'}}></div>
+              {/* Logo container - glassmorphism */}
+              <div className="w-24 h-24 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-glass-lg flex items-center justify-center z-10">
                 <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-20 h-20 object-contain" />
               </div>
             </div>
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-black tracking-widest text-indigo-500 uppercase">PARLAMENTUM</h2>
+              <h2 className="text-2xl font-black tracking-widest text-amber-400 uppercase animate-[glass-shimmer_3s_ease_infinite]">PARLAMENTUM</h2>
               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} font-semibold tracking-wide animate-pulse`}>
                 Cargando sistema legislativo...
               </p>
@@ -218,17 +230,17 @@ export default function App() {
     }
 
     return (
-      <div className={`min-h-screen flex ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-        {/* Sidebar */}
-        <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} border-r ${sidebarOpen ? 'w-64' : 'w-16'}`}>
-          <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800/50">
-            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-gray-700/50 bg-white flex items-center justify-center">
+      <div className={`min-h-screen flex ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
+        {/* Glassmorphism Sidebar */}
+        <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col backdrop-blur-xl ${darkMode ? 'bg-gray-900/70 border-r border-white/10' : 'bg-white/70 border-r border-black/5'} ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+          <div className="flex items-center gap-3 px-4 py-4 border-b border-inherit backdrop-blur-xl">
+            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-white/20 bg-white/10 backdrop-blur-xl flex items-center justify-center">
               <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-full h-full object-contain" />
             </div>
             {sidebarOpen && (
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate">{config.chamber_name || 'PARLAMENTUM'}</p>
-                <p className={`text-[10px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{config.chamber_name ? 'Legislativo' : 'Sistema de Gestión'}</p>
+                <p className={`text-[10px] truncate ${darkMode ? 'text-amber-400/80' : 'text-amber-700'}`}>{config.chamber_name ? 'Legislativo' : 'Sistema de Gestión'}</p>
               </div>
             )}
           </div>
@@ -239,10 +251,10 @@ export default function App() {
                 key={item.id}
                 data-testid={`nav-${item.id}`}
                 onClick={() => setCurrentPage(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all backdrop-blur-xl
                   ${currentPage === item.id 
-                    ? (darkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600') 
-                    : (darkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900')}
+                    ? (darkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200') 
+                    : (darkMode ? 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent' : 'text-gray-600 hover:bg-black/5 hover:text-gray-900 border border-transparent')}
                   ${!sidebarOpen ? 'justify-center px-2' : ''}`}
               >
                 {item.icon}
@@ -252,21 +264,21 @@ export default function App() {
           </nav>
 
           {sidebarOpen && (
-            <div className={`mx-3 mb-4 p-3 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <div className={`mx-3 mb-4 p-3 rounded-xl backdrop-blur-xl border ${darkMode ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/5'}`}>
               <p className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{user.nombreCompleto || user.username}</p>
-              <p className={`text-[10px] uppercase font-bold tracking-tighter ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{user.role}</p>
+              <p className={`text-[10px] uppercase font-bold tracking-tighter text-amber-400`}>{user.role}</p>
             </div>
           )}
 
-          <div className="p-2 border-t border-gray-800/50 space-y-1">
+          <div className="p-2 border-t border-inherit backdrop-blur-xl space-y-1">
             <button 
               onClick={handleLogout}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-red-500 hover:bg-red-500/10 ${!sidebarOpen ? 'justify-center' : ''}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-red-400 hover:bg-red-500/10 ${!sidebarOpen ? 'justify-center' : ''}`}
             >
               <LogOut className="w-5 h-5" />
               {sidebarOpen && <span>Cerrar Sesión</span>}
             </button>
-            <button onClick={() => setSidebarOpen(prev => !prev)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${darkMode ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-100'} ${!sidebarOpen ? 'justify-center' : ''}`}>
+            <button onClick={() => setSidebarOpen(prev => !prev)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-black/5'} ${!sidebarOpen ? 'justify-center' : ''}`}>
               {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
               {sidebarOpen && <span>Colapsar</span>}
             </button>
@@ -274,52 +286,52 @@ export default function App() {
         </aside>
 
         {/* Main Content */}
-        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'} ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-          {/* Top Bar */}
-          <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b backdrop-blur-xl ${darkMode ? 'bg-gray-950/80 border-gray-800' : 'bg-white/80 border-gray-200'}`}>
+        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'} ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100'}`}>
+          {/* Glassmorphism Top Bar */}
+          <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 backdrop-blur-xl border-b ${darkMode ? 'bg-gray-900/60 border-white/10' : 'bg-white/60 border-black/5'}`}>
             <div className="flex items-center gap-2">
               {logo && (
-                <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-gray-200 dark:border-gray-800 flex items-center justify-center mr-1 flex-shrink-0">
+                <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-black/10 dark:border-white/20 backdrop-blur-xl flex items-center justify-center mr-1 flex-shrink-0">
                   <img src={logo} alt="Logo Institucional" className="w-full h-full object-contain" />
                 </div>
               )}
               <span className="text-sm font-semibold">{navItems.find(i => i.id === currentPage)?.label}</span>
             </div>
             <div className="flex items-center gap-3">
-              {/* Sync Status Badge */}
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
-                syncStatus === 'synced' ? (darkMode ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-green-50 border-green-200 text-green-600') :
-                syncStatus === 'pending' ? (darkMode ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' : 'bg-yellow-50 border-yellow-200 text-yellow-600') :
-                (darkMode ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-red-50 border-red-200 text-red-600')
+              {/* Sync Status Badge - Glass */}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-xl transition-all ${
+                syncStatus === 'synced' ? (darkMode ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700') :
+                syncStatus === 'pending' ? (darkMode ? 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border-yellow-200 text-yellow-700') :
+                (darkMode ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-red-50 border-red-200 text-red-700')
               }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${
-                  syncStatus === 'synced' ? 'bg-green-500' :
-                  syncStatus === 'pending' ? 'bg-yellow-500 animate-pulse' :
-                  'bg-red-500'
+                  syncStatus === 'synced' ? 'bg-green-400' :
+                  syncStatus === 'pending' ? 'bg-yellow-400 animate-pulse' :
+                  'bg-red-400'
                 }`} />
                 {syncStatus === 'synced' ? 'PORTAL AL DÍA' : syncStatus === 'pending' ? 'SINCRONIZANDO...' : 'ERROR SYNC'}
               </div>
 
-              <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+              <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-black/10'}`} />
               
-              <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-700'} transition-colors`}>
+              <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm backdrop-blur-xl border transition-all ${darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10' : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-700 hover:bg-black/10'} transition-colors`}>
                 <Search className="w-4 h-4" />
                 <span className="hidden sm:inline">Buscar...</span>
-                <kbd className={`hidden sm:inline px-1.5 py-0.5 rounded text-[10px] ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>⌘K</kbd>
+                <kbd className={`hidden sm:inline px-1.5 py-0.5 rounded text-[10px] ${darkMode ? 'bg-white/10' : 'bg-black/10'}`}>⌘K</kbd>
               </button>
-              <div className={`w-px h-6 ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`} />
+              <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-black/10'}`} />
               <button 
                 onClick={async () => {
                   const res = await window.legisAPI.db.backupLocal();
                   if (res.success) addToast('Backup local creado exitosamente', 'success');
                   else addToast('Error al crear backup', 'error');
                 }}
-                className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+                className={`p-2 rounded-lg backdrop-blur-xl border transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' : 'bg-black/5 border-black/5 text-gray-500 hover:bg-black/10'}`}
                 title="Copia de seguridad local"
               >
                 <Database className="w-4 h-4" />
               </button>
-              <button onClick={toggleDarkMode} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+              <button onClick={toggleDarkMode} className={`p-2 rounded-lg backdrop-blur-xl border transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' : 'bg-black/5 border-black/5 text-gray-500 hover:bg-black/10'}`}>
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
