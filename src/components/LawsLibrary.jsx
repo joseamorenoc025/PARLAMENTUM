@@ -6,6 +6,8 @@ import {
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
 import HashDisplay from './ui/HashDisplay';
+import ConfirmDialog from './ui/ConfirmDialog';
+import useDebounce from '../hooks/useDebounce';
 
 const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   const [laws, setLaws] = useState([]);
@@ -15,7 +17,9 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [applyIntegritySeal, setApplyIntegritySeal] = useState(true); // Toggle SHA activado por defecto
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
+  const [applyIntegritySeal, setApplyIntegritySeal] = useState(true);
+  const debouncedSearch = useDebounce(search);
   
   const [form, setForm] = useState({
     titulo: '',
@@ -117,15 +121,22 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta ley de la biblioteca?')) return;
-    try {
-      await dbService.deleteLaw(id);
-      addToast('Ley eliminada', 'warning');
-      loadLaws();
-      onDataChange?.(); // Notificar al Dashboard para actualizar contadores
-    } catch (err) {
-      addToast('Error al eliminar', 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Eliminar ley',
+      message: '¿Eliminar esta ley de la biblioteca? Esta acción no se puede deshacer.',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await dbService.deleteLaw(id);
+          addToast('Ley eliminada', 'warning');
+          loadLaws();
+          onDataChange?.();
+        } catch (err) {
+          addToast('Error al eliminar', 'error');
+        }
+      }
+    });
   };
 
   const handleAudit = async (law) => {
@@ -196,12 +207,13 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
   const filteredLaws = useMemo(() => {
     return laws.filter(l => 
-      (l.titulo.toLowerCase().includes(search.toLowerCase()) || (l.expediente && l.expediente.includes(search))) &&
+      (l.titulo.toLowerCase().includes(debouncedSearch.toLowerCase()) || (l.expediente && l.expediente.includes(debouncedSearch))) &&
       (!filterType || l.tipo === filterType)
     );
-  }, [laws, search, filterType]);
+  }, [laws, debouncedSearch, filterType]);
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -211,7 +223,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
         <button 
           onClick={() => setShowForm(true)} 
           data-testid="btn-open-law-form"
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" /> Registrar Ley
         </button>
@@ -348,7 +360,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-3xl border p-8 shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`w-full max-w-lg rounded-2xl border p-8 shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
             <h2 className="text-2xl font-bold mb-6">{editingId ? 'Editar Ley' : 'Registrar Ley'}</h2>
             <div className="space-y-4">
               <div>
@@ -359,7 +371,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                   placeholder="Ej: Reforma al Código de Comercio..."
                   value={form.titulo}
                   onChange={e => setForm({...form, titulo: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                 />
               </div>
               
@@ -369,7 +381,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                   <select 
                     value={form.gaceta}
                     onChange={e => setForm({...form, gaceta: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   >
                     <option value="Ordinaria">Ordinaria</option>
                     <option value="Extraordinaria">Extraordinaria</option>
@@ -385,7 +397,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                     placeholder="Ej: 42.123"
                     value={form.numero}
                     onChange={e => setForm({...form, numero: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>
                 <div>
@@ -394,7 +406,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                     type="date" 
                     value={form.fechaPublicacion}
                     onChange={e => setForm({...form, fechaPublicacion: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>
               </div>
@@ -405,7 +417,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                   placeholder="Ej: Salud, Presupuesto, Educación (separados por comas)"
                   value={form.tags}
                   onChange={e => setForm({...form, tags: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                 />
               </div>
               <div>
@@ -416,7 +428,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                   placeholder="Pegue aquí el enlace compartido..."
                   value={form.driveLink}
                   onChange={e => setForm({...form, driveLink: e.target.value, localFilePath: null, localFileName: ''})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                 />
               </div>
 
@@ -434,7 +446,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                 <button
                   type="button"
                   onClick={handleSelectFile}
-                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${
+                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-colors ${
                     form.localFilePath 
                       ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
                       : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
@@ -504,7 +516,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                 onClick={handleSave} 
                 disabled={isSaving}
                 data-testid="btn-save-law"
-                className="flex-1 py-3.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-colors flex items-center justify-center gap-2"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Actualizar' : 'Registrar')}
               </button>
@@ -513,6 +525,8 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

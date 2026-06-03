@@ -5,6 +5,7 @@ import {
 import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
 import { getStagnationColor, getStagnationLabel } from '../utils/helpers';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], saveDocument, deleteDocument, reload }) => {
   const [view, setView] = useState('kanban');
@@ -27,6 +28,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
     tags: ''
   });
   const [detailProject, setDetailProject] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
   const resetForm = () => { 
     setForm({ 
@@ -126,7 +128,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
           <ChevronLeft className="w-4 h-4" /> Volver al Tablero
         </button>
 
-        <div className={`rounded-3xl border p-8 ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 shadow-sm'}`}>
+        <div className={`rounded-2xl border p-8 ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="flex items-start justify-between mb-8">
             <div className="space-y-3">
               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${detailProject.origen === 'Comisión' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>{detailProject.origen}</span>
@@ -144,7 +146,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                       setDetailProject(updatedProject);
                       addToast('Comisión asignada exitosamente', 'success');
                     }}
-                    className={`p-2.5 rounded-xl border text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all w-fit min-w-[240px] ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-700'}`}
+                    className={`p-2.5 rounded-xl border text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-colors w-fit min-w-[240px] ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-700'}`}
                   >
                     <option value="">Seleccionar comisión...</option>
                     {commissions.filter(c => c.activo).map(c => (
@@ -232,7 +234,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                           onSave({ ...detailProject, [fase.key]: newLink });
                           setDetailProject(prev => ({ ...prev, [fase.key]: newLink }));
                         }}
-                        className={`w-full p-2 rounded-xl text-[10px] border outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}
+                        className={`w-full p-2 rounded-xl text-[10px] border outline-none focus:ring-1 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-100 text-gray-600'}`}
                       />
                     </div>
                   )}
@@ -263,10 +265,16 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                               </button>
                               <button 
                                 onClick={async () => {
-                                  if (window.confirm('¿Desvincular este PDF?')) {
-                                    await deleteDocument(doc.id);
-                                    addToast('Archivo desvinculado', 'warning');
-                                  }
+                                  setConfirmDialog({
+                                    isOpen: true,
+                                    title: 'Desvincular PDF',
+                                    message: '¿Desvincular este PDF del proyecto?',
+                                    destructive: true,
+                                    onConfirm: async () => {
+                                      await deleteDocument(doc.id);
+                                      addToast('Archivo desvinculado', 'warning');
+                                    }
+                                  });
                                 }}
                                 className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                                 title="Desvincular PDF"
@@ -298,7 +306,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                               }
                             }
                           }}
-                          className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border border-dashed text-[10px] font-black uppercase transition-all cursor-pointer ${darkMode ? 'border-gray-700 hover:border-indigo-500 text-gray-400 hover:text-indigo-500' : 'border-gray-200 hover:border-indigo-500 text-gray-500 hover:text-indigo-600 bg-gray-50/50'}`}
+                          className={`flex items-center justify-center gap-1.5 p-2 rounded-xl border border-dashed text-[10px] font-black uppercase transition-colors cursor-pointer ${darkMode ? 'border-gray-700 hover:border-indigo-500 text-gray-400 hover:text-indigo-500' : 'border-gray-200 hover:border-indigo-500 text-gray-500 hover:text-indigo-600 bg-gray-50/50'}`}
                         >
                           <Plus className="w-3.5 h-3.5" /> Adjuntar PDF Local
                         </button>
@@ -312,11 +320,11 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
           <div className="flex gap-4">
             {currentIdx < phases.length - 1 && (
-              <button onClick={() => handleAdvancePhase(detailProject)} className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs">
+              <button onClick={() => handleAdvancePhase(detailProject)} className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-colors shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs">
                 <ArrowRight className="w-5 h-5" /> Avanzar a {phases[currentIdx + 1]}
               </button>
             )}
-            <button onClick={() => { if(window.confirm('¿Eliminar este proyecto permanentemente?')) { onDelete(detailProject.id); setDetailProject(null); } }} className="px-6 py-5 text-red-500 border-2 border-red-500/10 rounded-2xl hover:bg-red-500 hover:text-white transition-all font-black uppercase tracking-widest text-xs">
+            <button onClick={() => setConfirmDialog({ isOpen: true, title: 'Eliminar proyecto', message: '¿Eliminar este proyecto permanentemente? Esta acción no se puede deshacer.', destructive: true, onConfirm: () => { onDelete(detailProject.id); setDetailProject(null); } })} className="px-6 py-5 text-red-500 border-2 border-red-500/10 rounded-2xl hover:bg-red-500 hover:text-white transition-colors font-black uppercase tracking-widest text-xs">
               Eliminar
             </button>
           </div>
@@ -327,7 +335,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
   if (view === 'form') {
     return (
-      <div className={`max-w-3xl mx-auto p-10 rounded-[2.5rem] border shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100'}`}>
+      <div className={`max-w-3xl mx-auto p-10 rounded-2xl border shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100'}`}>
         <div className="flex items-center gap-4 mb-10">
           <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
             <Scale className="w-6 h-6" />
@@ -346,7 +354,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               data-testid="project-title-input"
               value={form.titulo} 
               onChange={e => setForm({...form, titulo: e.target.value})} 
-              className={`w-full p-5 rounded-3xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none h-40 text-lg font-bold leading-tight ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+              className={`w-full p-5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none h-40 text-lg font-bold leading-tight ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
             />
           </div>
           
@@ -363,7 +371,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                     faseActual: val === 'Ejecutivo / Órganos del Estado' ? 'Recepción' : 'Estudio en Comisión'
                   }));
                 }} 
-                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
               >
                 <option value="Comisión">Comisión Legislativa</option>
                 <option value="Ejecutivo / Órganos del Estado">Ejecutivo / Órganos del Estado</option>
@@ -374,7 +382,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             {form.origen === 'Comisión' && (
               <div className="space-y-3">
                 <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Comisión Responsable</label>
-                <select value={form.comisionId} onChange={e => setForm({...form, comisionId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                <select value={form.comisionId} onChange={e => setForm({...form, comisionId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
                   <option value="">Seleccionar...</option>
                   {commissions.filter(c => c.activo).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
@@ -384,7 +392,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
 
           <div className="space-y-3">
             <label className="block text-[10px] font-black opacity-40 uppercase tracking-[0.2em] ml-1">Legislador Ponente</label>
-            <select value={form.ponenteId} onChange={e => setForm({...form, ponenteId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+            <select value={form.ponenteId} onChange={e => setForm({...form, ponenteId: e.target.value})} className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
               <option value="">Seleccionar...</option>
               {legislators.filter(l => l.activo).map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
             </select>
@@ -397,7 +405,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               placeholder="Ej: Salud, Presupuesto, Educación (separados por comas)" 
               value={form.tags || ''} 
               onChange={e => setForm({...form, tags: e.target.value})} 
-              className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-800'}`} 
+              className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-100 text-gray-800'}`} 
             />
           </div>
 
@@ -409,7 +417,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                 placeholder="Google Drive Link..." 
                 value={form.linkPrimeraDiscusion} 
                 onChange={e => setForm({...form, linkPrimeraDiscusion: e.target.value})} 
-                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
               />
             </div>
             <div className="space-y-3">
@@ -419,7 +427,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                 placeholder="Google Drive Link..." 
                 value={form.linkConsultaPublica} 
                 onChange={e => setForm({...form, linkConsultaPublica: e.target.value})} 
-                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
               />
             </div>
             <div className="space-y-3">
@@ -429,7 +437,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                 placeholder="Google Drive Link..." 
                 value={form.linkSegundaDiscusion} 
                 onChange={e => setForm({...form, linkSegundaDiscusion: e.target.value})} 
-                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
               />
             </div>
             <div className="space-y-3">
@@ -439,12 +447,12 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                 placeholder="Google Drive Link..." 
                 value={form.linkTerceraDiscusion} 
                 onChange={e => setForm({...form, linkTerceraDiscusion: e.target.value})} 
-                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
+                className={`w-full p-4 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`} 
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-4 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
              <input 
                type="checkbox" 
                id="urgencia" 
@@ -456,11 +464,11 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
           </div>
 
           <div className="flex gap-4 pt-4">
-            <button onClick={resetForm} className={`flex-1 py-5 rounded-2xl font-black transition-all uppercase tracking-[0.2em] text-xs ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
+            <button onClick={resetForm} className={`flex-1 py-5 rounded-2xl font-black transition-colors uppercase tracking-[0.2em] text-xs ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
             <button 
               onClick={handleSave} 
               data-testid="btn-save-project"
-              className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-2xl shadow-indigo-500/30 uppercase tracking-[0.2em] text-xs"
+              className="flex-1 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-colors shadow-2xl shadow-indigo-500/30 uppercase tracking-[0.2em] text-xs"
             >
               {editingId ? 'Guardar Cambios' : 'Registrar Proyecto'}
             </button>
@@ -471,6 +479,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
   }
 
   return (
+    <>
     <div className="space-y-8 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
@@ -479,13 +488,13 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
         </div>
         <div className="flex gap-4">
           <div className="flex p-1.5 rounded-2xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-inner">
-             <button onClick={() => setView('kanban')} className={`p-2.5 rounded-xl transition-all ${view === 'kanban' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Layout className="w-5 h-5" /></button>
-             <button onClick={() => setView('list')} className={`p-2.5 rounded-xl transition-all ${view === 'list' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Plus className="w-5 h-5 rotate-45" /></button>
+             <button onClick={() => setView('kanban')} className={`p-2.5 rounded-xl transition-colors ${view === 'kanban' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Layout className="w-5 h-5" /></button>
+             <button onClick={() => setView('list')} className={`p-2.5 rounded-xl transition-colors ${view === 'list' ? 'bg-white dark:bg-gray-700 shadow-xl text-indigo-500' : 'text-gray-400 hover:text-gray-600'}`}><Plus className="w-5 h-5 rotate-45" /></button>
           </div>
           <button 
             onClick={() => setView('form')} 
             data-testid="btn-new-project"
-            className="flex items-center gap-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs"
+            className="flex items-center gap-3 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-colors shadow-xl shadow-indigo-500/30 uppercase tracking-widest text-xs"
           >
             <Plus className="w-5 h-5" /> Nuevo Proyecto
           </button>
@@ -503,7 +512,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
               return (
                 <div
                   key={column}
-                  className={`flex flex-col rounded-[2.5rem] border transition-all duration-300 min-h-[260px] ${
+                  className={`flex flex-col rounded-2xl border transition-all duration-300 min-h-[260px] ${
                     hasActiveProject
                       ? (darkMode 
                           ? 'bg-indigo-950/20 border-indigo-500/80 shadow-[0_0_30px_rgba(99,102,241,0.15)] scale-[1.01]' 
@@ -611,7 +620,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
             <div 
               key={p.id} 
               onClick={() => setDetailProject(p)}
-              className={`p-6 rounded-3xl border flex justify-between items-center cursor-pointer transition-all hover:shadow-xl ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'}`}
+              className={`p-6 rounded-2xl border flex justify-between items-center cursor-pointer transition-all hover:shadow-xl ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/50' : 'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'}`}
             >
               <div className="flex items-center gap-6">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs ${p.urgenciaParlamentaria ? 'bg-red-500/10 text-red-500' : 'bg-indigo-50/10 text-indigo-500'}`}>
@@ -634,7 +643,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                     setEditingId(p.id);
                     setView('form');
                   }}
-                  className={`p-3 rounded-2xl border transition-all ${darkMode ? 'border-gray-800 hover:bg-gray-800 text-indigo-400' : 'border-gray-100 hover:bg-gray-50 text-indigo-600'}`}
+                  className={`p-3 rounded-2xl border transition-colors ${darkMode ? 'border-gray-800 hover:bg-gray-800 text-indigo-400' : 'border-gray-100 hover:bg-gray-50 text-indigo-600'}`}
                 >
                    <Plus className="w-5 h-5 rotate-45" />
                 </button>
@@ -645,6 +654,8 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

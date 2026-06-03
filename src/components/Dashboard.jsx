@@ -36,6 +36,27 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
   const libraryLawsCount = useMemo(() => laws.filter(l => l.activo).length, [laws]);
   const activeProjects = useMemo(() => projects.filter(p => p.activo && p.faseActual !== 'Sancionada'), [projects]);
 
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+  const prevMonthSessions = useMemo(() => sessions.filter(s => {
+    if (!s.activo) return false;
+    const d = new Date(s.fecha + 'T12:00:00');
+    return d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+  }), [sessions, prevMonth, prevMonthYear]);
+
+  const prevMonthOficios = useMemo(() => oficios.filter(o => {
+    if (!o.activo) return false;
+    const d = new Date(o.fecha + 'T12:00:00');
+    return d.getMonth() === prevMonth && d.getFullYear() === prevMonthYear;
+  }), [oficios, prevMonth, prevMonthYear]);
+
+  const totalSessions = monthSessions.length + prevMonthSessions.length || 1;
+  const sessionTrend = Math.round(((monthSessions.length - prevMonthSessions.length) / totalSessions) * 100);
+  const oficiosTrend = Math.round(((monthOficios.length - prevMonthOficios.length) / (monthOficios.length + prevMonthOficios.length || 1)) * 100);
+
+  const maxSessionType = useMemo(() => Math.max(...Object.values(sessionTypeBreakdown), 1), [sessionTypeBreakdown]);
+
   const sessionTypeBreakdown = useMemo(() => {
     const counts = {};
     monthSessions.forEach(s => { counts[s.tipo] = (counts[s.tipo] || 0) + 1; });
@@ -70,7 +91,7 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
             projects: activeProjects,
             chamberName: config?.chamber_name || 'Cámara Legislativa'
           })}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-600/20"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20"
         >
           <FileDown className="w-4 h-4" />
           Exportar Informe Mensual
@@ -78,8 +99,8 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard darkMode={darkMode} icon={<CalendarDays className="w-5 h-5" />} label="Sesiones del Mes" value={monthSessions.length} color="blue" />
-        <StatCard darkMode={darkMode} icon={<FileText className="w-5 h-5" />} label="Oficios del Mes" value={monthOficios.length} color="purple" />
+        <StatCard darkMode={darkMode} icon={<CalendarDays className="w-5 h-5" />} label="Sesiones del Mes" value={monthSessions.length} color="blue" trend={sessionTrend} />
+        <StatCard darkMode={darkMode} icon={<FileText className="w-5 h-5" />} label="Oficios del Mes" value={monthOficios.length} color="purple" trend={oficiosTrend} />
         <StatCard darkMode={darkMode} icon={<Scale className="w-5 h-5" />} label="Leyes en Biblioteca" value={libraryLawsCount} color="emerald" />
         <StatCard darkMode={darkMode} icon={<BarChart3 className="w-5 h-5" />} label="Proyectos Activos" value={activeProjects.length} color="amber" />
       </div>
@@ -89,12 +110,17 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
           <h3 className="font-semibold mb-4">Sesiones del Mes por Tipo</h3>
           <div className="space-y-3">
             {Object.entries(sessionTypeBreakdown).map(([tipo, count]) => (
-              <div key={tipo} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${tipo === 'Ordinaria' ? 'bg-blue-500' : tipo === 'Extraordinaria' ? 'bg-purple-500' : tipo === 'Especial' ? 'bg-amber-500' : 'bg-gray-500'}`} />
-                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tipo}</span>
+              <div key={tipo} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${tipo === 'Ordinaria' ? 'bg-blue-500' : tipo === 'Extraordinaria' ? 'bg-purple-500' : tipo === 'Especial' ? 'bg-amber-500' : 'bg-gray-500'}`} />
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{tipo}</span>
+                  </div>
+                  <span className="font-semibold text-sm">{count}</span>
                 </div>
-                <span className="font-semibold text-sm">{count}</span>
+                <div className={`h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <div className={`h-full rounded-full transition-all duration-500 ${tipo === 'Ordinaria' ? 'bg-blue-500' : tipo === 'Extraordinaria' ? 'bg-purple-500' : tipo === 'Especial' ? 'bg-amber-500' : 'bg-gray-500'}`} style={{ width: `${(count / maxSessionType) * 100}%` }} />
+                </div>
               </div>
             ))}
             {Object.keys(sessionTypeBreakdown).length === 0 && (
@@ -154,13 +180,13 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
         <h3 className="font-semibold mb-4">Legisladores Registrados</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {legislators.filter(l => l.activo).map(l => (
-            <div key={l.id} className={`p-3 rounded-xl border text-center ${darkMode ? 'border-gray-800 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
+            <button key={l.id} onClick={() => onNavigate?.('legislador', l.id)} className={`p-3 rounded-xl border text-center transition-colors hover:shadow-md ${darkMode ? 'border-gray-800 bg-gray-800/50 hover:border-indigo-500/30' : 'border-gray-100 bg-gray-50 hover:border-indigo-200'}`}>
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
                 {l.nombre.split(' ').map(n => n[0]).join('').slice(0, 2)}
               </div>
               <p className="text-xs font-medium truncate">{l.nombre}</p>
               <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'} truncate`}>{l.partidoPolitico}</p>
-            </div>
+            </button>
           ))}
         </div>
       </div>

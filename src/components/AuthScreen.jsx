@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
 import { dbService } from '../services/db';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,6 +20,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     nombreCompleto: '',
     role: 'admin'
   });
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
   const handleRecover = async () => {
     if (recoveryPhrase.trim().split(/\s+/).length !== 12) {
@@ -162,28 +164,35 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const confirmCloudRestore = async () => {
     if (!restorePassword) return addToast('Ingresa la contraseña del respaldo', 'warning');
     
-    if (window.confirm('ATENCIÓN: Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?')) {
-      setLoading(true);
-      try {
-        const result = await window.legisAPI.backup.validateAndRestore(cloudBackupDetails.filePath, restorePassword);
-        if (result.success || !result.error) { // The handler returns {success, userInfo}
-          alert('Restauración completada. La aplicación se reiniciará o volverá a la pantalla inicial.');
-          window.location.reload(); // Quick way to reload the app in Electron
-        } else {
-          addToast(result.error || 'Contraseña incorrecta o archivo dañado.', 'error');
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Restaurar respaldo en la nube',
+      message: 'Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?',
+      destructive: true,
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const result = await window.legisAPI.backup.validateAndRestore(cloudBackupDetails.filePath, restorePassword);
+          if (result.success || !result.error) {
+            alert('Restauración completada. La aplicación se reiniciará o volverá a la pantalla inicial.');
+            window.location.reload();
+          } else {
+            addToast(result.error || 'Contraseña incorrecta o archivo dañado.', 'error');
+          }
+        } catch (err) {
+          addToast('Error crítico al restaurar.', 'error');
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        addToast('Error crítico al restaurar.', 'error');
-      } finally {
-        setLoading(false);
       }
-    }
+    });
   };
 
   // ... (keeping existing render logic and adding the new flow below)
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-      <div className={`w-full max-w-md p-8 rounded-3xl border shadow-2xl transition-all ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+    <>
+    <div className={`min-h-[100dvh] flex items-center justify-center p-4 ${darkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`w-full max-w-md p-8 rounded-2xl border shadow-2xl transition-colors ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border border-gray-200 dark:border-gray-800 flex items-center justify-center mb-4 shadow-lg">
             <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-full h-full object-contain" />
@@ -207,7 +216,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                    <input
                      type="text"
                      placeholder="Ej: Dr. Juan Pérez"
-                     className={`w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                     className={`w-full pl-10 pr-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                      value={form.nombreCompleto}
                      onChange={e => setForm({ ...form, nombreCompleto: e.target.value })}
                      required
@@ -223,7 +232,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                  <input
                    type={showPassword ? "text" : "password"}
                    placeholder="••••••••"
-                   className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                   className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                    value={form.password}
                    onChange={e => setForm({ ...form, password: e.target.value })}
                    required
@@ -264,7 +273,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
              <button
                type="submit"
                disabled={loading}
-               className={`w-full py-3 mt-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50`}
+               className={`w-full py-3 mt-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50`}
              >
                {loading ? (
                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -292,7 +301,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                   <input
                     type="password"
                     placeholder="ghp_..."
-                    className={`w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                     value={cloudTokenInput}
                     onChange={e => setCloudTokenInput(e.target.value)}
                   />
@@ -314,7 +323,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                     <input
                       type="password"
                       placeholder="Tu contraseña del sistema..."
-                      className={`w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                      className={`w-full px-4 py-3 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                       value={restorePassword}
                       onChange={e => setRestorePassword(e.target.value)}
                     />
@@ -339,7 +348,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
               <input
                 type="password"
                 placeholder="Contraseña del respaldo"
-                className={`w-full px-4 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                className={`w-full px-4 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-amber-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                 value={restorePassword}
                 onChange={e => setRestorePassword(e.target.value)}
               />
@@ -351,24 +360,30 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                   Cancelar
                 </button>
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (!restorePassword) {
                       addToast('Ingresa la contraseña del respaldo', 'warning');
                       return;
                     }
-                    if (window.confirm('ATENCIÓN: Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?')) {
-                      try {
-                        const result = await window.legisAPI.backup.import(restorePassword);
-                        if (result.success) {
-                          alert(result.message);
-                          window.location.reload();
-                        } else {
-                           addToast('Contraseña incorrecta', 'error');
+                    setConfirmDialog({
+                      isOpen: true,
+                      title: 'Restaurar respaldo local',
+                      message: 'Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?',
+                      destructive: true,
+                      onConfirm: async () => {
+                        try {
+                          const result = await window.legisAPI.backup.import(restorePassword);
+                          if (result.success) {
+                            alert(result.message);
+                            window.location.reload();
+                          } else {
+                            addToast('Contraseña incorrecta', 'error');
+                          }
+                        } catch (err) {
+                          addToast('Error al restaurar: Contraseña incorrecta o archivo dañado.', 'error');
                         }
-                      } catch (err) {
-                        addToast('Error al restaurar: Contraseña incorrecta o archivo dañado.', 'error');
-                      }
-                    }
+                       }
+                    });
                   }}
                   className="flex-1 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg shadow-amber-500/20"
                 >
@@ -384,7 +399,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                 <label className="block text-xs font-semibold opacity-50 mb-1 ml-1">Frase de 12 Palabras</label>
                 <textarea
                   placeholder="Ingrese las 12 palabras separadas por espacios..."
-                  className={`w-full p-3 rounded-xl border outline-none text-sm resize-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-full p-3 rounded-xl border outline-none text-sm resize-none focus:ring-2 focus:ring-amber-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   rows={3}
                   value={recoveryPhrase}
                   onChange={e => setRecoveryPhrase(e.target.value)}
@@ -398,7 +413,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Nueva contraseña fuerte"
-                    className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-amber-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full pl-10 pr-12 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-amber-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                     value={form.password}
                     onChange={e => setForm({ ...form, password: e.target.value })}
                   />
@@ -459,6 +474,8 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         </div>
       </div>
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

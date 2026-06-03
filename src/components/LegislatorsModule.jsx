@@ -3,6 +3,7 @@ import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus, FileText, Cam
 import Modal from './ui/Modal';
 import EmptyState from './ui/EmptyState';
 import JuntaDirectivaTab from './JuntaDirectivaTab';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveCommission, onDeleteLegislator, onDeleteCommission, darkMode, addToast }) => {
   const [tab, setTab] = useState('legislators');
@@ -10,6 +11,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const [formType, setFormType] = useState('legislator');
   const [editingId, setEditingId] = useState(null);
   const [isCitizenM3, setIsCitizenM3] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
   
   const [form, setForm] = useState({ nombre: '', partidoPolitico: '', contacto: '', notas: '', biografia: '', foto: '' });
   const [commissionForm, setCommissionForm] = useState({ 
@@ -133,6 +135,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
   const getM3Display = (c) => c.miembro3Nombre ? `${c.miembro3Nombre} (Ciudadano)` : getLegislatorName(c.miembro3Id);
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -165,7 +168,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                 `);
               } catch (e) { addToast('Error al generar QR Portal', 'error'); }
             }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border ${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border ${darkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
           >
             <QrCode className="w-4 h-4 text-indigo-500" /> QR Portal Público
           </button>
@@ -175,7 +178,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                 setFormType(tab === 'legislators' ? 'legislator' : 'commission');
                 setShowForm(true); 
               }} 
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold transition-colors hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
             >
               <Plus className="w-4 h-4" /> Nuevo {tab === 'legislators' ? 'Legislador' : 'Comisión'}
             </button>
@@ -186,19 +189,19 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
       <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit">
         <button 
           onClick={() => setTab('legislators')} 
-          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'legislators' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'legislators' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
         >
           Legisladores
         </button>
         <button 
           onClick={() => setTab('commissions')} 
-          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'commissions' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'commissions' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
         >
           Comisiones
         </button>
         <button 
           onClick={() => setTab('junta')} 
-          className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${tab === 'junta' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-500' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+          className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${tab === 'junta' ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-500' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
         >
           <Crown className="w-3.5 h-3.5" />
           Junta Directiva
@@ -264,7 +267,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                           <button onClick={() => { setEditingId(l.id); setForm(l); setShowForm(true); }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                             <User className="w-4 h-4 opacity-40" />
                           </button>
-                          <button onClick={() => { if(window.confirm('¿Eliminar legislador?')) onDeleteLegislator(l.id); }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
+                          <button onClick={() => setConfirmDialog({ isOpen: true, title: 'Eliminar legislador', message: '¿Eliminar este legislador? Esta acción no se puede deshacer.', destructive: true, onConfirm: () => onDeleteLegislator(l.id) })} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -280,7 +283,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
 
       {tab === 'commissions' && (
         commissions.filter(c => c.activo).length === 0 ? (
-          <div className={`max-w-2xl mx-auto p-8 rounded-[2rem] border ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 shadow-sm'} space-y-6`}>
+          <div className={`max-w-2xl mx-auto p-8 rounded-2xl border ${darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-100 shadow-sm'} space-y-6`}>
             <div className="text-center">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-3">
                 <Users className="w-6 h-6" />
@@ -294,40 +297,40 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             <div className="space-y-5">
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Nombre de la Comisión</label>
-                <input value={commissionForm.nombre} onChange={e => setCommissionForm({...commissionForm, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Hacienda y Presupuesto" />
+                <input value={commissionForm.nombre} onChange={e => setCommissionForm({...commissionForm, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Hacienda y Presupuesto" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Presidente</label>
-                  <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                  <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                     <option value="">Seleccionar...</option>
                     {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Vicepresidente</label>
-                  <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                  <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                     <option value="">Seleccionar...</option>
                     {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                 </div>
               </div>
               
-              <div className="p-5 rounded-3xl bg-gray-50 dark:bg-gray-800/30 space-y-4 border border-gray-100 dark:border-gray-800">
+              <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/30 space-y-4 border border-gray-100 dark:border-gray-800">
                 <div className="flex items-center justify-between border-b dark:border-gray-800 pb-3">
                   <label className="text-[10px] font-black uppercase tracking-widest opacity-40">Configuración Miembros</label>
                   <div className="flex gap-2">
                     <button 
                       type="button" 
                       onClick={() => setIsCitizenM3(false)}
-                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${!isCitizenM3 ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-colors ${!isCitizenM3 ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
                     >
                       LEGISLADORES
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setIsCitizenM3(true)}
-                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${isCitizenM3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                      className={`px-3 py-1 rounded-full text-[9px] font-bold transition-colors ${isCitizenM3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
                     >
                       + CIUDADANO
                     </button>
@@ -335,11 +338,11 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                  <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <option value="">Miembro I...</option>
                     {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
-                  <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                  <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <option value="">Miembro II...</option>
                     {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
@@ -350,28 +353,28 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                     placeholder="Nombre completo del Ciudadano (M-III)" 
                     value={commissionForm.miembro3Nombre} 
                     onChange={e => setCommissionForm({...commissionForm, miembro3Nombre: e.target.value})} 
-                    className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                    className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
                   />
                 ) : (
-                  <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                  <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                     <option value="">Miembro III (Legislador)...</option>
                     {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                   </select>
                 )}
               </div>
 
-              <button onClick={handleSaveCommission} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Instalar Comisión</button>
+              <button onClick={handleSaveCommission} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-colors shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Instalar Comisión</button>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {commissions.filter(c => c.activo).map(c => (
-              <div key={c.id} className={`p-6 rounded-3xl border transition-all ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/30' : 'bg-white border-gray-200 hover:border-indigo-200 shadow-sm'}`}>
+              <div key={c.id} className={`p-6 rounded-2xl border transition-colors ${darkMode ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/30' : 'bg-white border-gray-200 hover:border-indigo-200 shadow-sm'}`}>
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500 shadow-inner"><Users className="w-6 h-6" /></div>
                   <div className="flex gap-1">
                     <button onClick={() => { setEditingId(c.id); setCommissionForm(c); setIsCitizenM3(!!c.miembro3Nombre); setShowForm(true); }} className={`p-2 rounded-xl transition-colors ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}><Shield className="w-4 h-4 opacity-40" /></button>
-                    <button onClick={() => { if(window.confirm('¿Eliminar comisión?')) onDeleteCommission(c.id); }} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setConfirmDialog({ isOpen: true, title: 'Eliminar comisión', message: '¿Eliminar esta comisión? Esta acción no se puede deshacer.', destructive: true, onConfirm: () => onDeleteCommission(c.id) })} className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
                 <h3 className="font-black text-lg mb-6 leading-tight">{c.nombre}</h3>
@@ -407,7 +410,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
             <div className="flex justify-center mb-2">
               <div 
                 onClick={handleSelectFoto}
-                className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-indigo-500/5 hover:border-indigo-500/50 relative overflow-hidden ${form.foto ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}
+                className={`w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-indigo-500/5 hover:border-indigo-500/50 relative overflow-hidden ${form.foto ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}
               >
                 {form.foto ? (
                   <img src={form.foto} alt="Vista previa" className="w-full h-full object-cover" />
@@ -422,16 +425,16 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
 
             <div>
               <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Nombre y Apellido</label>
-              <input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Dr. Juan Pérez" />
+              <input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Dr. Juan Pérez" />
             </div>
             <div className="grid grid-cols-2 gap-4">
                <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Partido Político</label>
-                <input value={form.partidoPolitico} onChange={e => setForm({...form, partidoPolitico: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Siglas o Nombre" />
+                <input value={form.partidoPolitico} onChange={e => setForm({...form, partidoPolitico: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Siglas o Nombre" />
               </div>
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Contacto</label>
-                <input value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Teléfono o Email" />
+                <input value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Teléfono o Email" />
               </div>
             </div>
             <div>
@@ -439,50 +442,50 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               <textarea 
                 value={form.biografia} 
                 onChange={e => setForm({...form, biografia: e.target.value})} 
-                className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-h-[100px] resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} 
+                className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors min-h-[100px] resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} 
                 placeholder="Resumen de trayectoria y formación..." 
               />
             </div>
-            <button onClick={handleSaveLegislator} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all mt-2 shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Guardar Legislador</button>
+            <button onClick={handleSaveLegislator} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-colors mt-2 shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Guardar Legislador</button>
           </div>
         ) : (
           <div className="space-y-5">
             <div>
               <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Nombre de la Comisión</label>
-              <input value={commissionForm.nombre} onChange={e => setCommissionForm({...commissionForm, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Hacienda y Presupuesto" />
+              <input value={commissionForm.nombre} onChange={e => setCommissionForm({...commissionForm, nombre: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`} placeholder="Ej: Hacienda y Presupuesto" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Presidente</label>
-                <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                <select value={commissionForm.presidenteId} onChange={e => setCommissionForm({...commissionForm, presidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                   <option value="">Seleccionar...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-black opacity-40 mb-1.5 uppercase tracking-widest ml-1">Vicepresidente</label>
-                <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
+                <select value={commissionForm.vicepresidenteId} onChange={e => setCommissionForm({...commissionForm, vicepresidenteId: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}>
                   <option value="">Seleccionar...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
               </div>
             </div>
             
-            <div className="p-5 rounded-3xl bg-gray-50 dark:bg-gray-800/50 space-y-4 border border-gray-100 dark:border-gray-800">
+            <div className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 space-y-4 border border-gray-100 dark:border-gray-800">
               <div className="flex items-center justify-between border-b dark:border-gray-800 pb-3">
                 <label className="text-[10px] font-black uppercase tracking-widest opacity-40">Configuración Miembros</label>
                 <div className="flex gap-2">
                    <button 
                     type="button" 
                     onClick={() => setIsCitizenM3(false)}
-                    className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${!isCitizenM3 ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                    className={`px-3 py-1 rounded-full text-[9px] font-bold transition-colors ${!isCitizenM3 ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
                   >
                     LEGISLADORES
                   </button>
                   <button 
                     type="button" 
                     onClick={() => setIsCitizenM3(true)}
-                    className={`px-3 py-1 rounded-full text-[9px] font-bold transition-all ${isCitizenM3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
+                    className={`px-3 py-1 rounded-full text-[9px] font-bold transition-colors ${isCitizenM3 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 opacity-40'}`}
                   >
                     + CIUDADANO
                   </button>
@@ -490,11 +493,11 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro1Id} onChange={e => setCommissionForm({...commissionForm, miembro1Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro I...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
-                <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro2Id} onChange={e => setCommissionForm({...commissionForm, miembro2Id: e.target.value})} className={`w-full p-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro II...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
@@ -505,21 +508,23 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
                   placeholder="Nombre completo del Ciudadano (M-III)" 
                   value={commissionForm.miembro3Nombre} 
                   onChange={e => setCommissionForm({...commissionForm, miembro3Nombre: e.target.value})} 
-                  className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                  className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-emerald-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
                 />
               ) : (
-                <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                <select value={commissionForm.miembro3Id} onChange={e => setCommissionForm({...commissionForm, miembro3Id: e.target.value})} className={`w-full p-3.5 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <option value="">Miembro III (Legislador)...</option>
                   {legislators.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
                 </select>
               )}
             </div>
 
-            <button onClick={handleSaveCommission} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-all shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Instalar Comisión</button>
+            <button onClick={handleSaveCommission} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black transition-colors shadow-xl shadow-indigo-500/20 uppercase tracking-widest text-xs">Instalar Comisión</button>
           </div>
         )}
       </Modal>
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

@@ -3,6 +3,7 @@ import {
   Crown, Users, BookOpen, Star, Plus, Trash2, Camera, Loader2,
   Calendar, Building2, AlertCircle, CheckCircle2
 } from 'lucide-react';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 const ROLES = [
   {
@@ -64,6 +65,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
   const loadJunta = useCallback(async () => {
     setIsLoading(true);
@@ -117,12 +119,19 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Remover este cargo de la Junta Directiva?')) return;
-    try {
-      await window.legisAPI.junta.delete(id);
-      addToast('Cargo removido', 'warning');
-      loadJunta();
-    } catch { addToast('Error al eliminar', 'error'); }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Remover cargo',
+      message: '¿Remover este cargo de la Junta Directiva? Esta acción no se puede deshacer.',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await window.legisAPI.junta.delete(id);
+          addToast('Cargo removido', 'warning');
+          loadJunta();
+        } catch { addToast('Error al eliminar', 'error'); }
+      }
+    });
   };
 
   const openEditForm = (member) => {
@@ -157,9 +166,10 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
-      <div className={`p-5 rounded-3xl border ${darkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+      <div className={`p-5 rounded-2xl border ${darkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-2xl bg-amber-500/10">
             <Crown className="w-5 h-5 text-amber-500" />
@@ -183,7 +193,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
           return (
             <div
               key={role.id}
-              className={`rounded-3xl border p-6 transition-all ${
+              className={`rounded-2xl border p-6 transition-colors ${
                 darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
               }`}
             >
@@ -242,13 +252,13 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEditForm(member)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(member.id)}
-                      className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-all"
+                      className="p-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -257,7 +267,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
               ) : (
                 /* Cargo vacante */
                 <div className="flex flex-col items-center justify-center py-8">
-                  <div className={`w-16 h-16 rounded-3xl border-2 border-dashed flex items-center justify-center mb-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className={`w-16 h-16 rounded-2xl border-2 border-dashed flex items-center justify-center mb-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <Plus className="w-6 h-6 opacity-20" />
                   </div>
                   <p className="text-xs font-bold opacity-30 mb-4">Cargo Vacante</p>
@@ -278,7 +288,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
       {/* Modal de formulario */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-3xl border p-8 shadow-2xl overflow-y-auto max-h-[90vh] ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200'}`}>
+          <div className={`w-full max-w-lg rounded-2xl border p-8 shadow-2xl overflow-y-auto max-h-[90vh] ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200'}`}>
             {/* Header modal */}
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -304,7 +314,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                         key={role.id}
                         type="button"
                         onClick={() => setForm(prev => ({ ...prev, rol: role.id }))}
-                        className={`p-3 rounded-2xl border text-left text-[11px] font-bold transition-all ${
+                        className={`p-3 rounded-2xl border text-left text-[11px] font-bold transition-colors ${
                           form.rol === role.id
                             ? `${role.bg} ${role.border} ${role.color}`
                             : (darkMode ? 'border-gray-700 text-gray-400 hover:border-gray-600' : 'border-gray-200 text-gray-500 hover:border-gray-300')
@@ -342,7 +352,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                   value={form.nombre}
                   onChange={e => setForm(prev => ({ ...prev, nombre: e.target.value }))}
                   placeholder="Ej: Dip. María González"
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                 />
               </div>
 
@@ -355,7 +365,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                       value={form.partidoPolitico}
                       onChange={e => setForm(prev => ({ ...prev, partidoPolitico: e.target.value }))}
                       placeholder="Siglas o nombre del partido"
-                      className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                      className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                     />
                   </div>
                   <div>
@@ -365,7 +375,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                       onChange={e => setForm(prev => ({ ...prev, biografia: e.target.value }))}
                       placeholder="Resumen de trayectoria..."
                       rows={3}
-                      className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                      className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                     />
                   </div>
                 </>
@@ -379,7 +389,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                     type="date"
                     value={form.fechaInicio}
                     onChange={e => setForm(prev => ({ ...prev, fechaInicio: e.target.value }))}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>
                 <div>
@@ -388,7 +398,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                     type="date"
                     value={form.fechaFin}
                     onChange={e => setForm(prev => ({ ...prev, fechaFin: e.target.value }))}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>
               </div>
@@ -398,14 +408,14 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
                 <button
                   onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }}
                   disabled={isSaving}
-                  className={`flex-1 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  className={`flex-1 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-colors hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Actualizar' : 'Registrar')}
                 </button>
@@ -415,6 +425,8 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

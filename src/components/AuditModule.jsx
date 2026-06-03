@@ -167,7 +167,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
           <button 
             onClick={handleExportCSV}
             disabled={filteredLogs.length === 0}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors border ${
               darkMode 
                 ? 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-40' 
                 : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-40'
@@ -196,7 +196,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
             placeholder="Buscar por acción, entidad, firma o descripción..." 
             value={search}
             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-            className={`w-full pl-10 pr-4 py-3 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+            className={`w-full pl-10 pr-4 py-3 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
               darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 shadow-sm'
             }`}
           />
@@ -207,7 +207,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
           <select
             value={actionFilter}
             onChange={e => { setActionFilter(e.target.value); setCurrentPage(1); }}
-            className={`w-full pl-10 pr-4 py-3 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none ${
+            className={`w-full pl-10 pr-4 py-3 rounded-2xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors appearance-none ${
               darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 shadow-sm'
             }`}
           >
@@ -250,7 +250,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
                 </div>
 
                 {/* Tarjeta de Evento */}
-                <div className={`rounded-3xl border p-5 sm:p-6 transition-all ${
+                <div className={`rounded-3xl border p-5 sm:p-6 transition-colors ${
                   darkMode 
                     ? 'bg-gray-900 border-gray-800 hover:border-indigo-500/25' 
                     : 'bg-white border-gray-200 hover:border-indigo-500/20 shadow-sm hover:shadow-md'
@@ -322,7 +322,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
             <button 
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`p-2.5 rounded-xl border transition-colors ${
                 darkMode 
                   ? 'border-gray-800 bg-gray-900 hover:bg-gray-800 hover:text-white' 
                   : 'border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-900'
@@ -338,7 +338,7 @@ const AuditModule = ({ auditLogs = [], darkMode }) => {
             <button 
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`p-2.5 rounded-xl border transition-colors ${
                 darkMode 
                   ? 'border-gray-800 bg-gray-900 hover:bg-gray-800 hover:text-white' 
                   : 'border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-900'

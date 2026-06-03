@@ -7,6 +7,7 @@ import {
   FolderOpen, FileText, CalendarDays, Scale, Search, Filter, Gavel
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 export default function SyncSettings({ 
   darkMode, 
@@ -34,6 +35,7 @@ export default function SyncSettings({
   const [showForm, setShowForm] = useState(false);
   const [analyticsStatus, setAnalyticsStatus] = useState({ enabled: false, anonymousId: '' });
   const [isSyncing, setIsSyncing] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
   // Backup State
   const [backupPassword, setBackupPassword] = useState('');
@@ -95,30 +97,34 @@ export default function SyncSettings({
     e.preventDefault();
     if (!restoreFile || !restorePassword) return;
 
-    if (!window.confirm('¡ATENCIÓN! Al restaurar se reemplazará TODA la base de datos actual. Esta acción no se puede deshacer de forma sencilla. ¿Deseas continuar?')) {
-      return;
-    }
-
-    setIsProcessingBackup(true);
-    try {
-      const result = await window.legisAPI.db.restoreBackup(restoreFile, restorePassword);
-      if (result.success) {
-        addToast('Base de datos restaurada con éxito. La aplicación se reiniciará.', 'success');
-        setTimeout(() => window.location.reload(), 2000);
-      } else {
-        const errors = {
-          'INVALID_CREDENTIALS': 'Contraseña incorrecta o archivo dañado.',
-          'INVALID_FILE_TYPE': 'El archivo seleccionado no es un backup válido.',
-          'FILE_NOT_FOUND': 'No se pudo encontrar el archivo seleccionado.',
-          'CORRUPTED_FILE': 'El archivo de backup está dañado.'
-        };
-        addToast(errors[result.error] || 'Error al restaurar el backup', 'error');
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Restaurar backup',
+      message: 'Al restaurar se reemplazará TODA la base de datos actual. Esta acción no se puede deshacer de forma sencilla.',
+      destructive: true,
+      onConfirm: async () => {
+        setIsProcessingBackup(true);
+        try {
+          const result = await window.legisAPI.db.restoreBackup(restoreFile, restorePassword);
+          if (result.success) {
+            addToast('Base de datos restaurada con éxito. La aplicación se reiniciará.', 'success');
+            setTimeout(() => window.location.reload(), 2000);
+          } else {
+            const errors = {
+              'INVALID_CREDENTIALS': 'Contraseña incorrecta o archivo dañado.',
+              'INVALID_FILE_TYPE': 'El archivo seleccionado no es un backup válido.',
+              'FILE_NOT_FOUND': 'No se pudo encontrar el archivo seleccionado.',
+              'CORRUPTED_FILE': 'El archivo de backup está dañado.'
+            };
+            addToast(errors[result.error] || 'Error al restaurar el backup', 'error');
+          }
+        } catch (err) {
+          addToast('Error crítico al restaurar', 'error');
+        } finally {
+          setIsProcessingBackup(false);
+        }
       }
-    } catch (err) {
-      addToast('Error crítico al restaurar', 'error');
-    } finally {
-      setIsProcessingBackup(false);
-    }
+    });
   };
 
   const loadQueueStats = async () => {
@@ -199,12 +205,18 @@ export default function SyncSettings({
   };
 
   const handleClearToken = async () => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar el token de GitHub? La sincronización dejará de funcionar.')) {
-      await window.legisAPI.sync.github.clear();
-      setHasToken(false);
-      setSyncStatus(null);
-      addToast('Token eliminado', 'info');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Eliminar token de GitHub',
+      message: '¿Estás seguro de que deseas eliminar el token de GitHub? La sincronización dejará de funcionar.',
+      destructive: true,
+      onConfirm: async () => {
+        await window.legisAPI.sync.github.clear();
+        setHasToken(false);
+        setSyncStatus(null);
+        addToast('Token eliminado', 'info');
+      }
+    });
   };
 
   const handleCloudUpload = async () => {
@@ -234,19 +246,25 @@ export default function SyncSettings({
       return;
     }
 
-    if (!window.confirm('Esto reemplazará todos tus datos locales con la versión de la nube. ¿Continuar?')) return;
-
-    setIsSyncing(true);
-    try {
-      const result = await window.legisAPI.backup.cloudDownload(password);
-      if (result.success) {
-        addToast(result.message, 'success');
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Descarga desde la nube',
+      message: 'Esto reemplazará todos tus datos locales con la versión de la nube. ¿Continuar?',
+      destructive: true,
+      onConfirm: async () => {
+        setIsSyncing(true);
+        try {
+          const result = await window.legisAPI.backup.cloudDownload(password);
+          if (result.success) {
+            addToast(result.message, 'success');
+          }
+        } catch (err) {
+          addToast('Error al descargar de la nube', 'error');
+        } finally {
+          setIsSyncing(false);
+        }
       }
-    } catch (err) {
-      addToast('Error al descargar de la nube', 'error');
-    } finally {
-      setIsSyncing(false);
-    }
+    });
   };
 
   const handleToggleAnalytics = async () => {
@@ -340,22 +358,30 @@ export default function SyncSettings({
   }, [documents, fileFilterType, fileSearch, sessions, oficios, projects]);
 
   const handleDeleteFile = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar este archivo permanentemente de la bóveda del sistema?')) return;
-    try {
-      await onDeleteDocument?.(id);
-      addToast('Archivo eliminado del sistema', 'warning');
-    } catch {
-      addToast('Error al eliminar archivo', 'error');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Eliminar archivo',
+      message: '¿Estás seguro de eliminar este archivo permanentemente de la bóveda del sistema?',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await onDeleteDocument?.(id);
+          addToast('Archivo eliminado del sistema', 'warning');
+        } catch {
+          addToast('Error al eliminar archivo', 'error');
+        }
+      }
+    });
   };
 
   return (
+    <>
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Selector de Pestañas Principal */}
       <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 w-fit mb-4">
         <button 
           onClick={() => setActiveTab('settings')} 
-          className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+          className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
             activeTab === 'settings' 
               ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400' 
               : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -365,7 +391,7 @@ export default function SyncSettings({
         </button>
         <button 
           onClick={() => setActiveTab('files')} 
-          className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+          className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-2 ${
             activeTab === 'files' 
               ? 'bg-white dark:bg-gray-700 shadow-sm text-amber-500' 
               : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -409,7 +435,7 @@ export default function SyncSettings({
                           value={token}
                           onChange={(e) => setToken(e.target.value)}
                           placeholder="ghp_xxxxxxxxxxxx"
-                          className={`w-full px-4 py-2.5 rounded-xl border transition-all outline-none text-sm ${
+                          className={`w-full px-4 py-2.5 rounded-xl border transition-colors outline-none text-sm ${
                             darkMode ? 'bg-gray-800 border-gray-700 focus:border-indigo-500' : 'bg-gray-50 border-gray-200 focus:border-indigo-500'
                           }`}
                           required
@@ -470,7 +496,7 @@ export default function SyncSettings({
                         />
                       </div>
                     </div>
-                    <button type="submit" className={`w-full py-1.5 rounded-lg text-xs font-bold transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+                    <button type="submit" className={`w-full py-1.5 rounded-lg text-xs font-bold transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
                       Actualizar Repositorio
                     </button>
                   </form>
@@ -500,7 +526,7 @@ export default function SyncSettings({
                           <p className="text-sm font-medium">Conectado como <b>@{syncStatus.user}</b></p>
                           <button 
                             onClick={handleForceSync}
-                            className="text-xs px-4 py-2 rounded-lg font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white"
+                            className="text-xs px-4 py-2 rounded-lg font-bold transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
                           >
                             Sincronizar Metadata Ahora
                           </button>
@@ -588,7 +614,7 @@ export default function SyncSettings({
                       value={backupPassword}
                       onChange={(e) => setBackupPassword(e.target.value)}
                       placeholder="Mínimo 8 caracteres"
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all outline-none text-sm ${
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors outline-none text-sm ${
                         darkMode ? 'bg-gray-800 border-gray-700 focus:border-emerald-500' : 'bg-gray-50 border-gray-200 focus:border-emerald-500'
                       }`}
                       required
@@ -621,7 +647,7 @@ export default function SyncSettings({
                   <button
                     type="button"
                     onClick={handleSelectRestoreFile}
-                    className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                    className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-colors ${
                       restoreFile 
                         ? (darkMode ? 'bg-amber-500/10 border-amber-500/50 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600')
                         : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
@@ -640,7 +666,7 @@ export default function SyncSettings({
                       value={restorePassword}
                       onChange={(e) => setRestorePassword(e.target.value)}
                       placeholder="Contraseña usada al exportar"
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all outline-none text-sm ${
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border transition-colors outline-none text-sm ${
                         darkMode ? 'bg-gray-800 border-gray-700 focus:border-amber-500' : 'bg-gray-50 border-gray-200 focus:border-amber-500'
                       }`}
                       disabled={!restoreFile}
@@ -685,7 +711,7 @@ export default function SyncSettings({
               <button
                 onClick={handleCloudUpload}
                 disabled={isSyncing}
-                className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+                className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-colors ${
                   darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
                 }`}
               >
@@ -697,7 +723,7 @@ export default function SyncSettings({
               <button
                 onClick={handleCloudDownload}
                 disabled={isSyncing}
-                className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
+                className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-colors ${
                   darkMode ? 'bg-gray-800 border-gray-700 hover:border-indigo-500' : 'bg-gray-50 border-gray-200 hover:border-indigo-500'
                 }`}
               >
@@ -769,7 +795,7 @@ export default function SyncSettings({
                   name="plausibleLink"
                   defaultValue={config?.plausible_shared_link || ''}
                   placeholder="https://plausible.io/share/parlamentum.legislativo.com?auth=..."
-                  className={`w-full px-4 py-2.5 rounded-xl border transition-all outline-none text-sm ${
+                  className={`w-full px-4 py-2.5 rounded-xl border transition-colors outline-none text-sm ${
                     darkMode ? 'bg-gray-800 border-gray-700 focus:border-indigo-500' : 'bg-gray-50 border-gray-200 focus:border-indigo-500'
                   }`}
                 />
@@ -817,7 +843,7 @@ export default function SyncSettings({
                 placeholder="Buscar archivos por nombre o entidad..." 
                 value={fileSearch}
                 onChange={e => setFileSearch(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
+                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${
                   darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 shadow-sm'
                 }`}
               />
@@ -827,7 +853,7 @@ export default function SyncSettings({
               <select
                 value={fileFilterType}
                 onChange={e => setFileFilterType(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none ${
+                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors appearance-none ${
                   darkMode ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 shadow-sm'
                 }`}
               >
@@ -847,7 +873,7 @@ export default function SyncSettings({
             {filteredDocs.map(doc => (
               <div 
                 key={doc.id} 
-                className={`group rounded-2xl border p-5 transition-all hover:border-indigo-500/30 ${
+                className={`group rounded-2xl border p-5 transition-colors hover:border-indigo-500/30 ${
                   darkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
                 }`}
               >
@@ -896,7 +922,7 @@ export default function SyncSettings({
                     <a 
                       href={doc.contenidoBase64} 
                       download={doc.nombreOriginal} 
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all text-xs font-bold ${
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-colors text-xs font-bold ${
                         darkMode ? 'bg-gray-800 hover:bg-indigo-600 hover:text-white' : 'bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700'
                       }`}
                     >
@@ -908,7 +934,7 @@ export default function SyncSettings({
             ))}
 
             {filteredDocs.length === 0 && (
-              <div className="col-span-full py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl opacity-50">
+              <div className="col-span-full py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl opacity-50">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
                 <p className="text-sm font-bold opacity-30">No se encontraron archivos en el sistema</p>
               </div>
@@ -917,5 +943,7 @@ export default function SyncSettings({
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 }

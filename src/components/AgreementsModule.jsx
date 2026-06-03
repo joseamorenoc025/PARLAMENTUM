@@ -5,14 +5,18 @@ import {
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
+import ConfirmDialog from './ui/ConfirmDialog';
+import useDebounce from '../hooks/useDebounce';
 
 const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], saveDocument, deleteDocument, reload }) => {
   const [agreements, setAgreements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const debouncedSearch = useDebounce(search);
   
   const [form, setForm] = useState({
     numeroCorrelativo: '',
@@ -114,21 +118,23 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este acuerdo permanentemente?')) return;
-    try {
-      await dbService.deleteAgreement(id);
-      
-      // Desactivar el documento en la Bóveda Documental si existe
-      const existingDoc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === id && d.activo);
-      if (existingDoc) {
-        await deleteDocument(existingDoc.id);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Eliminar acuerdo',
+      message: '¿Eliminar este acuerdo permanentemente? Esta acción no se puede deshacer.',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await dbService.deleteAgreement(id);
+          const existingDoc = (documents || []).find(d => d.entidadTipo === 'Agreement' && d.entidadId === id && d.activo);
+          if (existingDoc) await deleteDocument(existingDoc.id);
+          addToast('Acuerdo eliminado', 'warning');
+          loadAgreements();
+        } catch (err) {
+          addToast('Error al eliminar', 'error');
+        }
       }
-
-      addToast('Acuerdo eliminado', 'warning');
-      loadAgreements();
-    } catch (err) {
-      addToast('Error al eliminar', 'error');
-    }
+    });
   };
 
   const handleEdit = (agreement) => {
@@ -170,13 +176,14 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
   const filteredAgreements = useMemo(() => {
     return agreements.filter(a => 
       a.activo && (
-        a.numeroCorrelativo.toLowerCase().includes(search.toLowerCase()) || 
-        a.objeto.toLowerCase().includes(search.toLowerCase())
+        a.numeroCorrelativo.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+        a.objeto.toLowerCase().includes(debouncedSearch.toLowerCase())
       )
     ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  }, [agreements, search]);
+  }, [agreements, debouncedSearch]);
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -185,7 +192,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
         </div>
         <button 
           onClick={() => setShowForm(true)} 
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-600/20"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20"
         >
           <Plus className="w-4 h-4" /> Nuevo Acuerdo
         </button>
@@ -199,7 +206,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
             placeholder="Buscar por número u objeto del acuerdo..." 
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
+            className={`w-full pl-10 pr-4 py-2.5 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
           />
         </div>
       </div>
@@ -316,7 +323,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-3xl border p-8 shadow-2xl animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-100'}`}>
+          <div className={`w-full max-w-lg rounded-2xl border p-8 shadow-2xl animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-100'}`}>
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-black">{editingId ? 'Editar Acuerdo' : 'Nuevo Acuerdo'}</h2>
@@ -336,7 +343,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                     placeholder="Ej: 001-2024"
                     value={form.numeroCorrelativo}
                     onChange={e => setForm({...form, numeroCorrelativo: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
                   />
                 </div>
                 <div className="space-y-2">
@@ -345,7 +352,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                     type="date" 
                     value={form.fecha}
                     onChange={e => setForm({...form, fecha: e.target.value})}
-                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                    className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
                   />
                 </div>
               </div>
@@ -356,7 +363,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                   placeholder="Escriba el objeto detallado del acuerdo..."
                   value={form.objeto}
                   onChange={e => setForm({...form, objeto: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold h-32 resize-none leading-relaxed ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold h-32 resize-none leading-relaxed ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
                 />
               </div>
 
@@ -365,7 +372,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                 <select 
                   value={form.sesionId}
                   onChange={e => setForm({...form, sesionId: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-bold ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
                 >
                   <option value="">Seleccionar sesión...</option>
                   {sessions.filter(s => s.activo).map(s => (
@@ -379,7 +386,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                 <button
                   type="button"
                   onClick={handleSelectFile}
-                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${
+                  className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-colors ${
                     form.localFilePath
                       ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
                       : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
@@ -397,7 +404,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                   placeholder="https://drive.google.com/..."
                   value={form.driveLink}
                   onChange={e => setForm({...form, driveLink: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
+                  className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors font-medium text-sm ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
                 />
               </div>
             </div>
@@ -406,14 +413,14 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
               <button 
                 onClick={() => { setShowForm(false); setEditingId(null); }} 
                 disabled={isSaving}
-                className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleSave} 
                 disabled={isSaving}
-                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2"
+                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-colors shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? 'Actualizar' : 'Registrar')}
               </button>
@@ -422,6 +429,8 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

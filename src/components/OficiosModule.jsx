@@ -3,11 +3,13 @@ import {
   Plus, Edit3, Trash2, FileText, ChevronLeft, Link 
 } from 'lucide-react';
 import EmptyState from './ui/EmptyState';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], saveDocument, deleteDocument, reload }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
   const handleSelectFile = async () => {
     if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
@@ -105,7 +107,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
               <button
                 type="button"
                 onClick={handleSelectFile}
-                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${
+                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-colors ${
                   form.localFilePath
                     ? (darkMode ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'bg-indigo-50 border-indigo-200 text-indigo-600')
                     : (darkMode ? 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300')
@@ -126,8 +128,8 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
-            <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-all">
+            <button onClick={resetForm} className={`flex-1 py-2.5 rounded-xl font-medium transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Cancelar</button>
+            <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors">
               {editingId ? 'Actualizar' : 'Crear Oficio'}
             </button>
           </div>
@@ -137,13 +139,14 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold mb-1">Oficios Salientes</h1>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gestión de comunicaciones oficiales</p>
         </div>
-        <button onClick={() => setView('form')} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all">
+        <button onClick={() => setView('form')} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
           <Plus className="w-4 h-4" /> Nuevo Oficio
         </button>
       </div>
@@ -245,18 +248,19 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                           }} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button onClick={async () => {
-                            if (window.confirm('¿Eliminar este oficio permanentemente?')) {
-                              await onDelete(o.id);
-                              
-                              // Desactivar el documento en la Bóveda Documental si existe
-                              const existingDoc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === o.id && d.activo);
-                              if (existingDoc) {
-                                await deleteDocument(existingDoc.id);
+                          <button onClick={() => {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: 'Eliminar oficio',
+                              message: '¿Eliminar este oficio permanentemente? Esta acción no se puede deshacer.',
+                              destructive: true,
+                              onConfirm: async () => {
+                                await onDelete(o.id);
+                                const existingDoc = (documents || []).find(d => d.entidadTipo === 'Oficio' && d.entidadId === o.id && d.activo);
+                                if (existingDoc) await deleteDocument(existingDoc.id);
+                                addToast('Oficio eliminado', 'warning');
                               }
-                              
-                              addToast('Oficio eliminado', 'warning');
-                            }
+                            });
                           }} className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -271,6 +275,8 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
         </div>
       )}
     </div>
+    <ConfirmDialog isOpen={confirmDialog.isOpen} onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })} onConfirm={confirmDialog.onConfirm} title={confirmDialog.title} message={confirmDialog.message} darkMode={darkMode} destructive={confirmDialog.destructive} />
+    </>
   );
 };
 

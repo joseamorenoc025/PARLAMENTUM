@@ -58,10 +58,35 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [syncStatus, setSyncStatus] = useState('synced');
   const [logo, setLogo] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const darkMode = config.darkMode;
   const navigate = useNavigate();
   const location = useLocation();
   const currentPage = location.pathname.replace('/', '') || 'dashboard';
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      setConfig(prev => {
+        if (prev.darkMode === undefined) return { ...prev, darkMode: e.matches };
+        return prev;
+      });
+    };
+    if (config.darkMode === undefined) {
+      setConfig(prev => ({ ...prev, darkMode: mq.matches }));
+    }
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handleChange = (e) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
 
   // Verificar entorno Electron
   const isElectron = window.legisAPI !== undefined;
@@ -183,8 +208,8 @@ export default function App() {
   const renderMainContent = () => {
     if (!isElectron) {
       return (
-        <div className="min-h-screen bg-red-50 flex items-center justify-center p-6 text-center">
-          <div className="max-w-md bg-white p-10 rounded-[2rem] shadow-2xl border border-red-100">
+        <div className="min-h-[100dvh] bg-red-50 flex items-center justify-center p-6 text-center">
+          <div className="max-w-md bg-white p-10 rounded-2xl shadow-2xl border border-red-100">
             <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <Gavel className="w-10 h-10" />
             </div>
@@ -203,7 +228,7 @@ export default function App() {
 
     if (isLoading || setupStatus.isLoading) {
       return (
-        <div className={`min-h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
+        <div className={`min-h-[100dvh] flex flex-col items-center justify-center ${darkMode ? 'bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
           <div className="flex flex-col items-center space-y-6 animate-[scale-in_0.5s_ease-out]">
             <div className="relative flex items-center justify-center">
               {/* Pulsing rings */}
@@ -234,9 +259,14 @@ export default function App() {
     }
 
     return (
-      <div className={`min-h-screen flex ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
+      <div className={`min-h-[100dvh] flex ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950 text-white' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100 text-gray-900'}`}>
+        {/* Mobile Backdrop */}
+        {isMobile && mobileMenuOpen && (
+          <div className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+        )}
+
         {/* Glassmorphism Sidebar */}
-        <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col backdrop-blur-xl ${darkMode ? 'bg-gray-900/70 border-r border-white/10' : 'bg-white/70 border-r border-black/5'} ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+        <aside className={`fixed left-0 top-0 h-full z-40 transition-all duration-300 flex flex-col backdrop-blur-xl ${darkMode ? 'bg-gray-900/70 border-r border-white/10' : 'bg-white/70 border-r border-black/5'} ${isMobile ? (mobileMenuOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full') : (sidebarOpen ? 'w-64' : 'w-16')}`}>
           <div className="flex items-center gap-3 px-4 py-4 border-b border-inherit backdrop-blur-xl">
             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-white/20 bg-white/10 backdrop-blur-xl flex items-center justify-center">
               <img src="/logo-parlamentum.png" alt="PARLAMENTUM" className="w-full h-full object-contain" />
@@ -254,12 +284,12 @@ export default function App() {
               <button
                 key={item.id}
                 data-testid={`nav-${item.id}`}
-                onClick={() => navigate(`/${item.id}`)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all backdrop-blur-xl
+                onClick={() => { navigate(`/${item.id}`); if (isMobile) setMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors backdrop-blur-xl
                   ${currentPage === item.id 
                     ? (darkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200') 
                     : (darkMode ? 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent' : 'text-gray-600 hover:bg-black/5 hover:text-gray-900 border border-transparent')}
-                  ${!sidebarOpen ? 'justify-center px-2' : ''}`}
+                  ${!sidebarOpen && !isMobile ? 'justify-center px-2' : ''}`}
               >
                 {item.icon}
                 {sidebarOpen && <span className="truncate">{item.label}</span>}
@@ -277,12 +307,12 @@ export default function App() {
           <div className="p-2 border-t border-inherit backdrop-blur-xl space-y-1">
             <button 
               onClick={handleLogout}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-red-400 hover:bg-red-500/10 ${!sidebarOpen ? 'justify-center' : ''}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-red-400 hover:bg-red-500/10 ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
             >
               <LogOut className="w-5 h-5" />
               {sidebarOpen && <span>Cerrar Sesión</span>}
             </button>
-            <button onClick={() => setSidebarOpen(prev => !prev)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-black/5'} ${!sidebarOpen ? 'justify-center' : ''}`}>
+            <button onClick={() => isMobile ? setMobileMenuOpen(false) : setSidebarOpen(prev => !prev)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${darkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-black/5'} ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}>
               {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
               {sidebarOpen && <span>Colapsar</span>}
             </button>
@@ -290,10 +320,15 @@ export default function App() {
         </aside>
 
         {/* Main Content */}
-        <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'} ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100'}`}>
+        <div className={`flex-1 transition-all duration-300 ${isMobile ? 'ml-0' : (sidebarOpen ? 'ml-64' : 'ml-16')} ${darkMode ? 'bg-gradient-to-br from-slate-950 via-gray-950 to-slate-950' : 'bg-gradient-to-br from-slate-100 via-white to-slate-100'}`}>
           {/* Glassmorphism Top Bar */}
           <header role="banner" className={`sticky top-0 z-30 flex items-center justify-between px-6 py-3 backdrop-blur-xl border-b ${darkMode ? 'bg-gray-900/60 border-white/10' : 'bg-white/60 border-black/5'}`}>
             <div className="flex items-center gap-2">
+              {isMobile && (
+                <button onClick={() => setMobileMenuOpen(true)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+              )}
               {logo && (
                 <div className="w-6 h-6 rounded-md overflow-hidden bg-white border border-black/10 dark:border-white/20 backdrop-blur-xl flex items-center justify-center mr-1 flex-shrink-0">
                   <img src={logo} alt="Logo Institucional" className="w-full h-full object-contain" />
@@ -303,7 +338,7 @@ export default function App() {
             </div>
             <div className="flex items-center gap-3">
               {/* Sync Status Badge - Glass */}
-              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-xl transition-all ${
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border backdrop-blur-xl transition-colors ${
                 syncStatus === 'synced' ? (darkMode ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-green-50 border-green-200 text-green-700') :
                 syncStatus === 'pending' ? (darkMode ? 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border-yellow-200 text-yellow-700') :
                 (darkMode ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-red-50 border-red-200 text-red-700')
@@ -318,7 +353,7 @@ export default function App() {
 
               <div className={`w-px h-6 ${darkMode ? 'bg-white/10' : 'bg-black/10'}`} />
               
-              <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm backdrop-blur-xl border transition-all ${darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10' : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-700 hover:bg-black/10'} transition-colors`}>
+              <button onClick={() => setShowCommandPalette(true)} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm backdrop-blur-xl border transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10' : 'bg-black/5 border-black/5 text-gray-500 hover:text-gray-700 hover:bg-black/10'} transition-colors`}>
                 <Search className="w-4 h-4" />
                 <span className="hidden sm:inline">Buscar...</span>
                 <kbd className={`hidden sm:inline px-1.5 py-0.5 rounded text-[10px] ${darkMode ? 'bg-white/10' : 'bg-black/10'}`}>⌘K</kbd>
