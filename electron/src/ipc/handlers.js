@@ -198,12 +198,8 @@ export const setupIPCHandlers = (mainWindow) => {
 
       sqlite.close();
 
-      try {
-        await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
-        return { success: true, message: 'Sistema restaurado correctamente. La aplicación debe reiniciarse.' };
-      } catch (restoreErr) {
-        throw restoreErr;
-      }
+      await restoreFromBuffer(backupBuffer, dbPath, configPath, password);
+      return { success: true, message: 'Sistema restaurado correctamente. La aplicación debe reiniciarse.' };
     } catch (err) {
       logger.error('Error al importar backup:', err);
       throw err;
@@ -699,11 +695,11 @@ export const setupIPCHandlers = (mainWindow) => {
       };
       if (data.id) {
         db.update(schema.juntaDirectiva).set(payload).where(eq(schema.juntaDirectiva.id, data.id)).run();
-        try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+        try { await enqueueTask('legislators', 0, 'sync'); } catch { /* fire-and-forget */ }
         return { success: true, id: data.id };
       } else {
         const result = db.insert(schema.juntaDirectiva).values(payload).run();
-        try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+        try { await enqueueTask('legislators', 0, 'sync'); } catch { /* fire-and-forget */ }
         return { success: true, id: result.lastInsertRowid };
       }
     } catch (err) {
@@ -718,7 +714,7 @@ export const setupIPCHandlers = (mainWindow) => {
         .set({ activo: 0, updatedAt: new Date().toISOString() })
         .where(eq(schema.juntaDirectiva.id, id))
         .run();
-      try { await enqueueTask('legislators', 0, 'sync'); } catch (e) {}
+      try { await enqueueTask('legislators', 0, 'sync'); } catch { /* fire-and-forget */ }
       return { success: true };
     } catch (err) {
       logger.error('junta:delete error:', err);

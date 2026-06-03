@@ -375,7 +375,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center gap-2 p-3 bg-indigo-500/10 text-indigo-500 rounded-xl mb-4">
                      <AlertCircle className="w-4 h-4" />
-                     <p className="text-xs font-bold">Abre tu app de contraseñas, crea una "Nota Segura" y pega las palabras allí.</p>
+                     <p className="text-xs font-bold">Abre tu app de contraseñas, crea una &quot;Nota Segura&quot; y pega las palabras allí.</p>
                   </div>
                   <div className={`p-4 rounded-xl font-mono font-black ${darkMode ? 'bg-gray-800' : 'bg-white shadow-inner'} grid grid-cols-3 gap-3 mb-4 text-center text-sm md:text-base`}>
                     {recoveryCode && recoveryCode.split(' ').map((word, i) => (
