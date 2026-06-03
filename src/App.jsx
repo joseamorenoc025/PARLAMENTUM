@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useLegisData } from './hooks/useLegisData';
 import { Toaster, toast } from 'sonner';
 
 // Componentes UI
 import CommandPalette from './components/ui/CommandPalette';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import AuthScreen from './components/AuthScreen';
 import OnboardingWizard from './components/onboarding/OnboardingWizard';
 
@@ -53,11 +55,13 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [setupStatus, setSetupStatus] = useState({ needsOnboarding: false, isLoading: true });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState('dashboard');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('synced'); // 'synced', 'pending', 'error'
+  const [syncStatus, setSyncStatus] = useState('synced');
   const [logo, setLogo] = useState(null);
   const darkMode = config.darkMode;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPage = location.pathname.replace('/', '') || 'dashboard';
 
   // Verificar entorno Electron
   const isElectron = window.legisAPI !== undefined;
@@ -151,10 +155,10 @@ export default function App() {
 
   const toggleDarkMode = () => setConfig({ darkMode: !config.darkMode });
 
-  const navigateToEntity = useCallback((type, id) => {
+  const navigateToEntity = useCallback((type) => {
     const pages = { sesion: 'sesiones', oficio: 'oficios', proyecto: 'agenda', legislador: 'legisladores' };
-    if (pages[type]) setCurrentPage(pages[type]);
-  }, []);
+    if (pages[type]) navigate(`/${pages[type]}`);
+  }, [navigate]);
 
   const handleLogout = () => {
     setUser(null);
@@ -250,7 +254,7 @@ export default function App() {
               <button
                 key={item.id}
                 data-testid={`nav-${item.id}`}
-                onClick={() => setCurrentPage(item.id)}
+                onClick={() => navigate(`/${item.id}`)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all backdrop-blur-xl
                   ${currentPage === item.id 
                     ? (darkMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200') 
@@ -339,37 +343,21 @@ export default function App() {
 
           {/* Page Content */}
           <main className="p-6">
-            {currentPage === 'dashboard' && <Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} config={config} onNavigate={navigateToEntity} />}
-            {currentPage === 'sesiones' && <SessionsModule sessions={sessions} oficios={oficios} darkMode={darkMode} addToast={addToast} onSave={saveSession} onDelete={deleteSession} onNavigate={navigateToEntity} />}
-            {currentPage === 'oficios' && <OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
-            {currentPage === 'agenda' && <AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
-            {currentPage === 'legisladores' && <LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />}
-            {currentPage === 'leyes' && <LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />}
-            {currentPage === 'acuerdos' && <AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />}
-            {currentPage === 'auditoria' && <AuditModule auditLogs={auditLogs} darkMode={darkMode} />}
-            {currentPage === 'analytics' && (
-              <AnalyticsModule 
-                config={config} 
-                darkMode={darkMode} 
-                addToast={addToast} 
-                setCurrentPage={setCurrentPage} 
-              />
-            )}
-            {currentPage === 'sincronizacion' && (
-              <SyncSettings 
-                darkMode={darkMode} 
-                addToast={addToast} 
-                documents={documents} 
-                sessions={sessions} 
-                oficios={oficios} 
-                projects={projects} 
-                agreements={agreements}
-                laws={laws}
-                onDeleteDocument={deleteDocument} 
-                config={config}
-                setConfig={setConfig}
-              />
-            )}
+            <ErrorBoundary darkMode={darkMode}>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard sessions={sessions} oficios={oficios} projects={projects} laws={laws} legislators={legislators} darkMode={darkMode} config={config} onNavigate={navigateToEntity} />} />
+                <Route path="/sesiones" element={<SessionsModule sessions={sessions} oficios={oficios} darkMode={darkMode} addToast={addToast} onSave={saveSession} onDelete={deleteSession} onNavigate={navigateToEntity} />} />
+                <Route path="/oficios" element={<OficiosModule oficios={oficios} sessions={sessions} darkMode={darkMode} addToast={addToast} onSave={saveOficio} onDelete={deleteOficio} onNavigate={navigateToEntity} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />} />
+                <Route path="/agenda" element={<AgendaModule projects={projects} commissions={commissions} legislators={legislators} darkMode={darkMode} addToast={addToast} onSave={saveProject} onDelete={deleteProject} onNavigate={navigateToEntity} config={config} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />} />
+                <Route path="/legisladores" element={<LegislatorsModule legislators={legislators} commissions={commissions} darkMode={darkMode} addToast={addToast} onSaveLegislator={saveLegislator} onSaveCommission={saveCommission} onDeleteLegislator={deleteLegislator} onDeleteCommission={deleteCommission} />} />
+                <Route path="/leyes" element={<LawsLibrary darkMode={darkMode} addToast={addToast} onDataChange={loadAllData} />} />
+                <Route path="/acuerdos" element={<AgreementsModule sessions={sessions} darkMode={darkMode} addToast={addToast} documents={documents} saveDocument={saveDocument} deleteDocument={deleteDocument} reload={loadAllData} />} />
+                <Route path="/auditoria" element={<AuditModule auditLogs={auditLogs} darkMode={darkMode} />} />
+                <Route path="/analytics" element={<AnalyticsModule config={config} darkMode={darkMode} addToast={addToast} setCurrentPage={(page) => navigate(`/${page}`)} />} />
+                <Route path="/sincronizacion" element={<SyncSettings darkMode={darkMode} addToast={addToast} documents={documents} sessions={sessions} oficios={oficios} projects={projects} agreements={agreements} laws={laws} onDeleteDocument={deleteDocument} config={config} setConfig={setConfig} />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </ErrorBoundary>
           </main>
         </div>
 

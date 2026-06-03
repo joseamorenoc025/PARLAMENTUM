@@ -74,6 +74,7 @@ export default [
       'react-hooks/unsupported-syntax': 'off',
       'react-hooks/incompatible-library': 'off',
       'react-hooks/preserve-manual-memoization': 'off',
+      'preserve-caught-error': 'off',
     },
   },
 ];

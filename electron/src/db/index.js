@@ -36,6 +36,7 @@ export const dbManager = {
     // 2. Abrir conexión permanente y configurar ORM
     sqlite = new Database(dbPath);
     sqlite.pragma('journal_mode = WAL');
+    sqlite.pragma('foreign_keys = ON');
     db = drizzle(sqlite, { schema });
     
     isInitialized = true;
