@@ -25,7 +25,7 @@ import AnalyticsModule from './components/AnalyticsModule';
 import { 
   LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
   Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel, ShieldCheck,
-  LogOut, Database, Github, Activity, BarChart3
+  LogOut, Database, GitBranch, Activity, BarChart3
 } from 'lucide-react';
 
 const defaultConfig = {
@@ -200,7 +200,7 @@ export default function App() {
     { id: 'acuerdos', label: 'Acuerdos', icon: <Gavel className="w-5 h-5" /> },
     { id: 'analytics', label: 'Impacto y Analíticas', icon: <BarChart3 className="w-5 h-5" />, roles: ['admin'] },
     { id: 'auditoria', label: 'Actividad', icon: <Activity className="w-5 h-5" />, roles: ['admin'] },
-    { id: 'sincronizacion', label: 'Configuración', icon: <Github className="w-5 h-5" />, roles: ['admin'] },
+    { id: 'sincronizacion', label: 'Configuración', icon: <GitBranch className="w-5 h-5" />, roles: ['admin'] },
   ];
 
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role));

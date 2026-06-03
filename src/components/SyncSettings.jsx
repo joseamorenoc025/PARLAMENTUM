@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Github, Save, RefreshCw, Trash2, CheckCircle2, 
+  GitBranch, Save, RefreshCw, Trash2, CheckCircle2, 
   AlertCircle, ExternalLink, Shield, CloudOff,
   Database, Download, Upload, Lock, FileJson,
   Activity, Cloud, CloudUpload, CloudDownload,
@@ -408,7 +408,7 @@ export default function SyncSettings({
           {/* GitHub Sync Section */}
           <div className="flex items-center gap-3 mb-2">
             <div className={`p-2 rounded-lg ${darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'}`}>
-              <Github className="w-6 h-6" />
+              <GitBranch className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Sincronización con GitHub</h2>
@@ -468,7 +468,7 @@ export default function SyncSettings({
 
                 <div className="space-y-4 pt-4 border-t border-gray-800/50">
                   <h3 className="font-semibold flex items-center gap-2">
-                    <Github className="w-4 h-4 text-indigo-500" />
+                    <GitBranch className="w-4 h-4 text-indigo-500" />
                     Repositorio Destino
                   </h3>
                   <form onSubmit={handleSaveRepo} className="space-y-3">
