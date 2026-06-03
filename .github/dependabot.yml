@@ -1,0 +1,41 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "joseamorenoc025"
+    labels:
+      - "dependencies"
+      - "security"
+    groups:
+      electron-and-build:
+        patterns:
+          - "electron"
+          - "electron-builder"
+          - "@electron/*"
+          - "vite"
+          - "esbuild"
+          - "app-builder-lib"
+          - "dmg-builder"
+          - "electron-builder-squirrel-windows"
+      database:
+        patterns:
+          - "better-sqlite3"
+          - "drizzle-orm"
+          - "drizzle-kit"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
