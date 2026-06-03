@@ -5,12 +5,12 @@
 
 const select = async (table, where = {}) => {
   if (!window.legisAPI) return [];
-  return await window.legisAPI.invoke('db:select', { table, where });
+  return await window.legisAPI.db.select(table, where);
 };
 
 const upsert = async (table, data) => {
   if (!window.legisAPI) return { lastInsertRowid: 0 };
-  return await window.legisAPI.invoke('db:upsert', { table, data });
+  return await window.legisAPI.db.upsert(table, data);
 };
 
 export const dbService = {
@@ -83,10 +83,10 @@ export const dbService = {
   // Versiones de Proyectos
   getProjectVersions: async (projectId) => {
       if (!window.legisAPI) return [];
-      const rows = await window.legisAPI.invoke('db:query', { 
-          sql: 'SELECT * FROM project_versions WHERE project_id = ? ORDER BY fecha_creacion DESC', 
-          params: [projectId] 
-      });
+      const rows = await window.legisAPI.db.query(
+          'SELECT * FROM project_versions WHERE project_id = ? ORDER BY fecha_creacion DESC',
+          [projectId]
+      );
       return rows.map(r => {
           let snapshotData = {};
           try {
@@ -146,9 +146,9 @@ export const dbService = {
 
   // Usuarios y Autenticación
   getUsers: async () => select('users'),
-  getUserByUsername: async (username) => {
+  getUserByUsername: async () => {
     if (!window.legisAPI) return null;
-    return await window.legisAPI.invoke('auth:get-user', username);
+    return await window.legisAPI.auth.getUser();
   },
   saveUser: async (u) => {
     const result = await upsert('users', u);
@@ -156,7 +156,7 @@ export const dbService = {
   },
   updateLastLogin: async (id) => {
     if (!window.legisAPI) return null;
-    return await window.legisAPI.invoke('auth:update-login', id);
+    return await window.legisAPI.auth.updateLogin(id);
   },
 
   // Backups

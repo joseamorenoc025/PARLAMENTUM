@@ -13,7 +13,7 @@ const SessionsModule = ({ sessions, oficios, onSave, onDelete, darkMode, addToas
 
   const handleSelectFile = async () => {
     if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
-    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    const filePath = await window.legisAPI.dialog.openPdf();
     if (filePath) {
       setForm(prev => ({ ...prev, localFilePath: filePath, localFileName: filePath.split(/[\\/]/).pop() }));
     }

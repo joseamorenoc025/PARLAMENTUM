@@ -11,7 +11,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
 
   const handleSelectFile = async () => {
     if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
-    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    const filePath = await window.legisAPI.dialog.openPdf();
     if (filePath) {
       setForm(prev => ({ ...prev, localFilePath: filePath, localFileName: filePath.split(/[\\/]/).pop() }));
     }
@@ -51,7 +51,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
           if (existingDoc) {
             await deleteDocument(existingDoc.id);
           }
-          await window.legisAPI.invoke('documents:save-file', {
+          await window.legisAPI.documents.saveFile({
             filePath: form.localFilePath,
             entidadTipo: 'Oficio',
             entidadId: editingId || savedId
@@ -200,7 +200,7 @@ const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 try {
-                                  await window.legisAPI.invoke('documents:open-file', doc.id);
+                                  await window.legisAPI.documents.openFile(doc.id);
                                   addToast('Archivo abierto con el visor del sistema', 'success');
                                 } catch (e) {
                                   addToast('Error al abrir el archivo local', 'error');

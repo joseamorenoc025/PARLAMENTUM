@@ -13,7 +13,7 @@ const BackupRestoreStep = ({ darkMode, onComplete, onCancel, addToast }) => {
 
   const handleFileSelect = async () => {
     try {
-      const result = await window.legisAPI.invoke('dialog:open-backup');
+      const result = await window.legisAPI.dialog.openBackup();
       if (result) {
         setFilePath(result);
         setError(null);
@@ -31,10 +31,7 @@ const BackupRestoreStep = ({ darkMode, onComplete, onCancel, addToast }) => {
     
     console.log('E2E Debug - Restoring from:', { filePath, password: password ? '***' : 'missing' });
     try {
-      const result = await window.legisAPI.invoke('backup:validateAndRestore', {
-        filePath,
-        password
-      });
+      const result = await window.legisAPI.backup.validateAndRestore(filePath, password);
 
       if (result.success) {
         if (addToast) addToast('Base de datos restaurada con éxito', 'success');

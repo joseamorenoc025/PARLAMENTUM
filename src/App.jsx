@@ -79,13 +79,13 @@ export default function App() {
     const checkSetup = async () => {
       try {
         // Esperar a que la DB esté lista
-        await window.legisAPI.invoke('db:isReady');
+        await window.legisAPI.db.isReady();
         
-        const status = await window.legisAPI.invoke('app:get-setup-status');
+        const status = await window.legisAPI.app.getSetupStatus();
         setSetupStatus({ ...status, isLoading: false });
         
         // Cargar logo si está configurado
-        const logoData = await window.legisAPI.invoke('app:get-logo');
+        const logoData = await window.legisAPI.app.getLogo();
         if (logoData) setLogo(logoData);
       } catch (err) {
         console.error('Setup status check failed:', err);
@@ -99,7 +99,7 @@ export default function App() {
     setSetupStatus({ needsOnboarding: false, onboardingCompleted: true, isLoading: false });
     // Recargar logo tras finalizar wizard
     if (window.legisAPI) {
-      const logoData = await window.legisAPI.invoke('app:get-logo');
+      const logoData = await window.legisAPI.app.getLogo();
       if (logoData) setLogo(logoData);
     }
   }, []);
@@ -138,7 +138,7 @@ export default function App() {
     
     // Log error to Winston via IPC
     if (type === 'error' && isElectron) {
-      window.legisAPI.invoke('log', { level: 'error', message: `toast:error - ${message}` })
+      window.legisAPI.log('error', `toast:error - ${message}`)
         .catch(err => console.error('Failed to log toast error:', err));
     }
 

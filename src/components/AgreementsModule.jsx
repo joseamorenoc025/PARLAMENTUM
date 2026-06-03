@@ -38,7 +38,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
 
   const handleSelectFile = async () => {
     if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
-    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    const filePath = await window.legisAPI.dialog.openPdf();
     if (filePath) {
       setForm(prev => ({
         ...prev,
@@ -77,7 +77,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
           if (existingDoc) {
             await deleteDocument(existingDoc.id);
           }
-          await window.legisAPI.invoke('documents:save-file', {
+          await window.legisAPI.documents.saveFile({
             filePath: form.localFilePath,
             entidadTipo: 'Agreement',
             entidadId: editingId || savedId
@@ -268,7 +268,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                         <button 
                           onClick={async () => {
                             try {
-                              await window.legisAPI.invoke('documents:open-file', doc.id);
+                              await window.legisAPI.documents.openFile(doc.id);
                               addToast('Archivo abierto con el visor del sistema', 'success');
                             } catch (e) {
                               addToast('Error al abrir el archivo local', 'error');
@@ -283,7 +283,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
                           onClick={async () => {
                             try {
                               addToast('Estampando QR...', 'info');
-                              await window.legisAPI.invoke('pdf:stamp-qr', { entidadTipo: 'Agreement', entidadId: doc.id });
+                              await window.legisAPI.pdf.stampQr({ entidadTipo: 'Agreement', entidadId: doc.id });
                               addToast('QR estampado exitosamente', 'success');
                             } catch (e) {
                               addToast('Error al estampar QR', 'error');

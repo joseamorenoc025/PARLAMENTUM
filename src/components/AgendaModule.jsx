@@ -250,7 +250,7 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                               <button 
                                 onClick={async () => {
                                   try {
-                                    await window.legisAPI.invoke('documents:open-file', doc.id);
+                                    await window.legisAPI.documents.openFile(doc.id);
                                     addToast('Archivo abierto con el visor del sistema', 'success');
                                   } catch (e) {
                                     addToast('Error al abrir el archivo local', 'error');
@@ -282,10 +282,10 @@ const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, da
                         <button
                           onClick={async () => {
                             if (!window.legisAPI) return addToast('Solo disponible en la aplicación de escritorio', 'info');
-                            const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+                            const filePath = await window.legisAPI.dialog.openPdf();
                             if (filePath) {
                               try {
-                                await window.legisAPI.invoke('documents:save-file', {
+                                await window.legisAPI.documents.saveFile({
                                   filePath,
                                   entidadTipo: 'Project',
                                   entidadId: detailProject.id,

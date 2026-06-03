@@ -21,7 +21,7 @@ export const useLegisData = (defaultConfig) => {
       if (window.legisAPI) {
         let ready = false;
         while (!ready) {
-          ready = await window.legisAPI.invoke('db:isReady');
+          ready = await window.legisAPI.db.isReady();
           if (!ready) await new Promise(resolve => setTimeout(resolve, 500));
         }
       }

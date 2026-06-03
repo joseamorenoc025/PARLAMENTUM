@@ -109,9 +109,29 @@ export const setupIPCHandlers = (mainWindow) => {
   ipcMain.handle('auth:get-user', async () => {
     try {
       const results = db.select().from(schema.users).limit(1).all();
-      return results[0] || null;
+      if (!results[0]) return null;
+      const { passwordHash, recoveryCodeHash, securityAnswerHash, ...safe } = results[0];
+      return safe;
     } catch (err) {
       logger.error('Auth get user error:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('auth:login', async (_, rawData) => {
+    const { authLoginSchema } = await import('./schemas/auth.js');
+    const validation = validateIPCInput(authLoginSchema, rawData, 'auth:login');
+    const { username, password } = validation.data;
+    try {
+      const user = db.select().from(schema.users).limit(1).all()[0];
+      if (!user) return { success: false, message: 'Usuario no encontrado' };
+      if (user.username !== username) return { success: false, message: 'Usuario no encontrado' };
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) return { success: false, message: 'Contraseña incorrecta' };
+      db.update(schema.users).set({ ultimoLogin: new Date().toISOString() }).where(eq(schema.users.id, user.id)).run();
+      return { success: true, user: { id: user.id, username: user.username, role: user.role, nombreCompleto: user.nombreCompleto } };
+    } catch (err) {
+      logger.error('Auth login error:', err);
       throw err;
     }
   });
@@ -272,13 +292,30 @@ export const setupIPCHandlers = (mainWindow) => {
   ipcMain.handle('db:query', async (_, rawData) => {
     const validation = validateIPCInput(dbQuerySchema, rawData, 'db:query');
     const { sql, params } = validation.data;
+    const normalized = sql.trim().toLowerCase();
+
+    if (!normalized.startsWith('select')) {
+      throw new Error('db:query only allows SELECT statements');
+    }
+
+    const FORBIDDEN = /\b(union|with|insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|reindex)\b/;
+    if (FORBIDDEN.test(normalized)) {
+      throw new Error('db:query forbids CTEs, UNION, and DML/DDL statements');
+    }
+
+    if (sql.includes(';')) {
+      throw new Error('db:query forbids multiple statements');
+    }
+
+    const ALLOWED_TABLES = ['project_versions'];
+    const FROM_MATCH = normalized.match(/\bfrom\s+(\w+)/);
+    if (!FROM_MATCH || !ALLOWED_TABLES.includes(FROM_MATCH[1])) {
+      throw new Error(`db:query table not allowed. Allowed: ${ALLOWED_TABLES.join(', ')}`);
+    }
+
     try {
       const stmt = sqlite.prepare(sql);
-      if (sql.trim().toLowerCase().startsWith('select')) {
-        return stmt.all(...params);
-      } else {
-        return stmt.run(...params);
-      }
+      return stmt.all(...params);
     } catch (err) {
       logger.error('Database query error:', err);
       throw err;

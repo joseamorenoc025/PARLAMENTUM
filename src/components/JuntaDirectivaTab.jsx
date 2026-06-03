@@ -68,7 +68,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
   const loadJunta = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await window.legisAPI.invoke('junta:getAll');
+      const data = await window.legisAPI.junta.getAll();
       setJunta(data || []);
     } catch (err) {
       addToast('Error al cargar Junta Directiva', 'error');
@@ -81,7 +81,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
 
   const handleSelectFoto = async () => {
     try {
-      const result = await window.legisAPI.invoke('dialog:open-image');
+      const result = await window.legisAPI.dialog.openImage();
       if (result) {
         const bytes = result.buffer instanceof Uint8Array ? result.buffer : new Uint8Array(Object.values(result.buffer));
         let binary = '';
@@ -103,7 +103,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
 
     setIsSaving(true);
     try {
-      await window.legisAPI.invoke('junta:save', { ...form, id: editingId || undefined });
+      await window.legisAPI.junta.save({ ...form, id: editingId || undefined });
       addToast(editingId ? 'Cargo actualizado' : 'Cargo de Junta Directiva registrado', 'success');
       setShowForm(false);
       setEditingId(null);
@@ -119,7 +119,7 @@ const JuntaDirectivaTab = ({ darkMode, addToast }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Remover este cargo de la Junta Directiva?')) return;
     try {
-      await window.legisAPI.invoke('junta:delete', id);
+      await window.legisAPI.junta.delete(id);
       addToast('Cargo removido', 'warning');
       loadJunta();
     } catch { addToast('Error al eliminar', 'error'); }

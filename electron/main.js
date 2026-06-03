@@ -21,6 +21,11 @@ import { analytics } from './src/services/analytics.js';
 
 let mainWindow;
 
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -37,19 +42,38 @@ function createWindow() {
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173/app.html');
-    // mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/app.html'));
   }
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const isDev = process.env.NODE_ENV === 'development';
+    const csp = isDev
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' http://localhost:* ws://localhost:*; frame-src https:; object-src 'none'"
+      : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com; frame-src https:; object-src 'none'; base-uri 'self'; form-action 'self'";
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
+    });
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 app.whenReady().then(async () => {
   try {
-    console.log('[MAIN] Starting application initialization...');
+    logger.info('[MAIN] Starting application initialization...');
 
     // 1. Inicializar DB y Migraciones
     await dbManager.initialize({
@@ -86,9 +110,9 @@ app.whenReady().then(async () => {
       });
     });
 
-    console.log('[MAIN] Initialization complete.');
+    logger.info('[MAIN] Initialization complete.');
   } catch (error) {
-    console.error('[MAIN] FATAL STARTUP ERROR:', error);
+    logger.error('[MAIN] FATAL STARTUP ERROR:', error);
     dialog.showErrorBox('Error de Inicio', `No se pudo inicializar la aplicación:\n${error.message}`);
     app.quit();
   }

@@ -45,7 +45,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
 
   const handleSelectFoto = async () => {
     try {
-      const result = await window.legisAPI.invoke('dialog:open-image');
+      const result = await window.legisAPI.dialog.openImage();
       if (result) {
         const bytes = result.buffer instanceof Uint8Array ? result.buffer : new Uint8Array(Object.values(result.buffer));
         let binary = '';
@@ -79,7 +79,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
     try {
       // El QR apunta a la subpage del portal ciudadano en GitHub Pages
       // Ejemplo: https://owner.github.io/repo/public/portal/?id=123
-      const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+      const repoInfo = await window.legisAPI.sync.github.getRepo();
       const isUserPage = repoInfo.repo.toLowerCase() === `${repoInfo.owner.toLowerCase()}.github.io`;
       const baseUrl = isUserPage 
         ? `https://${repoInfo.repo}/public/portal/`
@@ -143,7 +143,7 @@ const LegislatorsModule = ({ legislators, commissions, onSaveLegislator, onSaveC
           <button 
             onClick={async () => {
               try {
-                const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+                const repoInfo = await window.legisAPI.sync.github.getRepo();
                 const isUserPage = repoInfo.repo.toLowerCase() === `${repoInfo.owner.toLowerCase()}.github.io`;
                 const baseUrl = isUserPage 
                   ? `https://${repoInfo.repo}/public/portal/`

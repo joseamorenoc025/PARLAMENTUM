@@ -32,10 +32,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
 
     setLoading(true);
     try {
-      const result = await window.legisAPI.invoke('auth:recover', {
-        phrase: recoveryPhrase.trim().toLowerCase(),
-        newPassword: form.password
-      });
+      const result = await window.legisAPI.auth.recover(recoveryPhrase.trim().toLowerCase(), form.password);
 
       if (result.success) {
         addToast('Contraseña restablecida con éxito. Ya puede iniciar sesión.', 'success');
@@ -93,20 +90,12 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
         addToast('Usuario registrado exitosamente', 'success');
         setIsSignUp(false);
       } else {
-        const user = await window.legisAPI.invoke('auth:get-user');
-        if (!user) {
-          addToast('El sistema no está configurado', 'error');
-          setLoading(false);
-          return;
-        }
-
-        const isValid = await window.legisAPI.auth.verify(form.password, user.passwordHash);
-        if (isValid) {
-          await dbService.updateLastLogin(user.id);
-          onLogin(user);
+        const result = await window.legisAPI.auth.login(form.username, form.password);
+        if (result.success) {
+          onLogin(result.user);
           addToast(`Bienvenido`, 'success');
         } else {
-          addToast('Contraseña incorrecta', 'error');
+          addToast(result.message || 'Contraseña incorrecta', 'error');
         }
       }
     } catch (error) {
@@ -120,7 +109,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     setShowCloudRestore(true);
     setLoading(true);
     try {
-      const { exists } = await window.legisAPI.invoke('backup:checkCloudToken');
+      const { exists } = await window.legisAPI.backup.checkCloudToken();
       if (exists) {
         await fetchCloudBackup();
       } else {
@@ -137,7 +126,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     if (!cloudTokenInput.trim()) return addToast('Ingresa el token', 'warning');
     setLoading(true);
     try {
-      const res = await window.legisAPI.invoke('backup:setCloudToken', { token: cloudTokenInput.trim() });
+      const res = await window.legisAPI.backup.setCloudToken(cloudTokenInput.trim());
       if (res.success) {
         setNeedsCloudToken(false);
         await fetchCloudBackup();
@@ -154,7 +143,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const fetchCloudBackup = async () => {
     setLoading(true);
     try {
-      const res = await window.legisAPI.invoke('backup:downloadFromCloud');
+      const res = await window.legisAPI.backup.downloadFromCloud();
       if (res.success) {
         setCloudBackupDetails({ filePath: res.filePath, date: res.date });
       } else {
@@ -176,10 +165,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
     if (window.confirm('ATENCIÓN: Restaurar un respaldo reemplazará TODOS los datos actuales. ¿Deseas continuar?')) {
       setLoading(true);
       try {
-        const result = await window.legisAPI.invoke('backup:validateAndRestore', {
-           filePath: cloudBackupDetails.filePath,
-           password: restorePassword
-        });
+        const result = await window.legisAPI.backup.validateAndRestore(cloudBackupDetails.filePath, restorePassword);
         if (result.success || !result.error) { // The handler returns {success, userInfo}
           alert('Restauración completada. La aplicación se reiniciará o volverá a la pantalla inicial.');
           window.location.reload(); // Quick way to reload the app in Electron

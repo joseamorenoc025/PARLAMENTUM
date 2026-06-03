@@ -14,3 +14,8 @@ export const authRecoverSchema = z.object({
 export const authUpdateLoginSchema = z.number().int().positive('ID de usuario inválido');
 
 export const authHashSchema = z.string().min(1, 'La contraseña es requerida');
+
+export const authLoginSchema = z.object({
+  username: z.string().min(1, 'El usuario es requerido'),
+  password: z.string().min(1, 'La contraseña es requerida'),
+});

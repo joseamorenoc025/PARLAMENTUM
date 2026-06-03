@@ -46,7 +46,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
   const handleFinish = async () => {
     setIsSubmitting(true);
     try {
-      const result = await window.legisAPI.invoke('setup:initialize', formData);
+      const result = await window.legisAPI.setup.initialize(formData);
       if (result.success) {
         setRecoveryCode(result.recoveryCode);
         setStep(4);
@@ -67,7 +67,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
 
   const handleLogoSelect = async () => {
     try {
-      const result = await window.legisAPI.invoke('dialog:open-image');
+      const result = await window.legisAPI.dialog.openImage();
       if (result) {
         setFormData({ ...formData, logoBuffer: result.buffer });
       }

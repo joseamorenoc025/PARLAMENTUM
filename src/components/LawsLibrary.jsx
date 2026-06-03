@@ -47,7 +47,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   }, [loadLaws]);
 
   const handleSelectFile = async () => {
-    const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+    const filePath = await window.legisAPI.dialog.openPdf();
     if (filePath) {
       const fileName = filePath.split(/[\\/]/).pop();
       setForm(prev => ({
@@ -61,7 +61,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
       // Auto-calcular SHA si el toggle está activo
       if (applyIntegritySeal) {
         try {
-          const hash = await window.legisAPI.invoke('app:file-hash', filePath);
+          const hash = await window.legisAPI.app.fileHash(filePath);
           setForm(prev => ({ ...prev, fileHash: hash }));
         } catch (err) {
           console.warn('Hash calculation failed:', err);
@@ -78,7 +78,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
     setIsSaving(true);
     try {
-      await window.legisAPI.invoke('laws:import', {
+      await window.legisAPI.laws.import({
         metadata: {
           id: editingId,
           titulo: form.titulo,
@@ -135,10 +135,10 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
     }
 
     try {
-      const filePath = await window.legisAPI.invoke('dialog:open-pdf');
+      const filePath = await window.legisAPI.dialog.openPdf();
       if (!filePath) return;
 
-      const currentHash = await window.legisAPI.invoke('app:file-hash', filePath);
+      const currentHash = await window.legisAPI.app.fileHash(filePath);
       
       if (currentHash === law.fileHash) {
         addToast('✅ Integridad Confirmada: El documento coincide con el sello original.', 'success');
@@ -152,7 +152,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
   const showQR = async (law) => {
     try {
-      const repoInfo = await window.legisAPI.invoke('sync:github:get-repo');
+      const repoInfo = await window.legisAPI.sync.github.getRepo();
       const isUserPage = repoInfo.repo.toLowerCase() === `${repoInfo.owner.toLowerCase()}.github.io`;
       const baseUrl = isUserPage 
         ? `https://${repoInfo.repo}/public/portal/`

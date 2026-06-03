@@ -216,7 +216,7 @@ export default function SyncSettings({
 
     setIsSyncing(true);
     try {
-      const result = await window.legisAPI.invoke('backup:cloud:upload', password);
+      const result = await window.legisAPI.backup.cloudUpload(password);
       if (result.success) {
         addToast('Respaldo subido a la nube correctamente', 'success');
       }
@@ -238,7 +238,7 @@ export default function SyncSettings({
 
     setIsSyncing(true);
     try {
-      const result = await window.legisAPI.invoke('backup:cloud:download', password);
+      const result = await window.legisAPI.backup.cloudDownload(password);
       if (result.success) {
         addToast(result.message, 'success');
       }
