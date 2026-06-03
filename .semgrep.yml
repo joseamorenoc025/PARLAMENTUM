@@ -6,7 +6,7 @@ rules:
           ipcMain.handle($NAME, async ($EVENT, $DATA) => {
             ...
           })
-      - pattern-not-inside: |
+      - pattern-not: |
           ipcMain.handle($NAME, async ($EVENT, $DATA) => {
             ...
             validate(...)

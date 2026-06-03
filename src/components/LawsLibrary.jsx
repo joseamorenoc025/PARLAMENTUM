@@ -190,20 +190,26 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
   };
 
   const handleEdit = (law) => {
-    setEditingId(law.id);
-    const cleanDriveLink = (link) => link ? link.replace('Enlace de descarga: ', '') : '';
-    setForm({
-      titulo: law.titulo,
-      gaceta: law.tipo,
-      numero: law.numero || '',
-      anio: law.anio,
-      fechaPublicacion: law.fechaPublicacion,
-      driveLink: law.driveLink || cleanDriveLink(law.contenido) || law.link_drive || '',
-      fileHash: law.fileHash || '',
-      localFilePath: '',
-      tags: law.tags || ''
-    });
-    setShowForm(true);
+    try {
+      setEditingId(law.id);
+      const cleanDriveLink = (link) => link ? link.replace('Enlace de descarga: ', '') : '';
+      const safeDrive = law.driveLink ?? law.drive_link;
+      const cleanedContenido = law.contenido ? cleanDriveLink(law.contenido) : '';
+      setForm({
+        titulo: law.titulo || '',
+        gaceta: law.tipo || law.gaceta || 'Ordinaria',
+        numero: law.numero || '',
+        anio: law.anio || (law.fechaPublicacion ? new Date(law.fechaPublicacion).getFullYear() : new Date().getFullYear()),
+        fechaPublicacion: law.fechaPublicacion || law.fecha_publicacion || '',
+        driveLink: safeDrive || cleanedContenido || law.link_drive || '',
+        fileHash: law.fileHash || law.file_hash || '',
+        localFilePath: '',
+        tags: law.tags || ''
+      });
+      setShowForm(true);
+    } catch (err) {
+      addToast('Error al cargar la ley para edición', 'error');
+    }
   };
 
   const filteredLaws = useMemo(() => {

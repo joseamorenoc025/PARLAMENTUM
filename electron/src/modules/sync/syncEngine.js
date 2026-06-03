@@ -42,10 +42,23 @@ export class SyncEngine {
     this.oficiosPath = 'public/portal/oficios.json';
   }
 
+  /**
+   * El portal en `gh-pages` se sirve desde la raíz, no desde `public/portal/`.
+   * Esta función convierte la ruta local (usada por el portal en desarrollo)
+   * a la ruta remota correcta en el branch `gh-pages`.
+   */
+  toRemotePath(localPath) {
+    const prefix = 'public/portal/';
+    if (this.branch === 'gh-pages' && localPath.startsWith(prefix)) {
+      return localPath.slice(prefix.length);
+    }
+    return localPath;
+  }
+
   async syncLaws(client) {
     const localLaws = db.select().from(schema.laws).where(eq(schema.laws.activo, 1)).all();
     const localDocuments = db.select().from(schema.documents).where(eq(schema.documents.activo, 1)).all();
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.lawsPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.lawsPath));
     
     const lawsJson = localLaws.map(local => {
       let link = local.driveLink ? this.transformDriveLink(local.driveLink) : null;
@@ -82,7 +95,7 @@ export class SyncEngine {
     const localPortalPath = path.join(process.cwd(), this.lawsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(lawsJson, null, 2));
 
-    await client.updateFile(this.owner, this.repo, this.lawsPath, JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.lawsPath), JSON.stringify(lawsJson, null, 2), `Sync: Leyes ${new Date().toISOString()}`, remote.sha);
     
     // Ensure local public/portal/documentos directory exists
     const portalDocsDir = path.join(process.cwd(), 'public', 'portal', 'documentos');
@@ -101,7 +114,7 @@ export class SyncEngine {
           logger.error(`Error copying local PDF file ${fileName}:`, e);
         }
 
-        const remoteDocPath = `public/portal/documentos/${fileName}`;
+        const remoteDocPath = this.toRemotePath(`public/portal/documentos/${fileName}`);
         const buffer = fs.readFileSync(law.rutaPdf);
         
         try {
@@ -126,7 +139,7 @@ export class SyncEngine {
             logger.error(`Error copying extra local PDF file ${fileName}:`, e);
           }
 
-          const remoteDocPath = `public/portal/documentos/${fileName}`;
+          const remoteDocPath = this.toRemotePath(`public/portal/documentos/${fileName}`);
           const buffer = fs.readFileSync(doc.rutaArchivo);
           
           try {
@@ -180,11 +193,11 @@ export class SyncEngine {
       };
     });
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.projectsPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.projectsPath));
     const localPortalPath = path.join(process.cwd(), this.projectsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(projectsJson, null, 2));
 
-    await client.updateFile(this.owner, this.repo, this.projectsPath, JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.projectsPath), JSON.stringify(projectsJson, null, 2), `Sync: Agenda ${new Date().toISOString()}`, remote.sha);
 
     // Ensure local public/portal/documentos directory exists
     const portalDocsDir = path.join(process.cwd(), 'public', 'portal', 'documentos');
@@ -205,7 +218,7 @@ export class SyncEngine {
             logger.error(`Error copying project PDF file ${fileName}:`, e);
           }
 
-          const remoteDocPath = `public/portal/documentos/${fileName}`;
+          const remoteDocPath = this.toRemotePath(`public/portal/documentos/${fileName}`);
           const buffer = fs.readFileSync(doc.rutaArchivo);
           
           try {
@@ -235,10 +248,10 @@ export class SyncEngine {
       updated_at: new Date().toISOString()
     }));
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.agreementsPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.agreementsPath));
     const localPortalPath = path.join(process.cwd(), this.agreementsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(agreementsJson, null, 2));
-    await client.updateFile(this.owner, this.repo, this.agreementsPath, JSON.stringify(agreementsJson, null, 2), `Sync: Acuerdos ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.agreementsPath), JSON.stringify(agreementsJson, null, 2), `Sync: Acuerdos ${new Date().toISOString()}`, remote.sha);
     return agreementsJson.length;
   }
 
@@ -260,10 +273,10 @@ export class SyncEngine {
       updated_at: new Date().toISOString()
     }));
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.sessionsPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.sessionsPath));
     const localPortalPath = path.join(process.cwd(), this.sessionsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(sessionsJson, null, 2));
-    await client.updateFile(this.owner, this.repo, this.sessionsPath, JSON.stringify(sessionsJson, null, 2), `Sync: Sesiones ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.sessionsPath), JSON.stringify(sessionsJson, null, 2), `Sync: Sesiones ${new Date().toISOString()}`, remote.sha);
     return sessionsJson.length;
   }
 
@@ -280,10 +293,10 @@ export class SyncEngine {
       updated_at: new Date().toISOString()
     }));
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.oficiosPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.oficiosPath));
     const localPortalPath = path.join(process.cwd(), this.oficiosPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(oficiosJson, null, 2));
-    await client.updateFile(this.owner, this.repo, this.oficiosPath, JSON.stringify(oficiosJson, null, 2), `Sync: Oficios ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.oficiosPath), JSON.stringify(oficiosJson, null, 2), `Sync: Oficios ${new Date().toISOString()}`, remote.sha);
     return oficiosJson.length;
   }
 
@@ -309,7 +322,7 @@ export class SyncEngine {
             relativeWebFotoPath = `fotos/${fileName}`;
 
             // Sync file physically to GitHub Pages via API
-            const remoteFotoPath = `public/portal/fotos/${fileName}`;
+            const remoteFotoPath = this.toRemotePath(`public/portal/fotos/${fileName}`);
             const buffer = fs.readFileSync(fullPath);
             try {
               const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteFotoPath);
@@ -346,11 +359,11 @@ export class SyncEngine {
       });
     }
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.legislatorsPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.legislatorsPath));
     const localPortalPath = path.join(process.cwd(), this.legislatorsPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(legislatorsJson, null, 2));
 
-    await client.updateFile(this.owner, this.repo, this.legislatorsPath, JSON.stringify(legislatorsJson, null, 2), `Sync: Legisladores ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.legislatorsPath), JSON.stringify(legislatorsJson, null, 2), `Sync: Legisladores ${new Date().toISOString()}`, remote.sha);
   }
 
   async syncJunta(client) {
@@ -373,7 +386,7 @@ export class SyncEngine {
             relativeWebFotoPath = `fotos/${fileName}`;
 
             // Sync file physically to GitHub Pages via API
-            const remoteFotoPath = `public/portal/fotos/${fileName}`;
+            const remoteFotoPath = this.toRemotePath(`public/portal/fotos/${fileName}`);
             const buffer = fs.readFileSync(fullPath);
             try {
               const remoteFile = await client.getRemoteFile(this.owner, this.repo, remoteFotoPath);
@@ -400,11 +413,11 @@ export class SyncEngine {
       });
     }
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.juntaPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.juntaPath));
     const localPortalPath = path.join(process.cwd(), this.juntaPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(juntaJson, null, 2));
 
-    await client.updateFile(this.owner, this.repo, this.juntaPath, JSON.stringify(juntaJson, null, 2), `Sync: Junta Directiva ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.juntaPath), JSON.stringify(juntaJson, null, 2), `Sync: Junta Directiva ${new Date().toISOString()}`, remote.sha);
   }
 
   async syncConfig(client) {
@@ -416,19 +429,19 @@ export class SyncEngine {
       return acc;
     }, { last_sync: new Date().toISOString() });
 
-    const remote = await client.getRemoteFile(this.owner, this.repo, this.configPath);
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.configPath));
     const localPortalPath = path.join(process.cwd(), this.configPath);
     fs.writeFileSync(localPortalPath, JSON.stringify(configObj, null, 2));
 
-    await client.updateFile(this.owner, this.repo, this.configPath, JSON.stringify(configObj, null, 2), `Sync: Config ${new Date().toISOString()}`, remote.sha);
+    await client.updateFile(this.owner, this.repo, this.toRemotePath(this.configPath), JSON.stringify(configObj, null, 2), `Sync: Config ${new Date().toISOString()}`, remote.sha);
   }
 
   async syncLogo(client) {
     const logoConfig = db.select().from(schema.config).where(eq(schema.config.key, 'logo_path')).all();
     if (logoConfig.length > 0 && fs.existsSync(logoConfig[0].value)) {
       const buffer = fs.readFileSync(logoConfig[0].value);
-      const remote = await client.getRemoteFile(this.owner, this.repo, this.logoPath);
-      await client.updateFile(this.owner, this.repo, this.logoPath, buffer, `Sync: Logo ${new Date().toISOString()}`, remote.sha);
+      const remote = await client.getRemoteFile(this.owner, this.repo, this.toRemotePath(this.logoPath));
+      await client.updateFile(this.owner, this.repo, this.toRemotePath(this.logoPath), buffer, `Sync: Logo ${new Date().toISOString()}`, remote.sha);
     }
   }
 
@@ -447,9 +460,10 @@ export class SyncEngine {
       const localPath = path.join(process.cwd(), file.local);
       if (fs.existsSync(localPath)) {
         const content = file.binary ? fs.readFileSync(localPath) : fs.readFileSync(localPath, 'utf8');
-        const remoteFile = await client.getRemoteFile(this.owner, this.repo, file.remote);
+        const remotePath = this.toRemotePath(file.remote);
+        const remoteFile = await client.getRemoteFile(this.owner, this.repo, remotePath);
         // Solo actualizar si el contenido es diferente (opcional, por ahora siempre actualizamos)
-        await client.updateFile(this.owner, this.repo, file.remote, content, `Sync: UI ${path.basename(file.local)}`, remoteFile.sha);
+        await client.updateFile(this.owner, this.repo, remotePath, content, `Sync: UI ${path.basename(file.local)}`, remoteFile.sha);
       }
     }
   }
