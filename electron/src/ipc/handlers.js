@@ -9,11 +9,11 @@ import * as schema from '../db/schema.js';
 import { eq, sql as drizzleSql } from 'drizzle-orm';
 import { logger } from '../lib/logger.js';
 import { validateIPCInput } from './validate.js';
-import { authVerifySchema, authGetUserSchema, authUpdateLoginSchema, authHashSchema } from './schemas/auth.js';
+import { authVerifySchema, authUpdateLoginSchema, authHashSchema } from './schemas/auth.js';
 import { dbSelectSchema, dbUpsertSchema, dbQuerySchema } from './schemas/db.js';
 import { lawImportSchema } from './schemas/laws.js';
 import { setupInitializeSchema } from './schemas/setup.js';
-import { logSchema, qrGenerateSchema, analyticsOptInSchema } from './schemas/misc.js';
+import { logSchema, qrGenerateSchema } from './schemas/misc.js';
 import { backupExportSchema, backupImportSchema } from './schemas/backup.js';
 import { analyticsSetOptInSchema } from './schemas/analytics.js';
 

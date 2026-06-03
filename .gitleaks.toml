@@ -15,17 +15,20 @@ paths = [
 
 # Use default Gitleaks rules if possible, but defining some basic ones as per doc
 [[rules]]
+    id = "github-token"
     description = "GitHub Token"
     regex = '''ghp_[0-9a-zA-Z]{36}'''
     tags = ["key", "github"]
 
 [[rules]]
+    id = "aws-access-key"
     description = "AWS Access Key"
     regex = '''AKIA[0-9A-Z]{16}'''
     tags = ["key", "aws"]
 
 [[rules]]
+    id = "generic-secret"
     description = "Generic Secret"
     regex = '''(?i)secret|password|token|key'''
     # Minimal length to avoid too many false positives
-    path = '''\.env$''' 
+    path = '''\.env$'''

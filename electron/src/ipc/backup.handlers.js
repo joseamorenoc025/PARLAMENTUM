@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { encryptData, decryptData } from '../lib/cryptoUtils.js';
 import { logger } from '../lib/logger.js';
 import { validateIPCInput } from './validate.js';
-import { dbManager, sqlite, db } from '../db/index.js';
+import { dbManager, db } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
@@ -101,7 +101,7 @@ export const setupBackupHandlers = (mainWindow) => {
           ciphertext: Buffer.from(rawJson.ciphertext, 'base64'),
           authTag: Buffer.from(rawJson.authTag, 'base64')
         };
-      } catch (err) {
+      } catch {
         return { error: 'CORRUPTED_FILE' };
       }
 

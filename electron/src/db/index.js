@@ -72,7 +72,7 @@ export const dbManager = {
 
     console.log('[DB-MANAGER] Resetting database for tests...');
     try {
-      const dbToReset = this.getDB();
+      this.getDB();
       sqlite.transaction(() => {
         sqlite.prepare('DELETE FROM users').run();
         sqlite.prepare('DELETE FROM config').run();

@@ -1,13 +1,11 @@
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { sql } from 'drizzle-orm';
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import * as schema from './schema.js';
-import { logger } from '../lib/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,7 +61,7 @@ export const runMigrations = (dbPath) => {
           sqlite.prepare(`ALTER TABLE ${fix.t} ADD COLUMN ${fix.c} ${fix.d}`).run();
           console.log(`[MIGRATE] Emergency fix: Added ${fix.t}.${fix.c}`);
         }
-      } catch (e) {
+      } catch {
         // Ignorar si la tabla no existe todavía (el Healer la creará)
       }
     }
