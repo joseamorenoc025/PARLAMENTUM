@@ -21,6 +21,26 @@
     <link rel="shortcut icon" href="assets/logo-parlamentum.png" type="image/png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
+    <script>
+      (function() {
+        var stored = localStorage.getItem('portal-theme');
+        var theme;
+        if (stored) {
+          theme = stored;
+        } else {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#0f172a' : '#4f46e5');
+      })();
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (!localStorage.getItem('portal-theme')) {
+          var theme = e.matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#0f172a' : '#4f46e5');
+        }
+      });
+    </script>
 </head>
 <body>
     <div class="app-container">
@@ -37,6 +57,10 @@
                 <div class="logo-institucion">
                     <img id="institutional-logo" src="logo.png" alt="Logo" class="logo-institucional" onerror="if(this.src.indexOf('assets') === -1) { this.src='assets/logo-institucional.png'; } else { this.style.display='none'; }">
                 </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar modo claro/oscuro">
+                    <i data-lucide="moon" id="theme-icon-moon" style="width: 20px; height: 20px;"></i>
+                    <i data-lucide="sun" id="theme-icon-sun" style="width: 20px; height: 20px; display: none;"></i>
+                </button>
             </div>
         </header>
 
@@ -110,7 +134,7 @@
         </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script defer type="module" src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

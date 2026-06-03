@@ -36,6 +36,9 @@ export class SyncEngine {
     this.projectsPath = 'public/portal/proyectos.json';
     this.configPath = 'public/portal/config.json';
     this.logoPath = 'public/portal/logo.png';
+    this.agreementsPath = 'public/portal/acuerdos.json';
+    this.sessionsPath = 'public/portal/sesiones.json';
+    this.oficiosPath = 'public/portal/oficios.json';
   }
 
   async syncLaws(client) {
@@ -215,6 +218,72 @@ export class SyncEngine {
         }
       }
     }
+  }
+
+  async syncAgreements(client) {
+    const localAgreements = db.select().from(schema.agreements).where(eq(schema.agreements.activo, 1)).all();
+    const localSessions = db.select().from(schema.sessions).all();
+
+    const agreementsJson = localAgreements.map(a => ({
+      id: a.id,
+      numero_correlativo: a.numeroCorrelativo,
+      fecha: a.fecha,
+      objeto: a.objeto,
+      sesion_numero: localSessions.find(s => s.id === a.sesionId)?.numeroCorrelativo || null,
+      drive_link: a.driveLink || null,
+      updated_at: new Date().toISOString()
+    }));
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.agreementsPath);
+    const localPortalPath = path.join(process.cwd(), this.agreementsPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(agreementsJson, null, 2));
+    await client.updateFile(this.owner, this.repo, this.agreementsPath, JSON.stringify(agreementsJson, null, 2), `Sync: Acuerdos ${new Date().toISOString()}`, remote.sha);
+    return agreementsJson.length;
+  }
+
+  async syncSessions(client) {
+    const localSessions = db.select().from(schema.sessions).where(eq(schema.sessions.activo, 1)).all();
+
+    const sessionsJson = localSessions.map(s => ({
+      id: s.id,
+      tipo: s.tipo,
+      numero_correlativo: s.numeroCorrelativo,
+      motivo: s.motivo,
+      fecha: s.fecha,
+      hora_inicio: s.horaInicio,
+      hora_cierre: s.horaCierre,
+      periodo: s.periodo,
+      observaciones: s.observaciones,
+      orden_dia: s.ordenDia,
+      acta_pdf: s.actaPdf || null,
+      updated_at: new Date().toISOString()
+    }));
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.sessionsPath);
+    const localPortalPath = path.join(process.cwd(), this.sessionsPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(sessionsJson, null, 2));
+    await client.updateFile(this.owner, this.repo, this.sessionsPath, JSON.stringify(sessionsJson, null, 2), `Sync: Sesiones ${new Date().toISOString()}`, remote.sha);
+    return sessionsJson.length;
+  }
+
+  async syncOficios(client) {
+    const localOficios = db.select().from(schema.oficios).where(eq(schema.oficios.activo, 1)).all();
+
+    const oficiosJson = localOficios.map(o => ({
+      id: o.id,
+      numero_oficio: o.numeroOficio,
+      fecha: o.fecha,
+      organo_receptor: o.organoReceptor,
+      asunto: o.asunto,
+      vinculado_a: o.vinculadoA || null,
+      updated_at: new Date().toISOString()
+    }));
+
+    const remote = await client.getRemoteFile(this.owner, this.repo, this.oficiosPath);
+    const localPortalPath = path.join(process.cwd(), this.oficiosPath);
+    fs.writeFileSync(localPortalPath, JSON.stringify(oficiosJson, null, 2));
+    await client.updateFile(this.owner, this.repo, this.oficiosPath, JSON.stringify(oficiosJson, null, 2), `Sync: Oficios ${new Date().toISOString()}`, remote.sha);
+    return oficiosJson.length;
   }
 
   async syncLegislators(client) {
@@ -435,6 +504,27 @@ export class SyncEngine {
         if (type === 'all' || type === 'projects') await this.syncProjects(client);
       } catch (e) {
         logger.error('Error sincronizando proyectos:', e);
+      }
+
+      // Acuerdos
+      try {
+        if (type === 'all' || type === 'agreements') await this.syncAgreements(client);
+      } catch (e) {
+        logger.error('Error sincronizando acuerdos:', e);
+      }
+
+      // Sesiones
+      try {
+        if (type === 'all' || type === 'sessions') await this.syncSessions(client);
+      } catch (e) {
+        logger.error('Error sincronizando sesiones:', e);
+      }
+
+      // Oficios
+      try {
+        if (type === 'all' || type === 'oficios') await this.syncOficios(client);
+      } catch (e) {
+        logger.error('Error sincronizando oficios:', e);
       }
 
       logger.info(`Sincronización [${type}] finalizada.`);

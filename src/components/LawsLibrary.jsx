@@ -360,7 +360,7 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl border p-8 shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border p-8 shadow-2xl ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
             <h2 className="text-2xl font-bold mb-6">{editingId ? 'Editar Ley' : 'Registrar Ley'}</h2>
             <div className="space-y-4">
               <div>
@@ -405,7 +405,11 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
                   <input 
                     type="date" 
                     value={form.fechaPublicacion}
-                    onChange={e => setForm({...form, fechaPublicacion: e.target.value})}
+                    onChange={e => {
+                      const fecha = e.target.value;
+                      const anio = fecha ? new Date(fecha + 'T12:00:00').getFullYear() : new Date().getFullYear();
+                      setForm({...form, fechaPublicacion: fecha, anio});
+                    }}
                     className={`w-full px-4 py-3 rounded-xl border outline-none focus:ring-2 focus:ring-indigo-500 transition-colors ${darkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>

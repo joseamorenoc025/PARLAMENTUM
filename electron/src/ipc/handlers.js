@@ -428,6 +428,18 @@ export const setupIPCHandlers = (mainWindow) => {
         if (table === 'projects') {
           try { await enqueueTask('projects', 0, 'sync'); } catch (e) { logger.error('Auto-sync error:', e); }
         }
+        if (table === 'juntaDirectiva') {
+          try { await enqueueTask('legislators', 0, 'sync'); } catch (e) { logger.error('Auto-sync junta error:', e); }
+        }
+        if (table === 'agreements') {
+          try { await enqueueTask('agreements', 0, 'sync'); } catch (e) { logger.error('Auto-sync agreements error:', e); }
+        }
+        if (table === 'sessions') {
+          try { await enqueueTask('sessions', 0, 'sync'); } catch (e) { logger.error('Auto-sync sessions error:', e); }
+        }
+        if (table === 'oficios') {
+          try { await enqueueTask('oficios', 0, 'sync'); } catch (e) { logger.error('Auto-sync oficios error:', e); }
+        }
         return result;
       } else {
         const result = db.insert(tableSchema).values(data).run();
@@ -443,6 +455,15 @@ export const setupIPCHandlers = (mainWindow) => {
         }
         if (table === 'juntaDirectiva') {
           try { await enqueueTask('legislators', 0, 'sync'); } catch (e) { logger.error('Auto-sync junta error:', e); }
+        }
+        if (table === 'agreements') {
+          try { await enqueueTask('agreements', 0, 'sync'); } catch (e) { logger.error('Auto-sync agreements error:', e); }
+        }
+        if (table === 'sessions') {
+          try { await enqueueTask('sessions', 0, 'sync'); } catch (e) { logger.error('Auto-sync sessions error:', e); }
+        }
+        if (table === 'oficios') {
+          try { await enqueueTask('oficios', 0, 'sync'); } catch (e) { logger.error('Auto-sync oficios error:', e); }
         }
         return result;
       }

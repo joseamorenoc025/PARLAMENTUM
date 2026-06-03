@@ -1,8 +1,20 @@
-const CACHE_NAME = "cerebro-legislativo-cache-v1";
+const CACHE_NAME = "cerebro-legislativo-cache-v2";
 const STATIC_ASSETS = [
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./data.js",
+  "./search.js",
+  "./tracking.js",
+  "./ui.js",
+  "./pdf-viewer.js",
+  "./utils.js",
+  "./views/helpers.js",
+  "./views/junta.js",
+  "./views/laws.js",
+  "./views/legislators.js",
+  "./views/agenda.js",
+  "./views/stats.js",
   "./logo.png",
   "./manifest.json"
 ];

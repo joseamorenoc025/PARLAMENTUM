@@ -55,13 +55,13 @@ const Dashboard = ({ sessions, oficios, projects, laws = [], legislators, darkMo
   const sessionTrend = Math.round(((monthSessions.length - prevMonthSessions.length) / totalSessions) * 100);
   const oficiosTrend = Math.round(((monthOficios.length - prevMonthOficios.length) / (monthOficios.length + prevMonthOficios.length || 1)) * 100);
 
-  const maxSessionType = useMemo(() => Math.max(...Object.values(sessionTypeBreakdown), 1), [sessionTypeBreakdown]);
-
   const sessionTypeBreakdown = useMemo(() => {
     const counts = {};
     monthSessions.forEach(s => { counts[s.tipo] = (counts[s.tipo] || 0) + 1; });
     return counts;
   }, [monthSessions]);
+
+  const maxSessionType = useMemo(() => Math.max(...Object.values(sessionTypeBreakdown), 1), [sessionTypeBreakdown]);
 
   const stalledProjects = useMemo(() => projects.filter(p => {
     if (!p.activo || p.faseActual === 'Sancionada') return false;

@@ -16,6 +16,7 @@ const AuthScreen = ({ onLogin, darkMode, addToast }) => {
   const [restorePassword, setRestorePassword] = useState('');
   const [recoveryPhrase, setRecoveryPhrase] = useState('');
   const [form, setForm] = useState({
+    username: 'admin',
     password: '',
     nombreCompleto: '',
     role: 'admin'

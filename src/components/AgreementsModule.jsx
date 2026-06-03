@@ -323,7 +323,7 @@ const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], s
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-lg rounded-2xl border p-8 shadow-2xl animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-100'}`}>
+          <div className={`w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border p-8 shadow-2xl animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-100'}`}>
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-black">{editingId ? 'Editar Acuerdo' : 'Nuevo Acuerdo'}</h2>
