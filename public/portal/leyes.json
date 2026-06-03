@@ -1,16 +1,16 @@
 [
   {
-    "id": 3,
-    "titulo": "conbvjv",
+    "id": 1,
+    "titulo": "Constitucion",
     "tipo": "Extraordinaria",
-    "numero": "036",
+    "numero": "36",
     "gaceta": null,
-    "anio": 2016,
-    "expediente": "Extraordinaria #036 (2016)",
-    "link_drive": "documentos/ley_1779313481206_Ley_Organica_de_Consejos_Legislativos.pdf.pdf",
-    "fecha_publicacion": "2016-03-23",
+    "anio": 2026,
+    "expediente": "Extraordinaria #36 (2026)",
+    "link_drive": "documentos/ley_1780453699285_GACETA_N°_36_EXTRAORDINARIO.pdf",
+    "fecha_publicacion": "2015-12-16",
     "adjuntos": [],
     "tags": "Constitucion",
-    "updated_at": "2026-05-20T21:53:26.378Z"
+    "updated_at": "2026-06-03T02:29:54.032Z"
   }
 ]
