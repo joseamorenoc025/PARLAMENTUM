@@ -191,13 +191,14 @@ const LawsLibrary = ({ darkMode, addToast, onDataChange }) => {
 
   const handleEdit = (law) => {
     setEditingId(law.id);
+    const cleanDriveLink = (link) => link ? link.replace('Enlace de descarga: ', '') : '';
     setForm({
       titulo: law.titulo,
       gaceta: law.tipo,
       numero: law.numero || '',
       anio: law.anio,
       fechaPublicacion: law.fechaPublicacion,
-      driveLink: law.driveLink || law.contenido.replace('Enlace de descarga: ', ''),
+      driveLink: law.driveLink || cleanDriveLink(law.contenido) || law.link_drive || '',
       fileHash: law.fileHash || '',
       localFilePath: '',
       tags: law.tags || ''

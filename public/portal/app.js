@@ -1,4 +1,4 @@
-import { fetchConfig, fetchLaws, fetchProjects, fetchLegislators, fetchJunta, allLaws, allProjects, allLegislators } from './data.js';
+import { fetchConfig, fetchLaws, fetchProjects, fetchLegislators, fetchJunta, allLaws, allProjects, allLegislators, allJunta } from './data.js';
 import { initSearch } from './search.js';
 import { trackSearch } from './tracking.js';
 import { applyConfig, showStatus, hideStatus } from './ui.js';

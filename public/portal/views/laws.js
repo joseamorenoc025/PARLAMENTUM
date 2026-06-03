@@ -4,11 +4,19 @@ import { search } from '../search.js';
 import { getDownloadCount, getTotalDownloads, buildCounterBadge, trackDownload, trackPreview } from '../tracking.js';
 import { escapeHTML, popularityBadge } from './helpers.js';
 
+function getYear(law) {
+  if (law.fecha_publicacion) {
+    const d = new Date(law.fecha_publicacion + 'T12:00:00');
+    if (!isNaN(d.getTime())) return d.getFullYear();
+  }
+  return law.anio;
+}
+
 export function setupLawsFilters(container) {
   const yearSelect = document.createElement('select');
   yearSelect.id = 'filter-year';
   yearSelect.innerHTML = '<option value="">Todos los años</option>';
-  const years = [...new Set(allLaws.map(l => l.anio))].sort((a, b) => b - a);
+  const years = [...new Set(allLaws.map(l => getYear(l)).filter(Boolean))].sort((a, b) => b - a);
   years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
 
   const typeSelect = document.createElement('select');
@@ -52,7 +60,7 @@ export function renderLaws(term, renderCurrentView) {
   }
 
   filtered = filtered.filter(l => {
-    const matchYear = !year || String(l.anio) === year;
+    const matchYear = !year || String(getYear(l)) === year;
     const lawType = l.gaceta || l.tipo || 'Ordinaria';
     return matchYear && (!type || lawType === type) &&
       (!selectedTag || (l.tags && l.tags.split(',').map(t => t.trim().toLowerCase()).includes(selectedTag.toLowerCase())));
@@ -67,6 +75,7 @@ export function renderLaws(term, renderCurrentView) {
 
     const localDl = getDownloadCount('ley', l.id);
     const totalDl = localDl + (l.descargas || 0);
+    const yearDisplay = getYear(l) || 'N/A';
 
     card.innerHTML = `
       <div class="card-header-row">
@@ -76,7 +85,7 @@ export function renderLaws(term, renderCurrentView) {
       <h3 class="law-title">${escapeHTML(l.titulo)}</h3>
       <div class="law-meta">
         <span class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente || 'No asignado'}</span>
-        <span class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${l.anio || 'N/A'}</span>
+        <span class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${yearDisplay}</span>
       </div>
       ${renderTags(l.tags || l.materia, renderCurrentView)}
       ${renderLawActions(l, card)}
