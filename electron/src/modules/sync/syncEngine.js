@@ -27,9 +27,10 @@ const LeyesJsonSchema = z.array(LawMetadataSchema);
  * Motor de sincronización entre DB local y GitHub.
  */
 export class SyncEngine {
-  constructor(owner, repo) {
+  constructor(owner, repo, branch = 'gh-pages') {
     this.owner = owner;
     this.repo = repo;
+    this.branch = branch;
     this.lawsPath = 'public/portal/leyes.json';
     this.legislatorsPath = 'public/portal/legisladores.json';
     this.juntaPath = 'public/portal/junta_directiva.json';

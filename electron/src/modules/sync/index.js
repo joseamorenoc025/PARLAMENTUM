@@ -18,7 +18,8 @@ export async function getRepoConfig() {
   const config = db.select().from(schema.config).all();
   const owner = config.find(c => c.key === 'sync_github_owner')?.value || DEFAULT_OWNER;
   const repo = config.find(c => c.key === 'sync_github_repo')?.value || DEFAULT_REPO;
-  return { owner, repo };
+  const branch = config.find(c => c.key === 'sync_github_branch')?.value || 'gh-pages';
+  return { owner, repo, branch };
 }
 
 let queueManager = null;
@@ -28,8 +29,8 @@ let queueManager = null;
  */
 async function initQueueManager() {
   if (queueManager) return queueManager;
-  const { owner, repo } = await getRepoConfig();
-  queueManager = new SyncQueueManager(owner, repo);
+  const { owner, repo, branch } = await getRepoConfig();
+  queueManager = new SyncQueueManager(owner, repo, branch);
   queueManager.startBackgroundWorker();
   return queueManager;
 }
@@ -97,7 +98,7 @@ export const setupSyncHandlers = async () => {
   });
 
   // Configurar Repo
-  ipcMain.handle('sync:github:set-repo', async (_, { owner, repo }) => {
+  ipcMain.handle('sync:github:set-repo', async (_, { owner, repo, branch }) => {
     try {
       // Upsert owner
       const existingOwner = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_owner')).all();
@@ -113,6 +114,14 @@ export const setupSyncHandlers = async () => {
         db.update(schema.config).set({ value: repo }).where(eq(schema.config.key, 'sync_github_repo')).run();
       } else {
         db.insert(schema.config).values({ key: 'sync_github_repo', value: repo }).run();
+      }
+
+      // Upsert branch
+      const existingBranch = db.select().from(schema.config).where(eq(schema.config.key, 'sync_github_branch')).all();
+      if (existingBranch.length > 0) {
+        db.update(schema.config).set({ value: branch || 'gh-pages' }).where(eq(schema.config.key, 'sync_github_branch')).run();
+      } else {
+        db.insert(schema.config).values({ key: 'sync_github_branch', value: branch || 'gh-pages' }).run();
       }
 
       return { success: true };

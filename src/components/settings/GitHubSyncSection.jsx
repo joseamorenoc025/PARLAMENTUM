@@ -5,7 +5,7 @@ import SectionHeader from './SectionHeader';
 export default function GitHubSyncSection({ darkMode, addToast, queueStats }) {
   const [token, setToken] = useState('');
   const [hasToken, setHasToken] = useState(null);
-  const [repoConfig, setRepoConfig] = useState({ owner: '', repo: '' });
+  const [repoConfig, setRepoConfig] = useState({ owner: '', repo: '', branch: 'gh-pages' });
   const [isValidating, setIsValidating] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +63,7 @@ export default function GitHubSyncSection({ darkMode, addToast, queueStats }) {
       await window.legisAPI.sync.github.clear();
       setHasToken(false);
       setSyncStatus(null);
-      setRepoConfig({ owner: '', repo: '' });
+      setRepoConfig({ owner: '', repo: '', branch: 'gh-pages' });
       addToast('Token eliminado', 'success');
     } catch {
       addToast('Error al eliminar token', 'error');
@@ -131,7 +131,7 @@ export default function GitHubSyncSection({ darkMode, addToast, queueStats }) {
                 <span className="text-sm font-medium text-emerald-600">Token configurado</span>
               </div>
               <form onSubmit={handleSaveRepo} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="text"
                     value={repoConfig.owner}
@@ -144,6 +144,13 @@ export default function GitHubSyncSection({ darkMode, addToast, queueStats }) {
                     value={repoConfig.repo}
                     onChange={e => setRepoConfig({ ...repoConfig, repo: e.target.value })}
                     placeholder="Repo"
+                    className={`px-3 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                  />
+                  <input
+                    type="text"
+                    value={repoConfig.branch}
+                    onChange={e => setRepoConfig({ ...repoConfig, branch: e.target.value })}
+                    placeholder="Branch (ej: gh-pages)"
                     className={`px-3 py-2 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-indigo-500 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
                   />
                 </div>

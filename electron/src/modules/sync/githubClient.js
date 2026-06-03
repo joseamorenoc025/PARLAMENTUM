@@ -58,9 +58,10 @@ export class GitHubClient {
    * @param {string} repo 
    * @param {string} path 
    */
-  async getRemoteFile(owner, repo, path) {
+  async getRemoteFile(owner, repo, path, branch = 'gh-pages') {
     try {
-      const response = await this.fetchWithTimeout(`${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}`, {
+      const url = `${GITHUB_API_URL}/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+      const response = await this.fetchWithTimeout(url, {
         headers: this.headers
       });
 
@@ -96,15 +97,16 @@ export class GitHubClient {
    * @param {string} message 
    * @param {string} sha (opcional para actualizaciones)
    */
-  async updateFile(owner, repo, path, contentOrBuffer, message, sha = null) {
+  async updateFile(owner, repo, path, contentOrBuffer, message, sha = null, branch = 'gh-pages') {
     try {
-      const base64Content = Buffer.isBuffer(contentOrBuffer) 
+      const base64Content = Buffer.isBuffer(contentOrBuffer)
         ? contentOrBuffer.toString('base64')
         : Buffer.from(contentOrBuffer).toString('base64');
 
       const body = {
         message,
         content: base64Content,
+        branch,
       };
 
       if (sha) {

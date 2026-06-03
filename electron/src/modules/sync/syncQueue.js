@@ -8,9 +8,10 @@ import { eq, and, lte, or, asc, sql } from 'drizzle-orm';
  * Gestor de la cola de sincronización.
  */
 export class SyncQueueManager {
-  constructor(owner, repo) {
+  constructor(owner, repo, branch = 'gh-pages') {
     this.owner = owner;
     this.repo = repo;
+    this.branch = branch;
     this.isProcessing = false;
     this.timer = null;
   }
@@ -84,7 +85,7 @@ export class SyncQueueManager {
       logger.info(`Procesando cola de sincronización: ${pendingTasks.length} tareas. (Force: ${force})`);
 
       const syncTypes = new Set(pendingTasks.map(t => t.entityType));
-      const engine = new SyncEngine(this.owner, this.repo);
+      const engine = new SyncEngine(this.owner, this.repo, this.branch);
       
       for (const type of syncTypes) {
         await engine.run(type);
