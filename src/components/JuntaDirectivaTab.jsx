@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Crown, Users, BookOpen, Star, Plus, Trash2, Camera, Loader2,
-  Calendar, Building2, AlertCircle, CheckCircle2
+  Calendar, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import ConfirmDialog from './ui/ConfirmDialog';
 

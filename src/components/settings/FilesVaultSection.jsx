@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { FolderOpen, Search, Filter, FileText, CalendarDays, Scale, Trash2, Download } from 'lucide-react';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import SectionHeader from './SectionHeader';
@@ -15,7 +15,7 @@ export default function FilesVaultSection({ darkMode, addToast, documents, sessi
   const [fileFilterType, setFileFilterType] = useState('');
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, destructive: false });
 
-  const getEntityName = (doc) => {
+  const getEntityName = useCallback((doc) => {
     const id = Number(doc.entidadId);
     if (doc.entidadTipo === 'law') return laws?.find(l => l.id === id)?.titulo || `Ley #${id}`;
     if (doc.entidadTipo === 'project') return projects?.find(p => p.id === id)?.titulo || `Proyecto #${id}`;
@@ -23,7 +23,7 @@ export default function FilesVaultSection({ darkMode, addToast, documents, sessi
     if (doc.entidadTipo === 'oficio') return oficios?.find(o => o.id === id)?.asunto || `Oficio #${id}`;
     if (doc.entidadTipo === 'agreement') return agreements?.find(a => a.id === id)?.objeto || `Acuerdo #${id}`;
     return 'Sin vinculo';
-  };
+  }, [laws, projects, sessions, oficios, agreements]);
 
   const filteredDocs = useMemo(() => {
     if (!documents) return [];
@@ -35,7 +35,7 @@ export default function FilesVaultSection({ darkMode, addToast, documents, sessi
       }
       return true;
     });
-  }, [documents, fileSearch, fileFilterType, laws, projects, sessions, oficios, agreements]);
+  }, [documents, fileSearch, fileFilterType, getEntityName]);
 
   const handleDeleteFile = (doc) => {
     setConfirmDialog({

@@ -23,11 +23,6 @@ export const useLegisData = (defaultConfig) => {
     }
   }, []);
 
-  const loadConfig = useCallback(async () => {
-    const dbConfig = await dbService.getConfig();
-    setConfig(prev => ({ ...prev, ...dbConfig }));
-  }, []);
-
   const loadSessions = useCallback(async () => setSessions(await dbService.getSessions()), []);
   const loadLegislators = useCallback(async () => setLegislators(await dbService.getLegislators()), []);
   const loadCommissions = useCallback(async () => setCommissions(await dbService.getCommissions()), []);

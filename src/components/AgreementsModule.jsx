@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   Plus, Search, Download, Trash2, QrCode, 
-  Loader2, Gavel, FileText, Calendar, ExternalLink, Filter
+  Loader2, Gavel, FileText, Calendar, ExternalLink
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';
 import ConfirmDialog from './ui/ConfirmDialog';
 import useDebounce from '../hooks/useDebounce';
 
-const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], saveDocument, deleteDocument, reload }) => {
+const AgreementsModule = ({ darkMode, addToast, sessions = [], documents = [], deleteDocument, reload }) => {
   const [agreements, setAgreements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron';
 import { saveToken, loadToken, clearToken } from './tokenStorage.js';
 import { GitHubClient } from './githubClient.js';
-import { SyncEngine } from './syncEngine.js';
 import { SyncQueueManager } from './syncQueue.js';
 import { logger } from '../../lib/logger.js';
 import { db } from '../../db/index.js';

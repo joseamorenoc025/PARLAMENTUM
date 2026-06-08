@@ -1,17 +1,15 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Plus, ArrowRight, ChevronLeft, ChevronRight, History, Trash2, Layout, Clock, CheckCircle2, Gavel, Scale, AlertCircle, ExternalLink
+  Plus, ArrowRight, ChevronLeft, History, Trash2, Layout, Clock, Gavel, Scale, AlertCircle, ExternalLink
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import ProjectTimeline from './ProjectTimeline';
 import { getStagnationColor, getStagnationLabel } from '../utils/helpers';
 import ConfirmDialog from './ui/ConfirmDialog';
 
-const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], saveDocument, deleteDocument, reload }) => {
+const AgendaModule = ({ projects, commissions, legislators, onSave, onDelete, darkMode, addToast, config, documents = [], deleteDocument, reload }) => {
   const [view, setView] = useState('kanban');
   const [editingId, setEditingId] = useState(null);
-  const [currentColIndex, setCurrentColIndex] = useState(0);
-  const kanbanRef = useRef(null);
   const [form, setForm] = useState({ 
     titulo: '', 
     origen: 'Comisión', 

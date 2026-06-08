@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Users, User, Shield, Phone, Mail, UserPlus, FileText, Camera, QrCode, Crown } from 'lucide-react';
+import { Plus, Trash2, Users, User, Shield, UserPlus, Camera, QrCode, Crown } from 'lucide-react';
 import Modal from './ui/Modal';
 import EmptyState from './ui/EmptyState';
 import JuntaDirectivaTab from './JuntaDirectivaTab';

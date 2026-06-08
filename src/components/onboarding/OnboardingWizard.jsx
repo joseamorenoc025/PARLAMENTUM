@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, UserPlus, ShieldCheck, CheckCircle2, 
-  ChevronRight, ChevronLeft, Loader2, Image as ImageIcon,
+  ChevronRight, Loader2, Image as ImageIcon,
   ShieldAlert, AlertCircle, RefreshCw, Copy, Download, FileText, Lock
 } from 'lucide-react';
 import BackupRestoreStep from './BackupRestoreStep';
@@ -60,8 +60,7 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
     }
   };
 
-  const handleRestoreComplete = (userInfo) => {
-    // Al restaurar con éxito, saltamos directamente al final o completamos
+  const handleRestoreComplete = () => {
     onComplete();
   };
 
@@ -273,7 +272,6 @@ const OnboardingWizard = ({ darkMode, onComplete, addToast }) => {
 
       case 4:
         if (showVerification) {
-          const words = recoveryCode ? recoveryCode.split(' ') : [];
           return (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 py-4">
               <div className="mx-auto p-4 rounded-full bg-indigo-500/10 text-indigo-500 w-fit mb-4">

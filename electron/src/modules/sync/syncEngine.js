@@ -21,7 +21,7 @@ const LawMetadataSchema = z.object({
   updated_at: z.string()
 });
 
-const LeyesJsonSchema = z.array(LawMetadataSchema);
+const _LeyesJsonSchema = z.array(LawMetadataSchema);
 
 /**
  * Motor de sincronización entre DB local y GitHub.

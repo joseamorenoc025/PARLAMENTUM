@@ -5,7 +5,7 @@ import {
 import EmptyState from './ui/EmptyState';
 import ConfirmDialog from './ui/ConfirmDialog';
 
-const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], saveDocument, deleteDocument, reload }) => {
+const OficiosModule = ({ oficios, sessions, onSave, onDelete, darkMode, addToast, onNavigate, documents = [], deleteDocument, reload }) => {
   const [view, setView] = useState('list');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ numeroOficio: '', fecha: new Date().toISOString().split('T')[0], organoReceptor: '', asunto: '', sesionId: '', localFilePath: null, localFileName: '' });

@@ -110,7 +110,7 @@ export const setupIPCHandlers = (mainWindow) => {
     try {
       const results = db.select().from(schema.users).limit(1).all();
       if (!results[0]) return null;
-      const { passwordHash, recoveryCodeHash, securityAnswerHash, ...safe } = results[0];
+      const { passwordHash: _ph, recoveryCodeHash: _rh, securityAnswerHash: _sh, ...safe } = results[0];
       return safe;
     } catch (err) {
       logger.error('Auth get user error:', err);
