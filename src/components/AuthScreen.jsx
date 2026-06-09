@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { User, Lock, ArrowRight, ShieldCheck, UserPlus, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
+import { User, Lock, ArrowRight, Eye, EyeOff, Check, X, RefreshCw } from 'lucide-react';
 import { dbService } from '../services/db';
 import ConfirmDialog from './ui/ConfirmDialog';
 

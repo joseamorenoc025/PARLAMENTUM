@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  ChevronLeft, Plus, Edit3, Trash2, CalendarDays, RefreshCw, Link,
+  ChevronLeft, Plus, Edit3, Trash2, RefreshCw, Link,
   CalendarClock, FileText
 } from 'lucide-react';
 import { getSessionTypeByDate, generateSessionNumber } from '../utils/helpers';

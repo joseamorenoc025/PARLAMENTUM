@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FileArchive, ShieldCheck, AlertCircle, Loader2, 
-  ChevronLeft, CheckCircle2, Eye, EyeOff, UploadCloud
+  CheckCircle2, Eye, EyeOff, UploadCloud
 } from 'lucide-react';
 
 const BackupRestoreStep = ({ darkMode, onComplete, onCancel, addToast }) => {
@@ -10,18 +10,6 @@ const BackupRestoreStep = ({ darkMode, onComplete, onCancel, addToast }) => {
   const [password, setPassword] = useState('');
   const [filePath, setFilePath] = useState('');
   const [error, setError] = useState(null);
-
-  const handleFileSelect = async () => {
-    try {
-      const result = await window.legisAPI.dialog.openBackup();
-      if (result) {
-        setFilePath(result);
-        setError(null);
-      }
-    } catch (err) {
-      console.error('File selection failed:', err);
-    }
-  };
 
   const handleRestore = async () => {
     if (!filePath || password.length < 8) return;

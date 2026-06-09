@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Plus, Search, Download, Trash2, QrCode, 
-  Loader2, Scale, ExternalLink, FileText, ShieldCheck, FileCheck, TriangleAlert
+  Loader2, Scale, ExternalLink, FileText, ShieldCheck, FileCheck
 } from 'lucide-react';
 import { dbService } from '../services/db';
 import EmptyState from './ui/EmptyState';

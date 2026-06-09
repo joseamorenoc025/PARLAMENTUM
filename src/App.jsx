@@ -23,8 +23,8 @@ import AnalyticsModule from './components/AnalyticsModule';
 
 // Iconos
 import { 
-  LayoutDashboard, Users, Calendar, FileText, Scale, FolderOpen, 
-  Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel, ShieldCheck,
+  LayoutDashboard, Users, Calendar, FileText, Scale, 
+  Search, Moon, Sun, ChevronRight, ChevronLeft, Gavel,
   LogOut, Database, GitBranch, Activity, BarChart3
 } from 'lucide-react';
 
@@ -46,7 +46,7 @@ export default function App() {
     oficios, saveOficio, deleteOficio,
     projects, saveProject, deleteProject,
     laws,
-    agreements, saveAgreement, deleteAgreement,
+    agreements,
     documents, saveDocument, deleteDocument,
     auditLogs,
     isLoading, reload: loadAllData
@@ -77,6 +77,7 @@ export default function App() {
     }
     mq.addEventListener('change', handleChange);
     return () => mq.removeEventListener('change', handleChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -90,17 +91,6 @@ export default function App() {
 
   // Verificar entorno Electron
   const isElectron = window.legisAPI !== undefined;
-
-  // Glassmorphism classes
-  const glassBase = darkMode
-    ? 'bg-gray-900/80 border border-white/10'
-    : 'bg-white/80 border border-black/5';
-  const glassCard = darkMode
-    ? 'bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-glass'
-    : 'bg-white/60 backdrop-blur-xl border border-black/5 shadow-glass-light';
-  const glassHover = darkMode
-    ? 'hover:bg-gray-800/80 hover:border-white/20'
-    : 'hover:bg-white/90 hover:border-black/10';
 
   useEffect(() => {
     if (!isElectron) return;

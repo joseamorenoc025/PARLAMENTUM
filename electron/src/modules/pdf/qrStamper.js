@@ -59,7 +59,7 @@ export async function stampQR(entidadTipo, entidadId) {
     const qrImage = await pdfDoc.embedPng(qrBuffer);
     const pages = pdfDoc.getPages();
     const lastPage = pages[pages.length - 1];
-    const { width, height } = lastPage.getSize();
+    const { width } = lastPage.getSize();
 
     // 5. Draw QR on bottom right (with some margin)
     const qrSize = 100;

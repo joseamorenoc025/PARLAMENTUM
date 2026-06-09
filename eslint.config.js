@@ -61,7 +61,11 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
-      'no-unused-vars': 'warn',
+      'no-unused-vars': ['warn', {
+        args: 'after-used',
+        varsIgnorePattern: '^_',
+        caughtErrors: 'none',
+      }],
       'react-hooks/exhaustive-deps': 'warn',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/preserve-manual-memoization': 'off',

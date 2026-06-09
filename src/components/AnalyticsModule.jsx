@@ -1,7 +1,7 @@
 import React from 'react';
-import { BarChart3, ExternalLink, Settings, Shield, Info } from 'lucide-react';
+import { BarChart3, ExternalLink, Settings, Info } from 'lucide-react';
 
-export default function AnalyticsModule({ config = {}, darkMode, addToast, setCurrentPage }) {
+export default function AnalyticsModule({ config = {}, darkMode, setCurrentPage }) {
   const sharedLink = config.plausible_shared_link || '';
 
   const getIframeUrl = () => {

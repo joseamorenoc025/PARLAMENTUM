@@ -10,3 +10,4 @@ dist/
 *.db
 *.clbak
 test_output.txt
+.worktrees/

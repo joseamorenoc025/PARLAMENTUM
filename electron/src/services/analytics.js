@@ -1,4 +1,4 @@
-import { app, safeStorage } from 'electron';
+import { app } from 'electron';
 import { db } from '../db/index.js';
 import { config as configTable } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
