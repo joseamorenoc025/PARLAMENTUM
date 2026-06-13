@@ -9,10 +9,12 @@ const LEGISLATIVE_PHASES = ['Recepción', 'Estudio en Comisión', '1ra Discusió
 export function setupAgendaFilters(container) {
   const stateSelect = document.createElement('select');
   stateSelect.id = 'filter-state';
+  stateSelect.setAttribute('aria-label', 'Filtrar por estado');
   stateSelect.innerHTML = '<option value="">Todos los estados</option><option value="en_comision">En Comisión</option><option value="aprobado">Aprobado</option><option value="rechazado">Rechazado</option>';
 
   const tagSelect = document.createElement('select');
   tagSelect.id = 'filter-tag';
+  tagSelect.setAttribute('aria-label', 'Filtrar por materia o eje temático');
   tagSelect.innerHTML = '<option value="">Materia / Eje Temático</option>';
   const allTags = new Set();
   allProjects.forEach(p => { if (p.tags) p.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTags.add(t)); });
@@ -70,8 +72,8 @@ export function renderAgenda(term, renderCurrentView) {
       <h3 class="law-title">${escapeHTML(p.titulo)}</h3>
       <p class="law-extracto">${escapeHTML(p.extracto) || ''}</p>
       <div class="law-meta">
-        <span class="meta-item"><i data-lucide="user" style="width:12px"></i> ${escapeHTML(p.ponente || '')}</span>
-        <span class="meta-item"><i data-lucide="users" style="width:12px"></i> ${escapeHTML(p.comision || '')}</span>
+        <span class="meta-item"><i data-lucide="user" class="icon-xs"></i> ${escapeHTML(p.ponente || '')}</span>
+        <span class="meta-item"><i data-lucide="users" class="icon-xs"></i> ${escapeHTML(p.comision || '')}</span>
       </div>
       ${renderTags(p.tags, renderCurrentView)}
       ${buildPhaseTimeline(p)}
@@ -104,8 +106,8 @@ function buildPhaseTimeline(project) {
 
     const docBtn = hasDoc
       ? `<div class="phase-doc-btns">
-          <button class="phase-doc-btn" data-preview="${escapeHTML(doc.relative_path)}" data-title="${escapeHTML(doc.nombre || phase)}" data-type="proyecto" data-id="${project.id}"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
-          <a href="${escapeHTML(doc.relative_path)}" target="_blank" class="phase-doc-btn" data-track-download="${project.id}" data-track-type="proyecto"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+          <button class="phase-doc-btn" data-preview="${escapeHTML(doc.relative_path)}" data-title="${escapeHTML(doc.nombre || phase)}" data-type="proyecto" data-id="${project.id}"><i data-lucide="eye" class="icon-xxs"></i> Ver</button>
+          <a href="${escapeHTML(doc.relative_path)}" target="_blank" class="phase-doc-btn" data-track-download="${project.id}" data-track-type="proyecto"><i data-lucide="download" class="icon-xxs"></i> PDF</a>
          </div>`
       : '';
 
@@ -116,15 +118,15 @@ function buildPhaseTimeline(project) {
     <div class="phase-node phase-has-doc">
       <span class="phase-node-label">${escapeHTML(adj.fase)}</span>
       <div class="phase-doc-btns">
-        <button class="phase-doc-btn" data-preview="${escapeHTML(adj.relative_path)}" data-title="${escapeHTML(adj.nombre)}" data-type="proyecto" data-id="${project.id}"><i data-lucide="eye" style="width: 8px; height: 8px;"></i> Ver</button>
-        <a href="${escapeHTML(adj.relative_path)}" target="_blank" class="phase-doc-btn" data-track-download="${project.id}" data-track-type="proyecto"><i data-lucide="download" style="width: 8px; height: 8px;"></i> PDF</a>
+        <button class="phase-doc-btn" data-preview="${escapeHTML(adj.relative_path)}" data-title="${escapeHTML(adj.nombre)}" data-type="proyecto" data-id="${project.id}"><i data-lucide="eye" class="icon-xxs"></i> Ver</button>
+        <a href="${escapeHTML(adj.relative_path)}" target="_blank" class="phase-doc-btn" data-track-download="${project.id}" data-track-type="proyecto"><i data-lucide="download" class="icon-xxs"></i> PDF</a>
       </div>
     </div>
   `).join('');
 
   return `
     <div class="phase-timeline">
-      <div class="phase-timeline-title"><i data-lucide="git-branch" style="width: 12px; height: 12px;"></i> Trámite Legislativo</div>
+      <div class="phase-timeline-title"><i data-lucide="git-branch" class="icon-xs"></i> Trámite Legislativo</div>
       <div class="phase-timeline-list">${nodesHtml}${extraHtml}</div>
     </div>
   `;

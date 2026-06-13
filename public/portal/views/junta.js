@@ -29,9 +29,9 @@ export function renderJunta(term) {
     card.className = 'card legislator-card';
     card.innerHTML = `
       <div class="junta-badge">
-        <i data-lucide="crown" style="width: 10px; height: 10px;"></i> Junta Directiva
+        <i data-lucide="crown" class="icon-xxs"></i> Junta Directiva
       </div>
-      <img src="${j.foto || getDefaultAvatar()}" onerror="this.onerror=null; this.src='${getDefaultAvatar()}'" class="legislator-img" loading="lazy" alt="${escapeHTML(j.nombre)}" style="margin-top: 1rem;">
+      <img src="${j.foto || getDefaultAvatar()}" onerror="this.onerror=null; this.src='${getDefaultAvatar()}'" class="legislator-img legislator-img-spaced" loading="lazy" alt="${escapeHTML(j.nombre)}">
       <h3 class="legislator-name">${escapeHTML(j.nombre)}</h3>
       <span class="legislator-party">${escapeHTML(j.partido || '')}</span>
       <p class="junta-rol">${escapeHTML(j.rol)}</p>

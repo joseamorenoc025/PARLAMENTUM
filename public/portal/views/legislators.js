@@ -7,6 +7,7 @@ import { escapeHTML } from './helpers.js';
 export function setupLegislatorsFilters(container) {
   const filter = document.createElement('select');
   filter.id = 'filter-party';
+  filter.setAttribute('aria-label', 'Filtrar por partido');
   filter.innerHTML = '<option value="">Todos los partidos</option>';
   const parties = [...new Set(allLegislators.map(l => l.partido).filter(Boolean))].sort();
   parties.forEach(p => filter.innerHTML += `<option value="${p}">${p}</option>`);

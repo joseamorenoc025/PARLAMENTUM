@@ -43,11 +43,11 @@ export function renderStatsDashboard() {
     </div>
     <div class="stats-charts-row">
       <div class="chart-card">
-        <h3><i data-lucide="bar-chart" style="color: #4f46e5; width: 18px; height: 18px;"></i> Histórico de Leyes Aprobadas</h3>
+        <h3><i data-lucide="bar-chart" class="icon-md" style="color: var(--primary);"></i> Histórico de Leyes Aprobadas</h3>
         <div class="chart-bars">${totalLaws > 0 ? lawsBarsHtml : '<p class="chart-empty">No hay registro histórico de leyes.</p>'}</div>
       </div>
       <div class="chart-card">
-        <h3><i data-lucide="pie-chart" style="color: #10b981; width: 18px; height: 18px;"></i> Proyectos por Fase del Proceso</h3>
+        <h3><i data-lucide="pie-chart" class="icon-md" style="color: var(--accent-emerald);"></i> Proyectos por Fase del Proceso</h3>
         <div class="chart-bars">${totalProjects > 0 ? projectsBarsHtml : '<p class="chart-empty">No hay proyectos registrados en la agenda.</p>'}</div>
       </div>
     </div>
@@ -75,7 +75,7 @@ function statCard(icon, label, value, bg, color) {
   return `
     <div class="stat-counter-card">
       <div class="stat-counter-icon" style="background: ${bg}; color: ${color};">
-        <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
+        <i data-lucide="${icon}" class="icon-md"></i>
       </div>
       <div class="stat-counter-info">
         <h3>${label}</h3>

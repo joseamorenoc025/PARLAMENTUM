@@ -15,16 +15,19 @@ function getYear(law) {
 export function setupLawsFilters(container) {
   const yearSelect = document.createElement('select');
   yearSelect.id = 'filter-year';
+  yearSelect.setAttribute('aria-label', 'Filtrar por año');
   yearSelect.innerHTML = '<option value="">Todos los años</option>';
   const years = [...new Set(allLaws.map(l => getYear(l)).filter(Boolean))].sort((a, b) => b - a);
   years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
 
   const typeSelect = document.createElement('select');
   typeSelect.id = 'filter-type';
+  typeSelect.setAttribute('aria-label', 'Filtrar por tipo de gaceta');
   typeSelect.innerHTML = '<option value="">Gaceta: Todas</option><option value="Ordinaria">Ordinaria</option><option value="Extraordinaria">Extraordinaria</option>';
 
   const tagSelect = document.createElement('select');
   tagSelect.id = 'filter-tag';
+  tagSelect.setAttribute('aria-label', 'Filtrar por materia o eje temático');
   tagSelect.innerHTML = '<option value="">Materia / Eje Temático</option>';
   const allTags = new Set();
   allLaws.forEach(l => { if (l.tags) l.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => allTags.add(t)); });
@@ -84,8 +87,8 @@ export function renderLaws(term, renderCurrentView) {
       </div>
       <h3 class="law-title">${escapeHTML(l.titulo)}</h3>
       <div class="law-meta">
-        <span class="meta-item"><i data-lucide="file-text" style="width:12px"></i> ${l.expediente || 'No asignado'}</span>
-        <span class="meta-item"><i data-lucide="calendar" style="width:12px"></i> ${yearDisplay}</span>
+        <span class="meta-item"><i data-lucide="file-text" class="icon-xs"></i> ${l.expediente || 'No asignado'}</span>
+        <span class="meta-item"><i data-lucide="calendar" class="icon-xs"></i> ${yearDisplay}</span>
       </div>
       ${renderTags(l.tags || l.materia, renderCurrentView)}
       ${renderLawActions(l, card)}
@@ -109,10 +112,10 @@ function renderLawActions(l, card) {
   return `
     <div class="law-actions">
       <button class="btn-primary" data-preview="${escapeHTML(l.link_drive)}" data-title="${escapeHTML(l.titulo)}" data-type="ley" data-id="${l.id}">
-        <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver PDF
+        <i data-lucide="eye" class="icon-sm"></i> Ver PDF
       </button>
       <a href="${escapeHTML(l.link_drive)}" target="_blank" class="btn-secondary" data-track-download="${l.id}" data-track-type="ley">
-        <i data-lucide="download" style="width: 14px; height: 14px;"></i> Descargar
+        <i data-lucide="download" class="icon-sm"></i> Descargar
       </a>
     </div>
     ${buildCounterBadge('ley', l.id)}
@@ -123,18 +126,18 @@ function renderAdjuntos(adjuntos, parentId) {
   if (!adjuntos || adjuntos.length === 0) return '';
   return `
     <div class="law-adjuntos">
-      <div class="law-adjuntos-title"><i data-lucide="paperclip" style="width: 12px; height: 12px;"></i> Documentos Adjuntos</div>
+      <div class="law-adjuntos-title"><i data-lucide="paperclip" class="icon-xs"></i> Documentos Adjuntos</div>
       ${adjuntos.map(adj => `
         <div class="law-adjunto-item">
-          <div class="law-adjunto-icon"><i data-lucide="file-text" style="width: 14px; height: 14px;"></i></div>
+          <div class="law-adjunto-icon"><i data-lucide="file-text" class="icon-sm"></i></div>
           <span class="law-adjunto-name">${escapeHTML(adj.nombre)}</span>
           <div class="law-adjunto-actions">
             <button class="law-adjunto-download" data-preview="${escapeHTML(adj.relative_path)}" data-title="${escapeHTML(adj.nombre)}" data-type="ley" data-id="${parentId}">
-              <i data-lucide="eye" style="width: 12px; height: 12px;"></i> Ver
+              <i data-lucide="eye" class="icon-xs"></i> Ver
             </button>
             <span class="adjunto-sep">|</span>
             <a href="${escapeHTML(adj.relative_path)}" target="_blank" class="law-adjunto-download" data-track-download="${parentId}" data-track-type="ley">
-              <i data-lucide="download" style="width: 12px; height: 12px;"></i> PDF
+              <i data-lucide="download" class="icon-xs"></i> PDF
             </a>
           </div>
         </div>

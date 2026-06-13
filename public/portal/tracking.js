@@ -39,7 +39,7 @@ export function incrementDownload(entityType, entityId) {
 
 export function buildCounterBadge(entityType, entityId) {
   const count = getDownloadCount(entityType, entityId);
-  return `<div class="download-counter${count > 0 ? ' has-downloads' : ''}"><i data-lucide="arrow-down-to-line" style="width: 11px; height: 11px;"></i> <span id="dl-badge-${entityType}-${entityId}">${count}</span></div>`;
+  return `<div class="download-counter${count > 0 ? ' has-downloads' : ''}"><i data-lucide="arrow-down-to-line" class="icon-xxs"></i> <span id="dl-badge-${entityType}-${entityId}">${count}</span></div>`;
 }
 
 export function getTotalDownloads(entityType, items) {

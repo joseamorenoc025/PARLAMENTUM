@@ -19,7 +19,7 @@ export function openPdfPreview(url, title, type, id) {
     <div class="pdf-modal-content">
       <div class="pdf-modal-header">
         <h3 title="${title.replace(/"/g, '&quot;')}">${title}</h3>
-        <button class="pdf-close-btn" id="pdf-close-btn">✕ Cerrar</button>
+        <button class="pdf-close-btn" id="pdf-close-btn" aria-label="Cerrar vista previa">✕ Cerrar</button>
       </div>
       <div class="pdf-canvas-container">
         <div class="pdf-loading-spinner" id="pdf-spinner">
@@ -30,19 +30,19 @@ export function openPdfPreview(url, title, type, id) {
       </div>
       <div class="pdf-controls">
         <div class="pdf-controls-group">
-          <button id="pdf-prev" class="pdf-btn">◀ Anterior</button>
+          <button id="pdf-prev" class="pdf-btn" aria-label="Página anterior">◀ Anterior</button>
           <span class="pdf-page-indicator">Pág. <span id="pdf-page-num">1</span> de <span id="pdf-page-count">-</span></span>
-          <button id="pdf-next" class="pdf-btn">Siguiente ▶</button>
+          <button id="pdf-next" class="pdf-btn" aria-label="Página siguiente">Siguiente ▶</button>
         </div>
         <div class="pdf-controls-group">
-          <button class="pdf-btn" id="pdf-zoom-out"><i data-lucide="zoom-out" style="width:14px;height:14px;"></i></button>
-          <span id="pdf-zoom-percent" style="font-size:0.75rem; font-weight:600; min-width:40px; text-align:center;">100%</span>
-          <button class="pdf-btn" id="pdf-zoom-in"><i data-lucide="zoom-in" style="width:14px;height:14px;"></i></button>
-          <button class="pdf-btn" id="pdf-zoom-fit"><i data-lucide="maximize" style="width:14px;height:14px;"></i> Ajustar</button>
+          <button class="pdf-btn" id="pdf-zoom-out" aria-label="Reducir zoom"><i data-lucide="zoom-out" class="icon-sm"></i></button>
+          <span id="pdf-zoom-percent" class="pdf-zoom-percent">100%</span>
+          <button class="pdf-btn" id="pdf-zoom-in" aria-label="Ampliar zoom"><i data-lucide="zoom-in" class="icon-sm"></i></button>
+          <button class="pdf-btn" id="pdf-zoom-fit" aria-label="Ajustar a página"><i data-lucide="maximize" class="icon-sm"></i> Ajustar</button>
         </div>
       </div>
       <div class="pdf-download-footer">
-        <a href="${url}" target="_blank" class="download-btn" id="pdf-download-link">
+        <a href="${url}" target="_blank" class="download-btn" id="pdf-download-link" aria-label="Descargar PDF completo">
           <i data-lucide="download"></i> Descargar PDF Completo
         </a>
       </div>
@@ -87,7 +87,7 @@ async function loadPdf(url) {
   } catch (err) {
     console.error('Error loading PDF:', err);
     const spinner = document.getElementById('pdf-spinner');
-    if (spinner) spinner.innerHTML = '<span style="color:#f87171; text-align:center; padding: 1rem;">⚠️ Vista previa no disponible para este enlace externo. Puede intentar descargarlo directamente.</span>';
+    if (spinner) spinner.innerHTML = '<span class="pdf-error-message">⚠️ Vista previa no disponible para este enlace externo. Puede intentar descargarlo directamente.</span>';
   }
 }
 
