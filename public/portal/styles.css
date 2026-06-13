@@ -1001,7 +1001,7 @@ body {
 }
 
 .pdf-close-btn {
-    background: #f1f5f9;
+    background: var(--hover-bg);
     border: none;
     cursor: pointer;
     font-weight: 700;
@@ -1037,7 +1037,7 @@ body {
 .pdf-controls {
     padding: 0.75rem 1.5rem;
     border-top: 1px solid var(--border);
-    background: #f8fafc;
+    background: var(--bg-card, #f8fafc);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1052,13 +1052,13 @@ body {
 }
 
 .pdf-btn {
-    background: white;
-    border: 1px solid var(--border);
+    background: var(--bg-card, #f8fafc);
+    border: 1px solid var(--primary);
     padding: 0.5rem 0.875rem;
     border-radius: 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-main);
+    color: var(--primary);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -1068,9 +1068,9 @@ body {
 }
 
 .pdf-btn:hover:not(:disabled) {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: #f8fafc;
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary-dark);
 }
 
 .pdf-btn:disabled {
