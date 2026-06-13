@@ -12,6 +12,18 @@
     --nav-bg: #ffffff;
     --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     --hover-bg: #f1f5f9;
+    --header-bg: #1B365D;
+    --footer-bg: #0f172a;
+    --status-comision-bg: #fffbeb;
+    --status-comision-text: #92400e;
+    --status-aprobado-bg: #ecfdf5;
+    --status-aprobado-text: #065f46;
+    --status-rechazado-bg: #fef2f2;
+    --status-rechazado-text: #991b1b;
+    --info-bg: #eff6ff;
+    --info-text: #1d4ed8;
+    --error-bg: #fef2f2;
+    --error-text: #b91c1c;
 }
 
 [data-theme="dark"] {
@@ -28,6 +40,18 @@
     --nav-bg: #1e293b;
     --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
     --hover-bg: #334155;
+    --header-bg: #0f172a;
+    --footer-bg: #020617;
+    --status-comision-bg: #78350f;
+    --status-comision-text: #fde68a;
+    --status-aprobado-bg: #064e3b;
+    --status-aprobado-text: #6ee7b7;
+    --status-rechazado-bg: #7f1d1d;
+    --status-rechazado-text: #fca5a5;
+    --info-bg: #1e1b4b;
+    --info-text: #a5b4fc;
+    --error-bg: #7f1d1d;
+    --error-text: #fca5a5;
 }
 
 * {
@@ -51,9 +75,15 @@ body {
 
 .hidden { display: none !important; }
 
+/* Icon utility classes */
+.icon-xxs { width: 12px; height: 12px; flex-shrink: 0; }
+.icon-xs { width: 16px; height: 16px; flex-shrink: 0; }
+.icon-sm { width: 18px; height: 18px; flex-shrink: 0; }
+.icon-md { width: 24px; height: 24px; flex-shrink: 0; }
+
 /* Header */
 .header {
-    background: #1B365D;
+    background: var(--header-bg);
     color: white;
     padding: 1.5rem 0 3rem 0;
     box-shadow: var(--shadow);
@@ -88,7 +118,7 @@ body {
 }
 
 .logo-institucional {
-    background: white;
+    background: var(--bg-card);
     border-radius: 12px;
     padding: 4px;
 }
@@ -176,7 +206,7 @@ body {
     background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 1.5rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -210,7 +240,7 @@ body {
 
 #search-input:focus {
     border-color: var(--primary);
-    background: white;
+    background: var(--bg-card);
     box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
@@ -278,7 +308,7 @@ body {
     margin-bottom: 1rem;
     flex-grow: 1;
     line-height: 1.4;
-    color: #1e293b;
+    color: var(--text-main);
 }
 
 .law-meta {
@@ -307,9 +337,9 @@ body {
     width: fit-content;
 }
 
-.status-en_comision { background: #fffbeb; color: #92400e; }
-.status-aprobado { background: #ecfdf5; color: #065f46; }
-.status-rechazado { background: #fef2f2; color: #991b1b; }
+.status-en_comision { background: var(--status-comision-bg); color: var(--status-comision-text); }
+.status-aprobado { background: var(--status-aprobado-bg); color: var(--status-aprobado-text); }
+.status-rechazado { background: var(--status-rechazado-bg); color: var(--status-rechazado-text); }
 
 /* Legislador Card */
 .legislator-card {
@@ -325,15 +355,19 @@ body {
     object-fit: cover;
     margin-bottom: 1.25rem;
     background: var(--bg-body);
-    border: 3px solid white;
+    border: 3px solid var(--bg-card);
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.legislator-img-spaced {
+    margin-top: 1rem;
 }
 
 .legislator-name {
     font-size: 1.25rem;
     font-weight: 800;
     margin-bottom: 0.35rem;
-    color: #1e293b;
+    color: var(--text-main);
 }
 
 .legislator-party {
@@ -350,10 +384,10 @@ body {
 
 /* Profile View */
 .legislator-profile {
-    background: white;
+    background: var(--bg-card);
     border-radius: 2.5rem;
     padding: 3rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--card-shadow);
     margin-bottom: 4rem;
     border: 1px solid var(--border);
 }
@@ -370,7 +404,7 @@ body {
     height: 200px;
     border-radius: 4rem;
     object-fit: cover;
-    border: 6px solid white;
+    border: 6px solid var(--bg-card);
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
 }
 
@@ -380,17 +414,17 @@ body {
     font-size: 2.25rem;
     font-weight: 900;
     margin-bottom: 0.75rem;
-    color: #1e293b;
+    color: var(--text-main);
     letter-spacing: -0.025em;
 }
 
 .profile-bio {
     font-size: 1.05rem;
-    color: #475569;
+    color: var(--text-muted);
     line-height: 1.8;
     margin-bottom: 2.5rem;
     padding: 2rem;
-    background: #f1f5f9;
+    background: var(--hover-bg);
     border-radius: 2rem;
 }
 
@@ -413,12 +447,12 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1.25rem;
-    background: white;
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 1.25rem;
 }
 
-.comm-name { font-weight: 800; font-size: 0.95rem; margin-bottom: 0.25rem; color: #1e293b; }
+.comm-name { font-weight: 800; font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--text-main); }
 .comm-role { font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase; }
 
 /* Global Buttons */
@@ -449,13 +483,13 @@ body {
 .back-btn {
     width: auto;
     margin-bottom: 2.5rem;
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--hover-bg);
+    color: var(--text-muted);
     border: 1px solid var(--border);
 }
 
 .back-btn:hover {
-    background: #e2e8f0;
+    background: var(--border);
     box-shadow: none;
 }
 
@@ -468,8 +502,8 @@ body {
     margin-bottom: 2rem;
 }
 
-.status-message.info { background: #eff6ff; color: #1d4ed8; }
-.status-message.error { background: #fef2f2; color: #b91c1c; }
+.status-message.info { background: var(--info-bg); color: var(--info-text); }
+.status-message.error { background: var(--error-bg); color: var(--error-text); }
 
 /* Loader */
 .loader {
@@ -481,7 +515,7 @@ body {
 .spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid #e2e8f0;
+    border: 4px solid var(--border);
     border-top: 4px solid var(--primary);
     border-radius: 50%;
     margin: 0 auto 1.5rem;
@@ -493,13 +527,13 @@ body {
 /* Footer */
 .footer {
     padding: 4rem 0;
-    background: #0f172a;
+    background: var(--footer-bg);
     color: white;
     text-align: center;
 }
 
 .footer p { margin-bottom: 0.5rem; font-size: 0.9rem; opacity: 0.8; }
-.footer .footer-note { font-size: 0.75rem; opacity: 0.4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.footer .footer-note { font-size: 0.75rem; opacity: 0.5; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 
 @media (max-width: 768px) {
     .header .container { justify-content: center; text-align: center; flex-wrap: wrap; }
@@ -515,10 +549,10 @@ body {
    PANEL DE ESTADÍSTICAS / ANALYTICS
    ========================================== */
 .stats-dashboard {
-    background: white;
+    background: var(--bg-card);
     border-radius: 2.5rem;
     padding: 3rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--card-shadow);
     margin-bottom: 4rem;
     border: 1px solid var(--border);
 }
@@ -532,7 +566,7 @@ body {
 .stats-header h2 {
     font-size: 2.25rem;
     font-weight: 900;
-    color: #1e293b;
+    color: var(--text-main);
     letter-spacing: -0.025em;
     margin-bottom: 0.5rem;
 }
@@ -590,7 +624,7 @@ body {
 .stat-counter-info .stat-value {
     font-size: 1.75rem;
     font-weight: 900;
-    color: #1e293b;
+    color: var(--text-main);
     line-height: 1;
 }
 
@@ -611,17 +645,16 @@ body {
 }
 
 .chart-card {
-    background: white;
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 2rem;
     padding: 2rem;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.01);
 }
 
 .chart-card h3 {
     font-size: 1.05rem;
     font-weight: 800;
-    color: #1e293b;
+    color: var(--text-main);
     margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
@@ -645,12 +678,12 @@ body {
     justify-content: space-between;
     font-size: 0.8rem;
     font-weight: 700;
-    color: #334155;
+    color: var(--text-main);
 }
 
 .chart-bar-track {
     height: 10px;
-    background: #e2e8f0;
+    background: var(--border);
     border-radius: 99px;
     overflow: hidden;
     position: relative;
@@ -674,16 +707,16 @@ body {
     font-weight: 800;
     padding: 3px 10px;
     border-radius: 99px;
-    background: #f1f5f9;
-    color: #94a3b8;
+    background: var(--hover-bg);
+    color: var(--text-muted);
     margin-top: 0.4rem;
     transition: all 0.3s ease;
     width: fit-content;
 }
 
 .download-counter.has-downloads {
-    background: #ecfdf5;
-    color: #059669;
+    background: var(--status-aprobado-bg);
+    color: var(--status-aprobado-text);
     animation: counterPulse 0.4s ease;
 }
 
@@ -771,7 +804,7 @@ body {
    ========================================== */
 .phase-timeline {
     margin-top: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border);
     padding-top: 0.75rem;
 }
 
@@ -822,7 +855,7 @@ body {
     height: 12px;
     border-radius: 50%;
     border: 2px solid var(--primary);
-    background: white;
+    background: var(--bg-card);
     z-index: 1;
     transition: all 0.3s ease;
 }
@@ -841,7 +874,7 @@ body {
 .phase-node-label {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #4b5563;
+    color: var(--text-muted);
     flex: 1;
 }
 
@@ -851,7 +884,7 @@ body {
 }
 
 .phase-node.phase-has-doc .phase-node-label {
-    color: #065f46;
+    color: var(--status-aprobado-text);
 }
 
 .phase-doc-btn {
@@ -863,17 +896,17 @@ body {
     padding: 4px 10px;
     border-radius: 8px;
     text-decoration: none;
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid #a7f3d0;
+    background: var(--status-aprobado-bg);
+    color: var(--status-aprobado-text);
+    border: 1px solid var(--accent-emerald);
     transition: all 0.2s ease;
     white-space: nowrap;
 }
 
 .phase-doc-btn:hover {
-    background: #065f46;
-    color: white;
-    border-color: #065f46;
+    background: var(--status-aprobado-text);
+    color: var(--bg-card);
+    border-color: var(--status-aprobado-text);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(6, 95, 70, 0.2);
 }
@@ -881,7 +914,7 @@ body {
 /* Adjuntos mejorados para Leyes */
 .law-adjuntos {
     margin-top: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border);
     padding-top: 0.75rem;
 }
 
@@ -899,10 +932,10 @@ body {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.75rem;
-    background: #f9fafb;
+    background: var(--hover-bg);
     padding: 8px 12px;
     border-radius: 10px;
-    border: 1px solid #f3f4f6;
+    border: 1px solid var(--border);
     margin-bottom: 0.35rem;
     transition: all 0.2s ease;
 }
@@ -916,7 +949,7 @@ body {
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    background: #e0e7ff;
+    background: var(--info-bg);
     color: var(--primary);
     display: flex;
     align-items: center;
@@ -927,7 +960,7 @@ body {
 .law-adjunto-name {
     flex: 1;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-main);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -983,7 +1016,7 @@ body {
 
 .pdf-modal-header {
     padding: 1rem 1.5rem;
-    border-b: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1030,7 +1063,7 @@ body {
 
 #pdf-canvas {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    background: white;
+    background: var(--bg-card);
     max-width: 100%;
 }
 
@@ -1086,6 +1119,19 @@ body {
     text-align: center;
 }
 
+.pdf-zoom-percent {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+.pdf-error-message {
+    color: #f87171;
+    text-align: center;
+    padding: 1rem;
+}
+
 .pdf-download-footer {
     display: flex;
     justify-content: center;
@@ -1128,7 +1174,7 @@ body {
     gap: 0.5rem;
 }
 
-.spinner {
+.pdf-loading-spinner .spinner {
     width: 24px;
     height: 24px;
     border: 3px solid rgba(255, 255, 255, 0.2);
@@ -1377,6 +1423,12 @@ body {
     border: 1px solid #bbf7d0;
 }
 
+.badge-icon {
+    display: inline;
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
 .law-adjunto-actions {
     display: flex;
     gap: 6px;
@@ -1569,5 +1621,131 @@ body {
 
 [data-theme="dark"] .phase-node-label {
     color: var(--text-main);
+}
+
+/* ==========================================
+   :ACTIVE STATES
+   ========================================== */
+.nav-btn:active { transform: scale(0.97); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary:active { transform: scale(0.98); }
+.pdf-btn:active:not(:disabled) { transform: scale(0.97); }
+.phase-doc-btn:active { transform: scale(0.97); }
+.tag-badge-clickable:active { transform: scale(0.95); }
+.pdf-close-btn:active { transform: scale(0.95); }
+.search-results-clear:active { transform: scale(0.95); }
+.theme-toggle:active { transform: scale(0.9); }
+.card:active { transform: translateY(-2px); }
+.stat-counter-card:active { transform: translateY(-2px); }
+
+/* ==========================================
+   ENHANCED FOCUS-VISIBLE STATES
+   ========================================== */
+.btn-primary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+}
+.btn-secondary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.pdf-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.phase-doc-btn:focus-visible {
+    outline: 2px solid var(--accent-emerald);
+    outline-offset: 2px;
+}
+.tag-badge-clickable:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.search-results-clear:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.filters select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.nav-btn.active:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* ==========================================
+   REMAINING DARK MODE OVERRIDES
+   ========================================== */
+[data-theme="dark"] .law-adjuntos {
+    border-top-color: var(--border);
+}
+
+[data-theme="dark"] .download-counter.has-downloads {
+    background: var(--status-aprobado-bg);
+    color: var(--status-aprobado-text);
+}
+
+[data-theme="dark"] .phase-doc-btn {
+    background: #064e3b;
+    color: #6ee7b7;
+    border-color: #065f46;
+}
+
+[data-theme="dark"] .phase-doc-btn:hover {
+    background: #065f46;
+    color: white;
+    border-color: #065f46;
+}
+
+[data-theme="dark"] .law-adjunto-icon {
+    background: #1e1b4b;
+    color: var(--primary);
+}
+
+[data-theme="dark"] .pdf-canvas-container {
+    background: #020617;
+}
+
+[data-theme="dark"] .status-en_comision {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .status-aprobado {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .status-rechazado {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .status-message.info {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .status-message.error {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .phase-node.phase-has-doc .phase-node-label {
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .legislator-img {
+    border-color: var(--bg-card);
+}
+
+[data-theme="dark"] .profile-img-lg {
+    border-color: var(--bg-card);
+}
+
+[data-theme="dark"] .logo-institucional {
+    background: var(--bg-body);
 }
 
